@@ -1,4 +1,4 @@
-﻿:root{--ink:#0d0f12;--ink2:#1a1f27;--ink3:#2d3340;--mist:#8b94a3;--mist2:#b8c0cc;--fog:#e8ecf2;--snow:#f4f6fa;--white:#fff;--lime:#c8f135;--lime-d:#9ec000;--lime-p:rgba(200,241,53,.1);--teal:#0fd9b4;--coral:#ff6b52;--violet:#7c5cfc;--blue:#3b82f6;--sh1:0 2px 10px rgba(0,0,0,.06);--sh2:0 8px 28px rgba(0,0,0,.10);--sh3:0 20px 60px rgba(0,0,0,.14);--rd:14px;--rd-s:10px;--rd-x:7px;--sb:230px;--nav:58px;
+:root{--ink:#0d0f12;--ink2:#1a1f27;--ink3:#2d3340;--mist:#8b94a3;--mist2:#b8c0cc;--fog:#e8ecf2;--snow:#f4f6fa;--white:#fff;--lime:#c8f135;--lime-d:#9ec000;--lime-p:rgba(200,241,53,.1);--teal:#0fd9b4;--coral:#ff6b52;--violet:#7c5cfc;--blue:#3b82f6;--sh1:0 2px 10px rgba(0,0,0,.06);--sh2:0 8px 28px rgba(0,0,0,.10);--sh3:0 20px 60px rgba(0,0,0,.14);--rd:14px;--rd-s:10px;--rd-x:7px;--sb:230px;--nav:58px;
   /* Accent vars — overridden by JS */
   --ac1:var(--lime);--ac1-d:var(--lime-d);--ac1-p:var(--lime-p);
   /* Alias vars for portal-manager & college-portal components */
