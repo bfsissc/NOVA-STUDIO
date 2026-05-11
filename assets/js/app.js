@@ -1,4 +1,4 @@
-﻿// ==================== DASHBOARD CORE ====================
+// ==================== DASHBOARD CORE ====================
 let U=null, editSkills=[];
 // SK / SS kept for legacy reference but Firestore is the source of truth now
 const SK='nova_users', SS='nova_sess';
