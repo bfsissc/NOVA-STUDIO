@@ -1,4 +1,4 @@
-// ==================== DASHBOARD CORE ====================
+﻿// ==================== DASHBOARD CORE ====================
 let U=null, editSkills=[];
 // SK / SS kept for legacy reference but Firestore is the source of truth now
 const SK='nova_users', SS='nova_sess';
@@ -50,7 +50,7 @@ window.onload = () => {
 };
 
 function boot(anim){
-  updateGreeting(); renderAvatars(); renderProfile(); updateStats(); updateGmailTracker();
+  updateGreeting(); renderAvatars(); renderProfile(); updateStats(); updateGmailTracker(); setTimeout(function(){if(typeof tpInit==='function'){tpInit().then(function(){tpRenderHomeWidget();});}},600);
   document.getElementById('loginScreen').classList.add('out');
   document.getElementById('app').classList.add('visible');
   if(anim) showToast('Welcome, '+U.firstName+'! 👋','ok');
@@ -295,8 +295,8 @@ function doLogout(){
   showToast('Signed out','ok');
 }
 
-const VIEWS=['home','cert','projects','profile','settings','mailer','sync','portal'];
-const SBM={home:'sbHome',projects:'sbProj',profile:'sbProfile',cert:'sbCert',settings:'sbSettings',mailer:'sbMailer',sync:'sbSync',portal:'sbPortal'};
+const VIEWS=['home','cert','projects','profile','settings','mailer','sync','portal','help','tp','imgcomp','fileconv','imgedit'];
+const SBM={home:'sbHome',projects:'sbProj',profile:'sbProfile',cert:'sbCert',settings:'sbSettings',mailer:'sbMailer',sync:'sbSync',portal:'sbPortal',help:'sbHelp',tp:'sbTp',imgcomp:'sbImgComp',fileconv:'sbFileConv',imgedit:'sbImgEdit'};
 
 function goView(v){
   VIEWS.forEach(id=>{
@@ -310,10 +310,11 @@ function goView(v){
   if(v==='projects'){projShowBin=false;projRender();}
   if(v==='settings'){stgApplyUI(stgGetSettings());stgUpdateStorageInfo();}
   if(v==='mailer'){setTimeout(mlInitCanvas,80);}
-  if(v==='home'){updateGmailTracker();}
+  if(v==='home'){updateGmailTracker();if(typeof tpRenderHomeWidget==='function')tpRenderHomeWidget();anRestoreFromStorage();}
   if(v==='sync'){syncOnViewOpen();}
   if(v==='portal'){if(typeof cpInit==='function')cpInit();}
-
+  if(v==='help'){const el=document.getElementById('viewHelp');if(el)el.scrollTop=0;}
+  if(v==='tp'){tpInit();}
 }
 
 const TL={cert:'🎓 Certificate Maker',mailer:'📧 Certificate Mailer'};
@@ -391,7 +392,7 @@ async function _setGmailTrack(data) {
 
 async function updateGmailTracker() {
   const stored  = await _getGmailTrack();
-  const limit   = parseInt(localStorage.getItem('gmailDailyLimit') || '500', 10);
+  const limit   = parseInt((function(){ try{ return localStorage.getItem('gmailDailyLimit'); }catch(e){ return null; } })()||'500', 10);
   const sent    = stored.sent || 0;
   const remaining = Math.max(0, limit - sent);
   const pct     = Math.min(100, limit > 0 ? Math.round(sent / limit * 100) : 0);
@@ -486,34 +487,66 @@ function renderProfile(){
 
 function handleCover(inp){
   const f=inp.files[0];if(!f)return;
-  if(f.size>10*1024*1024){showToast('Max 10MB','err');return;}
-  showToast('Uploading cover photo…','info');
-  const ext=f.name.split('.').pop()||'jpg';
-  const path='profile-photos/'+U.email+'/cover.'+ext;
-  const ref=fbStorage.ref(path);
-  ref.put(f).then(()=>ref.getDownloadURL()).then(url=>{
-    U.cover=url;
-    const ci=document.getElementById('coverImg');
-    if(ci){ci.src=url;ci.style.display='block';}
-    persist();renderProfile();showToast('Cover photo updated ✓','ok');
-  }).catch(err=>showToast('Upload failed: '+err.message,'err'));
+  if(f.size>10*1024*1024){showToast('Max 10MB for cover photo','err');return;}
+  showToast('Processing cover photo…','info');
+  const reader=new FileReader();
+  reader.onload=function(e){
+    const img=new Image();
+    img.onload=function(){
+      const canvas=document.createElement('canvas');
+      // Cover: wide crop, max 1200x400
+      const targetW=1200,targetH=400;
+      canvas.width=targetW;canvas.height=targetH;
+      const ctx=canvas.getContext('2d');
+      // Fill with center crop
+      const imgAspect=img.width/img.height;
+      const targetAspect=targetW/targetH;
+      let sx=0,sy=0,sw=img.width,sh=img.height;
+      if(imgAspect>targetAspect){sw=img.height*targetAspect;sx=(img.width-sw)/2;}
+      else{sh=img.width/targetAspect;sy=(img.height-sh)/2;}
+      ctx.drawImage(img,sx,sy,sw,sh,0,0,targetW,targetH);
+      const resized=canvas.toDataURL('image/jpeg',0.82);
+      U.cover=resized;
+      const ci=document.getElementById('coverImg');
+      if(ci){ci.src=resized;ci.style.display='block';}
+      persist();renderProfile();showToast('Cover photo updated ✓','ok');
+    };
+    img.onerror=function(){showToast('Could not load image','err');};
+    img.src=e.target.result;
+  };
+  reader.onerror=function(){showToast('Could not read file','err');};
+  reader.readAsDataURL(f);
   inp.value='';
 }
 
 function handleAvatar(inp){
   const f=inp.files[0];if(!f)return;
-  if(f.size>10*1024*1024){showToast('Max 10MB','err');return;}
-  showToast('Uploading profile photo…','info');
-  const ext=f.name.split('.').pop()||'jpg';
-  const path='profile-photos/'+U.email+'/avatar.'+ext;
-  const ref=fbStorage.ref(path);
-  ref.put(f).then(()=>ref.getDownloadURL()).then(url=>{
-    U.avatar=url;
-    const ep=document.getElementById('epAv');
-    if(ep)ep.innerHTML=`<img src="${url}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
-    renderAvatars();renderProfile();persist();
-    showToast('Profile photo updated ✓','ok');
-  }).catch(err=>showToast('Upload failed: '+err.message,'err'));
+  if(f.size>10*1024*1024){showToast('Max 10MB for profile photo','err');return;}
+  showToast('Processing profile photo…','info');
+  const reader=new FileReader();
+  reader.onload=function(e){
+    const img=new Image();
+    img.onload=function(){
+      // Instant preview at full res
+      const epEl=document.getElementById('epAv');
+      if(epEl)epEl.innerHTML=`<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+      // Resize to 256x256 square for storage efficiency
+      const canvas=document.createElement('canvas');
+      canvas.width=256;canvas.height=256;
+      const ctx=canvas.getContext('2d');
+      const size=Math.min(img.width,img.height);
+      const sx=(img.width-size)/2,sy=(img.height-size)/2;
+      ctx.drawImage(img,sx,sy,size,size,0,0,256,256);
+      const resized=canvas.toDataURL('image/jpeg',0.85);
+      U.avatar=resized;
+      renderAvatars();renderProfile();persist();
+      showToast('Profile photo updated ✓','ok');
+    };
+    img.onerror=function(){showToast('Could not load image','err');};
+    img.src=e.target.result;
+  };
+  reader.onerror=function(){showToast('Could not read file','err');};
+  reader.readAsDataURL(f);
   inp.value='';
 }
 
@@ -543,7 +576,8 @@ function closeEdit(){
 function saveProfile(){
   U.firstName=document.getElementById('epFirst').value.trim()||U.firstName;
   U.lastName=document.getElementById('epLast').value.trim();
-  U.email=document.getElementById('epEmail').value.trim()||U.email;
+  // Never change email from UI — it's the Firestore doc key and auth identity
+  // U.email stays as-is
   U.phone=document.getElementById('epPhone').value.trim();
   U.location=document.getElementById('epLoc').value.trim();
   U.website=document.getElementById('epWeb').value.trim();
@@ -552,7 +586,9 @@ function saveProfile(){
   U.dept=document.getElementById('epDept').value.trim();
   U.bio=document.getElementById('epBio').value.trim();
   U.skills=[...editSkills];
-  persist();renderAvatars();renderProfile();updateGreeting();closeEdit();
+  // Persist to Firestore + localStorage
+  persist();
+  renderAvatars();renderProfile();updateGreeting();closeEdit();
   showToast('Profile saved ✓','ok');
 }
 function persist(){
@@ -563,11 +599,13 @@ function persist(){
     const dataToSave = Object.assign({}, U);
     // Never store password in Firestore
     delete dataToSave.password;
-    // Strip base64 images — only store Storage URLs (Firestore 1MB limit)
-    if (dataToSave.avatar && dataToSave.avatar.startsWith('data:')) delete dataToSave.avatar;
-    if (dataToSave.cover  && dataToSave.cover.startsWith('data:'))  delete dataToSave.cover;
+    // base64 images (256x256 JPEG ~30-50KB) are fine for Firestore (1MB doc limit)
+    // Only strip if somehow oversized (>800KB)
+    if(dataToSave.avatar && dataToSave.avatar.startsWith('data:') && dataToSave.avatar.length > 800000) delete dataToSave.avatar;
+    if(dataToSave.cover  && dataToSave.cover.startsWith('data:')  && dataToSave.cover.length  > 800000) delete dataToSave.cover;
     fbDb.collection('users').doc(U.email).set(dataToSave, { merge: true })
-      .catch(function(err){ console.warn('Firestore persist error:', err); });
+      .then(function(){ console.log('Profile saved to Firestore ✓'); })
+      .catch(function(err){ console.warn('Firestore persist error:', err.code, err.message); });
   }
 }
 function addSkill(e){
@@ -2625,13 +2663,14 @@ const STG_DEFAULTS = {
 };
 
 function stgGetSettings() {
-  return { ...STG_DEFAULTS, ...JSON.parse(localStorage.getItem(STG_KEY) || '{}') };
+  try { return { ...STG_DEFAULTS, ...JSON.parse(localStorage.getItem(STG_KEY) || '{}') }; }
+  catch(e) { return { ...STG_DEFAULTS }; }
 }
 
 function stgSaveKey(key, val) {
   const s = stgGetSettings();
   s[key] = val;
-  localStorage.setItem(STG_KEY, JSON.stringify(s));
+  try { localStorage.setItem(STG_KEY, JSON.stringify(s)); } catch(e) {}
 }
 
 function stgSave() {
@@ -2741,12 +2780,17 @@ async function stgUpdateStorageInfo() {
 }
 
 function stgTab(tab) {
-  ['appearance','workspace','notifications','privacy','data','integrations'].forEach(t => {
-    document.getElementById('stp'+t[0].toUpperCase()+t.slice(1))?.style && (document.getElementById('stp'+t[0].toUpperCase()+t.slice(1)).style.display = t===tab ? '' : 'none');
-    document.getElementById('stn'+t[0].toUpperCase()+t.slice(1))?.classList.toggle('active', t===tab);
+  ['appearance','workspace','notifications','privacy','data','dataupload','integrations'].forEach(t => {
+    const panId = 'stp' + t[0].toUpperCase() + t.slice(1);
+    const navId = 'stn' + t[0].toUpperCase() + t.slice(1);
+    const pan = document.getElementById(panId);
+    const nav = document.getElementById(navId);
+    if (pan) pan.style.display = t===tab ? '' : 'none';
+    if (nav) nav.classList.toggle('active', t===tab);
   });
   if (tab === 'data') stgUpdateStorageInfo();
   if (tab === 'integrations') ejsLoadKeys();
+  if (tab === 'dataupload') { anUpdateStgIndicator(); stgUpdateStandaloneIndicator(); }
 }
 
 // ── Brevo Template Defaults ──
@@ -4146,3 +4190,2263 @@ function stgDriveCopyCode() {
     if (btn) { btn.textContent = 'Copied!'; setTimeout(function() { btn.textContent = 'Copy'; }, 2000); }
   });
 }
+
+// ═══════════════════════════════════════════════════════════════
+// NOVA ANALYTICS ENGINE
+// ═══════════════════════════════════════════════════════════════
+const AN = {
+  raw: [],          // all rows (objects)
+  headers: [],      // column names
+  colTypes: {},     // { col: 'numeric'|'category'|'date'|'text' }
+  colRoles: {},     // { col: 'x'|'y'|'ignore' }
+  charts: [],       // Chart.js instances
+  fileName: '',
+  theme: 'nova',
+  filteredRows: []
+};
+
+// ── Colour palettes per theme ──
+const AN_PALETTES = {
+  nova:    ['#c8f135','#0fd9b4','#ff6b52','#7c5cfc','#3b82f6','#f59e0b','#ec4899','#14b8a6'],
+  ocean:   ['#0ea5e9','#06b6d4','#38bdf8','#7dd3fc','#0284c7','#0369a1','#60a5fa','#a5f3fc'],
+  sunset:  ['#f97316','#ef4444','#eab308','#f43f5e','#fb923c','#fbbf24','#fcd34d','#fde68a'],
+  forest:  ['#22c55e','#16a34a','#4ade80','#86efac','#15803d','#065f46','#a3e635','#bef264'],
+  mono:    ['#1a1f27','#3d4452','#5d6575','#7d8699','#9da6b3','#bdc5d0','#d5dae2','#ebeef3']
+};
+
+// ── Template Download ──
+const AN_TEMPLATES = {
+  general: {
+    name: 'general_analytics_template',
+    headers: ['Category','Sub_Category','Value','Count','Date','Notes'],
+    rows: [
+      ['Electronics','Laptops',45000,12,'2024-01-15','Q1 batch'],
+      ['Electronics','Phones',32000,28,'2024-02-10','High demand'],
+      ['Furniture','Chairs',18000,40,'2024-03-05','Office order'],
+      ['Furniture','Desks',27500,15,'2024-04-20','Bulk discount'],
+      ['Clothing','Shirts',9800,85,'2024-05-01','Summer stock'],
+      ['Clothing','Trousers',14200,62,'2024-06-15','Mixed sizes']
+    ]
+  },
+  certificates: {
+    name: 'certificate_data_template',
+    headers: ['Month','Department','Certificates_Issued','Emails_Sent','Downloads','Pending'],
+    rows: [
+      ['January','Engineering',45,42,38,3],
+      ['January','Management',30,30,28,0],
+      ['February','Engineering',52,50,47,3],
+      ['February','Design',18,17,15,2],
+      ['March','Marketing',36,35,33,1],
+      ['March','HR',22,22,20,0]
+    ]
+  },
+  sales: {
+    name: 'sales_data_template',
+    headers: ['Region','Product','Revenue','Units_Sold','Profit','Month'],
+    rows: [
+      ['North','Product A',125000,42,38000,'January'],
+      ['South','Product B',98000,35,29000,'January'],
+      ['East','Product A',143000,50,44000,'February'],
+      ['West','Product C',76000,28,21000,'February'],
+      ['Central','Product B',112000,40,33000,'March'],
+      ['North','Product C',89000,32,26000,'March']
+    ]
+  },
+  students: {
+    name: 'student_data_template',
+    headers: ['Course','Semester','Grade','Marks','Attendance_Pct','Projects_Submitted','Backlogs'],
+    rows: [
+      ['B.Tech','Sem 1','A',88,92,4,0],
+      ['B.Tech','Sem 2','B',74,85,3,1],
+      ['MBA','Sem 1','A',91,96,5,0],
+      ['MBA','Sem 2','B+',79,88,4,0],
+      ['BCA','Sem 1','C',62,72,2,2],
+      ['MCA','Sem 1','A',85,90,5,0]
+    ]
+  },
+  hr: {
+    name: 'hr_attendance_template',
+    headers: ['Department','Month','Total_Employees','Present_Days','Absent_Days','Leave_Days','Work_Hours'],
+    rows: [
+      ['Engineering','January',20,440,12,8,3520],
+      ['Management','January',8,172,4,4,1376],
+      ['Design','February',12,252,8,12,2016],
+      ['Marketing','February',15,318,10,2,2544],
+      ['HR','March',6,126,2,4,1008],
+      ['Operations','March',25,530,20,0,4240]
+    ]
+  },
+  events: {
+    name: 'events_programme_template',
+    headers: ['Event_Name','City','Date','Registrations','Attended','Revenue','Certificates_Issued'],
+    rows: [
+      ['Python Workshop','Mumbai','2024-01-20',120,108,54000,108],
+      ['Data Science Bootcamp','Delhi','2024-02-15',85,79,118500,79],
+      ['Leadership Summit','Bangalore','2024-03-10',200,187,0,187],
+      ['Web Dev Masterclass','Pune','2024-04-05',65,60,39000,60],
+      ['AI & ML Seminar','Hyderabad','2024-05-18',150,141,0,141],
+      ['Digital Marketing','Chennai','2024-06-22',90,84,42000,84]
+    ]
+  }
+};
+
+function anDownloadTemplate(type, format) {
+  const tpl = AN_TEMPLATES[type];
+  if (!tpl) return;
+
+  if (format === 'csv') {
+    // Build CSV string
+    const escapeCSV = v => {
+      const s = String(v ?? '');
+      return (s.includes(',') || s.includes('"') || s.includes('\n')) ? '"' + s.replace(/"/g,'""') + '"' : s;
+    };
+    const lines = [tpl.headers.map(escapeCSV).join(',')];
+    tpl.rows.forEach(row => lines.push(row.map(escapeCSV).join(',')));
+    const blob = new Blob([lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = tpl.name + '.csv'; a.click();
+    URL.revokeObjectURL(url);
+    showToast('CSV template downloaded ✓', 'ok');
+    logAct('📥 Template', 'Downloaded CSV: ' + tpl.name);
+
+  } else if (format === 'xlsx') {
+    // Build XLSX using SheetJS (XLSX global already loaded via vendor.sheetjs.js)
+    try {
+      const wsData = [tpl.headers, ...tpl.rows];
+      const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+      // Style the header row width
+      ws['!cols'] = tpl.headers.map(h => ({ wch: Math.max(h.length + 4, 14) }));
+
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Data');
+
+      // Add an Instructions sheet
+      const instrData = [
+        ['NOVA Studio — Data Upload Template'],
+        [''],
+        ['Instructions:'],
+        ['1. This is the "' + tpl.name.replace(/_/g,' ') + '" template.'],
+        ['2. Go to the "Data" sheet. The first row contains column headers — DO NOT change them.'],
+        ['3. The rows below the header are EXAMPLES. Delete them and add your own data.'],
+        ['4. Save the file as .xlsx or .csv, then upload it in Settings → Data Upload.'],
+        ['5. Your charts will appear automatically on the Dashboard.'],
+        [''],
+        ['Supported upload formats: CSV, XLSX, XLS, JSON'],
+        ['Maximum rows: 50,000'],
+      ];
+      const wsInstr = XLSX.utils.aoa_to_sheet(instrData);
+      wsInstr['!cols'] = [{ wch: 70 }];
+      XLSX.utils.book_append_sheet(wb, wsInstr, 'Instructions');
+
+      XLSX.writeFile(wb, tpl.name + '.xlsx');
+      showToast('Excel template downloaded ✓', 'ok');
+      logAct('📥 Template', 'Downloaded Excel: ' + tpl.name);
+    } catch(e) {
+      showToast('Excel download failed — try CSV instead', 'err');
+      console.error('XLSX export error:', e);
+    }
+  }
+}
+
+// ── Analytics localStorage persistence ──
+function anSaveToStorage() {
+  try {
+    const payload = { raw: AN.raw, headers: AN.headers, colTypes: AN.colTypes, fileName: AN.fileName };
+    localStorage.setItem('nova_an_data', JSON.stringify(payload));
+  } catch(e) { console.warn('Analytics save failed:', e); }
+}
+
+function anRestoreFromStorage() {
+  try {
+    const saved = (function(){ try{ return localStorage.getItem('nova_an_data'); }catch(e){ return null; } })();
+    if (!saved) return;
+    const d = JSON.parse(saved);
+    if (!d.raw || !d.raw.length) return;
+    // Only restore if AN is currently empty (avoid re-rendering if already loaded)
+    if (AN.raw.length > 0) {
+      // Data already loaded, just ensure UI is right
+      anShowDataBar();
+      const eb = document.getElementById('anExportBtn'); if(eb) eb.style.display='';
+      const rb = document.getElementById('anResetBtn'); if(rb) rb.style.display='';
+      const ts = document.getElementById('anChartTheme'); if(ts) ts.style.display='';
+      return;
+    }
+    AN.raw = d.raw;
+    AN.headers = d.headers || Object.keys(AN.raw[0]);
+    AN.colTypes = d.colTypes || {};
+    AN.fileName = d.fileName || 'Loaded data';
+    AN.filteredRows = AN.raw.slice();
+    anShowDataBar();
+    anShowConfigPanel();
+    document.getElementById('anEmptyState').style.display='none';
+    const eb = document.getElementById('anExportBtn'); if(eb) eb.style.display='';
+    const rb = document.getElementById('anResetBtn'); if(rb) rb.style.display='';
+    const ts = document.getElementById('anChartTheme'); if(ts) ts.style.display='';
+    // Auto-build charts
+    setTimeout(()=>{ try { anAutoDetect(); anBuildCharts(); } catch(e){} }, 100);
+  } catch(e) { console.warn('Analytics restore failed:', e); }
+}
+
+function anUpdateStgIndicator() {
+  const wrap = document.getElementById('stgAnDataLoaded');
+  if (!wrap) return;
+  if (AN.raw.length > 0) {
+    wrap.style.display = 'flex';
+    const fn = document.getElementById('stgAnFileName'); if(fn) fn.textContent = AN.fileName;
+    const fi = document.getElementById('stgAnFileInfo');
+    if(fi) {
+      const nc = AN.headers.filter(h=>AN.colTypes[h]==='numeric').length;
+      fi.textContent = AN.raw.length.toLocaleString() + ' rows · ' + AN.headers.length + ' columns · ' + nc + ' numeric';
+    }
+    const st = document.getElementById('stgDataUploadStatus'); if(st) st.textContent = '';
+  } else {
+    wrap.style.display = 'none';
+  }
+  // Also refresh the settings.html standalone indicator if present
+  stgUpdateStandaloneIndicator();
+}
+
+// ── Settings panel upload helpers ──
+function stgHandleDataDrop(e) {
+  e.preventDefault();
+  const zone = document.getElementById('stgUploadZone');
+  if (zone) { zone.style.borderColor='var(--fog)'; zone.style.background='var(--card)'; }
+  const file = e.dataTransfer.files[0];
+  if (file) {
+    const status = document.getElementById('stgDataUploadStatus');
+    if (status) status.textContent = '⏳ Parsing ' + file.name + '…';
+    anHandleFile(file);
+  }
+}
+
+function stgOnDataFileChange(inp) {
+  const file = inp.files[0]; if (!file) return;
+  const status = document.getElementById('stgDataUploadStatus');
+  if (status) status.textContent = '⏳ Parsing ' + file.name + '…';
+  anHandleFile(file);
+  inp.value = '';
+}
+
+function stgUpdateStandaloneIndicator() {
+  const wrap = document.getElementById('stgStandaloneLoaded');
+  if (!wrap) return;
+  if (AN && AN.raw && AN.raw.length > 0) {
+    wrap.style.display = 'flex';
+    const fn = document.getElementById('stgStandaloneFileName'); if(fn) fn.textContent = AN.fileName || '';
+    const fi = document.getElementById('stgStandaloneFileInfo');
+    if(fi) {
+      const nc = AN.headers.filter(h=>AN.colTypes[h]==='numeric').length;
+      fi.textContent = AN.raw.length.toLocaleString() + ' rows · ' + AN.headers.length + ' columns · ' + nc + ' numeric';
+    }
+    const st = document.getElementById('stgDataUploadStatus'); if(st) st.textContent = '';
+  } else {
+    wrap.style.display = 'none';
+    const st = document.getElementById('stgDataUploadStatus'); if(st) st.textContent = '';
+  }
+}
+
+// ── Init / reset ──
+function anResetAll() {
+  AN.raw=[]; AN.headers=[]; AN.colTypes={}; AN.colRoles={}; AN.filteredRows=[];
+  AN.charts.forEach(c=>{try{c.destroy()}catch(e){}});
+  AN.charts=[];
+  document.getElementById('anKpiRow').style.display='none';
+  document.getElementById('anChartsGrid').style.display='none';
+  document.getElementById('anTableWrap').style.display='none';
+  document.getElementById('anConfigPanel').style.display='none';
+  const db = document.getElementById('anDataBar'); if(db) db.style.display='none';
+  document.getElementById('anEmptyState').style.display='block';
+  const st = document.getElementById('anUploadStatus'); if(st) st.textContent='';
+  const fi = document.getElementById('anFileInput'); if(fi) fi.value='';
+  // Hide settings loaded indicator
+  const sl = document.getElementById('stgAnDataLoaded'); if(sl) sl.style.display='none';
+  // Clear export/reset buttons
+  const eb = document.getElementById('anExportBtn'); if(eb) eb.style.display='none';
+  const rb = document.getElementById('anResetBtn'); if(rb) rb.style.display='none';
+  const ts = document.getElementById('anChartTheme'); if(ts) ts.style.display='none';
+  // Clear localStorage
+  try { localStorage.removeItem('nova_an_data'); } catch(e) {}
+  showToast('Analytics data cleared','ok');
+}
+
+// ── File handling ──
+function anHandleDrop(e) {
+  e.preventDefault();
+  const zone = document.getElementById('anUploadZone');
+  zone.style.borderColor='var(--fog)'; zone.style.background='var(--card)';
+  const file = e.dataTransfer.files[0];
+  if (file) anHandleFile(file);
+}
+
+function anHandleFile(file) {
+  if (!file) return;
+  const ext = file.name.split('.').pop().toLowerCase();
+  const status = document.getElementById('anUploadStatus');
+  if (status) status.textContent = '⏳ Parsing ' + file.name + '…';
+  AN.fileName = file.name;
+
+  if (ext === 'csv') {
+    const reader = new FileReader();
+    reader.onload = e => anParseCSV(e.target.result);
+    reader.readAsText(file);
+  } else if (ext === 'json') {
+    const reader = new FileReader();
+    reader.onload = e => anParseJSON(e.target.result);
+    reader.readAsText(file);
+  } else if (ext === 'xlsx' || ext === 'xls') {
+    const reader = new FileReader();
+    reader.onload = e => anParseExcel(e.target.result);
+    reader.readAsArrayBuffer(file);
+  } else {
+    if (status) status.textContent = '❌ Unsupported file type. Use CSV, XLSX, XLS or JSON.';
+  }
+}
+
+function anParseCSV(text) {
+  try {
+    // Use SheetJS for robust CSV parsing
+    const wb = XLSX.read(text, {type:'string', raw:false});
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(ws, {defval:''});
+    anIngestRows(rows);
+  } catch(e) {
+    document.getElementById('anUploadStatus').textContent = '❌ CSV parse error: ' + e.message;
+  }
+}
+
+function anParseExcel(buffer) {
+  try {
+    const wb = XLSX.read(buffer, {type:'array', cellDates:true});
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(ws, {defval:''});
+    anIngestRows(rows);
+  } catch(e) {
+    document.getElementById('anUploadStatus').textContent = '❌ Excel parse error: ' + e.message;
+  }
+}
+
+function anParseJSON(text) {
+  try {
+    let data = JSON.parse(text);
+    if (!Array.isArray(data)) {
+      // try common wrapper keys
+      const keys = ['data','rows','records','items','results'];
+      for (const k of keys) { if (Array.isArray(data[k])) { data = data[k]; break; } }
+    }
+    if (!Array.isArray(data)) throw new Error('JSON must be an array of objects.');
+    anIngestRows(data);
+  } catch(e) {
+    document.getElementById('anUploadStatus').textContent = '❌ JSON parse error: ' + e.message;
+  }
+}
+
+function anIngestRows(rows) {
+  if (!rows || !rows.length) { const st=document.getElementById('anUploadStatus'); if(st) st.textContent='❌ No data rows found.'; return; }
+  AN.raw = rows.slice(0, 50000);
+  AN.filteredRows = AN.raw.slice();
+  AN.headers = Object.keys(AN.raw[0]);
+  anDetectTypes();
+  anShowDataBar();
+  anShowConfigPanel();
+  document.getElementById('anEmptyState').style.display='none';
+  const st=document.getElementById('anUploadStatus'); if(st) st.textContent='';
+  // Save to localStorage for persistence
+  anSaveToStorage();
+  // Update settings panel indicator
+  anUpdateStgIndicator();
+  // Show export/reset/theme controls
+  const eb = document.getElementById('anExportBtn'); if(eb) eb.style.display='';
+  const rb = document.getElementById('anResetBtn'); if(rb) rb.style.display='';
+  const ts = document.getElementById('anChartTheme'); if(ts) ts.style.display='';
+  showToast('Data loaded: ' + AN.raw.length + ' rows ✓ — go to Dashboard to see charts','ok');
+  // Auto-build charts after a short delay
+  setTimeout(()=>{ try { anAutoDetect(); anBuildCharts(); } catch(e){} }, 150);
+}
+
+// ── Type detection ──
+function anDetectTypes() {
+  AN.colTypes={};
+  for (const col of AN.headers) {
+    const samples = AN.raw.slice(0, 200).map(r=>r[col]).filter(v=>v!==''&&v!==null&&v!==undefined);
+    const nums = samples.filter(v=>!isNaN(parseFloat(v))&&isFinite(v));
+    const dateRx = /^\d{1,4}[\-\/\.]\d{1,2}[\-\/\.]\d{1,4}/;
+    const dates = samples.filter(v=>dateRx.test(String(v)));
+    if (nums.length / Math.max(samples.length,1) > 0.8) AN.colTypes[col] = 'numeric';
+    else if (dates.length / Math.max(samples.length,1) > 0.6) AN.colTypes[col] = 'date';
+    else {
+      const uniq = new Set(samples.map(v=>String(v).trim())).size;
+      AN.colTypes[col] = (uniq / Math.max(samples.length,1) < 0.6 && uniq <= 40) ? 'category' : 'text';
+    }
+  }
+}
+
+// ── Auto-detect column roles ──
+function anAutoDetect() {
+  const cats = AN.headers.filter(h=>AN.colTypes[h]==='category');
+  const nums = AN.headers.filter(h=>AN.colTypes[h]==='numeric');
+  AN.colRoles = {};
+  // pick best x (lowest cardinality category or date)
+  const xCand = AN.headers.filter(h=>AN.colTypes[h]==='category'||AN.colTypes[h]==='date');
+  if (xCand.length) AN.colRoles[xCand[0]] = 'x';
+  nums.forEach(n=>{ AN.colRoles[n] = 'y'; });
+  // Reflect in UI dropdowns
+  document.querySelectorAll('.an-col-role').forEach(sel=>{
+    const col = sel.getAttribute('data-col');
+    if (AN.colRoles[col]) sel.value = AN.colRoles[col];
+    else sel.value = 'ignore';
+  });
+  showToast('Columns auto-detected ✓','ok');
+}
+
+// ── UI: data bar ──
+function anShowDataBar() {
+  const bar = document.getElementById('anDataBar');
+  if (!bar) return;
+  bar.style.display='flex';
+  const fn = document.getElementById('anFileName'); if(fn) fn.textContent = AN.fileName;
+  const numCols = AN.headers.filter(h=>AN.colTypes[h]==='numeric').length;
+  const catCols = AN.headers.filter(h=>AN.colTypes[h]==='category').length;
+  const fi = document.getElementById('anFileInfo');
+  if(fi) fi.textContent =
+    AN.raw.length.toLocaleString() + ' rows · ' + AN.headers.length + ' columns · ' +
+    numCols + ' numeric · ' + catCols + ' category';
+}
+
+// ── UI: config panel ──
+function anShowConfigPanel() {
+  const panel = document.getElementById('anColConfig');
+  panel.innerHTML = '';
+  for (const col of AN.headers) {
+    const type = AN.colTypes[col] || 'text';
+    const typeBadge = {numeric:'🔢',category:'🏷️',date:'📅',text:'📝'}[type]||'📝';
+    const card = document.createElement('div');
+    card.style.cssText='background:var(--snow);border:1.5px solid var(--fog);border-radius:9px;padding:10px 12px;display:flex;flex-direction:column;gap:6px;';
+    card.innerHTML = `
+      <div style="font-size:.72rem;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${col}">${typeBadge} ${col}</div>
+      <div style="font-size:.62rem;color:var(--mist);font-weight:600;text-transform:uppercase;letter-spacing:.04em;">${type}</div>
+      <select class="an-col-role" data-col="${col}"
+        style="font-size:.7rem;font-weight:600;border:1.5px solid var(--fog);border-radius:6px;padding:4px 7px;background:var(--card);color:var(--ink);outline:none;cursor:pointer;"
+        onchange="AN.colRoles[this.getAttribute('data-col')]=this.value">
+        <option value="ignore">— ignore</option>
+        <option value="x" ${type==='category'||type==='date'?'selected':''}>X axis / Label</option>
+        <option value="y" ${type==='numeric'?'selected':''}>Y axis / Value</option>
+        <option value="group">Group / Split</option>
+      </select>`;
+    panel.appendChild(card);
+  }
+  document.getElementById('anConfigPanel').style.display='block';
+  anAutoDetect();
+}
+
+// ── Build Charts ──
+function anBuildCharts() {
+  // Read roles from dropdowns
+  AN.colRoles={};
+  document.querySelectorAll('.an-col-role').forEach(sel=>{
+    AN.colRoles[sel.getAttribute('data-col')] = sel.value;
+  });
+  const xCols = AN.headers.filter(h=>AN.colRoles[h]==='x');
+  const yCols = AN.headers.filter(h=>AN.colRoles[h]==='y');
+  const gCols = AN.headers.filter(h=>AN.colRoles[h]==='group');
+  if (!yCols.length) { showToast('Select at least one Y-axis column','err'); return; }
+
+  // Destroy old charts
+  AN.charts.forEach(c=>{try{c.destroy()}catch(e){}});
+  AN.charts=[];
+
+  // Show KPI cards
+  anRenderKPIs(yCols);
+
+  // Build chart grid
+  const grid = document.getElementById('anChartsGrid');
+  grid.innerHTML='';
+  grid.style.display='grid';
+
+  const pal = AN_PALETTES[AN.theme] || AN_PALETTES.nova;
+  const xCol = xCols[0] || null;
+
+  // 1. Bar chart per Y column (grouped if group col exists)
+  yCols.forEach((yCol, yi) => {
+    anAddChart(grid, 'bar', xCol, yCol, gCols[0]||null, pal, yi);
+  });
+
+  // 2. Line chart if we have a date or ordered x
+  if (xCol && (AN.colTypes[xCol]==='date' || AN.colTypes[xCol]==='category') && yCols.length) {
+    anAddChart(grid, 'line', xCol, yCols[0], null, pal, 0, 'Trend');
+  }
+
+  // 3. Pie/donut for category x vs first Y
+  if (xCol && AN.colTypes[xCol]==='category' && yCols.length) {
+    anAddDoughnut(grid, xCol, yCols[0], pal);
+  }
+
+  // 4. Scatter if we have 2+ Y cols
+  if (yCols.length >= 2) {
+    anAddScatter(grid, yCols[0], yCols[1], xCol, pal);
+  }
+
+  // 5. Horizontal bar — top-10 by first Y
+  if (xCol && yCols.length) {
+    anAddHBar(grid, xCol, yCols[0], pal);
+  }
+
+  // Data Table
+  anRenderTable();
+  document.getElementById('anTableWrap').style.display='block';
+
+  showToast('Charts built ✓','ok');
+  logAct('📊 Analytics','Charts built – ' + AN.raw.length + ' rows');
+}
+
+// ── Aggregate helper ──
+function anAggregate(xCol, yCol, groupCol) {
+  const map = {};
+  for (const row of AN.raw) {
+    const x = xCol ? String(row[xCol]||'').trim() : 'Total';
+    const g = groupCol ? String(row[groupCol]||'').trim() : null;
+    const y = parseFloat(row[yCol]) || 0;
+    const key = g ? `${x}||${g}` : x;
+    map[key] = (map[key]||0) + y;
+  }
+  return map;
+}
+
+// ── Add Bar / Line chart ──
+function anAddChart(grid, type, xCol, yCol, groupCol, pal, palOffset, titleSuffix) {
+  const wrap = anChartCard(yCol + (titleSuffix?' — '+titleSuffix:'') + (type==='line'?' (Trend)':''));
+  const canvas = wrap.querySelector('canvas');
+  grid.appendChild(wrap);
+
+  let labels, datasets;
+  if (groupCol) {
+    const groups = [...new Set(AN.raw.map(r=>String(r[groupCol]||'').trim()))].slice(0,8);
+    const xVals  = [...new Set(AN.raw.map(r=>xCol?String(r[xCol]||'').trim():'Total'))].slice(0,20);
+    labels = xVals;
+    datasets = groups.map((g,gi)=>({
+      label: g,
+      data: xVals.map(x=>{
+        const agg = anAggregate(xCol, yCol, groupCol);
+        return agg[`${x}||${g}`]||0;
+      }),
+      backgroundColor: pal[(gi+palOffset)%pal.length] + (type==='bar'?'cc':''),
+      borderColor: pal[(gi+palOffset)%pal.length],
+      borderWidth: 2, tension:.4, fill: type==='line'
+    }));
+  } else {
+    const agg = anAggregate(xCol, yCol, null);
+    labels = Object.keys(agg).slice(0,20);
+    datasets = [{
+      label: yCol,
+      data: labels.map(l=>agg[l]),
+      backgroundColor: type==='bar' ? labels.map((_,i)=>pal[(i+palOffset)%pal.length]+'cc') : pal[palOffset%pal.length]+'33',
+      borderColor: type==='bar' ? labels.map((_,i)=>pal[(i+palOffset)%pal.length]) : pal[palOffset%pal.length],
+      borderWidth:2, tension:.4, fill:type==='line',
+      pointBackgroundColor: pal[palOffset%pal.length],
+      pointRadius:4
+    }];
+  }
+
+  const ch = new Chart(canvas, {
+    type, data:{labels, datasets},
+    options: anChartOptions(yCol, type)
+  });
+  AN.charts.push(ch);
+}
+
+// ── Doughnut ──
+function anAddDoughnut(grid, xCol, yCol, pal) {
+  const wrap = anChartCard(yCol + ' by ' + xCol + ' (Donut)');
+  const canvas = wrap.querySelector('canvas');
+  grid.appendChild(wrap);
+  const agg = anAggregate(xCol, yCol, null);
+  const labels = Object.keys(agg).slice(0,10);
+  const data = labels.map(l=>agg[l]);
+  const ch = new Chart(canvas, {
+    type:'doughnut',
+    data:{labels, datasets:[{data, backgroundColor:labels.map((_,i)=>pal[i%pal.length]+'dd'), borderWidth:2, borderColor:'var(--card)'}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{font:{size:11,family:"'Bricolage Grotesque',sans-serif"},color:'var(--ink)',boxWidth:12,padding:10}},tooltip:{callbacks:{label:ctx=>' '+ctx.label+': '+ctx.parsed.toLocaleString()}}}}
+  });
+  AN.charts.push(ch);
+}
+
+// ── Scatter ──
+function anAddScatter(grid, xCol, yCol, labelCol, pal) {
+  const wrap = anChartCard(xCol + ' vs ' + yCol + ' (Scatter)');
+  const canvas = wrap.querySelector('canvas');
+  grid.appendChild(wrap);
+  const pts = AN.raw.slice(0,500).map(r=>({x:parseFloat(r[xCol])||0, y:parseFloat(r[yCol])||0}));
+  const ch = new Chart(canvas, {
+    type:'scatter',
+    data:{datasets:[{label:xCol+' vs '+yCol, data:pts, backgroundColor:pal[0]+'99', borderColor:pal[0], pointRadius:4}]},
+    options:anChartOptions(yCol,'scatter')
+  });
+  AN.charts.push(ch);
+}
+
+// ── Horizontal Bar Top-N ──
+function anAddHBar(grid, xCol, yCol, pal) {
+  const wrap = anChartCard('Top 10 — ' + xCol + ' by ' + yCol);
+  const canvas = wrap.querySelector('canvas');
+  grid.appendChild(wrap);
+  const agg = anAggregate(xCol, yCol, null);
+  const sorted = Object.entries(agg).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  const labels = sorted.map(s=>s[0]);
+  const data   = sorted.map(s=>s[1]);
+  const ch = new Chart(canvas, {
+    type:'bar',
+    data:{labels, datasets:[{label:yCol, data, backgroundColor:labels.map((_,i)=>pal[i%pal.length]+'cc'), borderColor:labels.map((_,i)=>pal[i%pal.length]), borderWidth:2}]},
+    options:{...anChartOptions(yCol,'bar'), indexAxis:'y'}
+  });
+  AN.charts.push(ch);
+}
+
+// ── Chart card DOM element ──
+function anChartCard(title) {
+  const wrap = document.createElement('div');
+  wrap.style.cssText='background:var(--card);border:1.5px solid var(--fog);border-radius:12px;padding:16px;position:relative;';
+  wrap.innerHTML=`<div style="font-size:.78rem;font-weight:800;letter-spacing:-.02em;margin-bottom:12px;color:var(--ink);">${title}</div><div style="position:relative;height:220px;"><canvas></canvas></div>`;
+  return wrap;
+}
+
+// ── Shared chart options ──
+function anChartOptions(yLabel, type) {
+  const isBar = type==='bar' || type==='line';
+  return {
+    responsive:true, maintainAspectRatio:false,
+    plugins:{legend:{display:true,position:'top',labels:{font:{size:10.5,family:"'Bricolage Grotesque',sans-serif"},color:'var(--ink)',boxWidth:10,padding:8}},tooltip:{callbacks:{label:ctx=>' '+ctx.dataset.label+': '+(ctx.parsed.y!==undefined?ctx.parsed.y:ctx.parsed).toLocaleString()}}},
+    scales: isBar||type==='scatter' ? {
+      x:{grid:{color:'var(--fog)'},ticks:{font:{size:10},color:'var(--mist)',maxRotation:35}},
+      y:{grid:{color:'var(--fog)'},ticks:{font:{size:10},color:'var(--mist)',callback:v=>v>=1000?v/1000+'k':v},title:{display:true,text:yLabel,font:{size:10},color:'var(--mist)'}}
+    } : {}
+  };
+}
+
+// ── KPI Cards ──
+function anRenderKPIs(yCols) {
+  const row = document.getElementById('anKpiRow');
+  row.innerHTML='';
+  const pal = AN_PALETTES[AN.theme] || AN_PALETTES.nova;
+  yCols.forEach((col, i)=>{
+    const vals = AN.raw.map(r=>parseFloat(r[col])).filter(v=>!isNaN(v));
+    const sum = vals.reduce((a,b)=>a+b,0);
+    const avg = vals.length ? sum/vals.length : 0;
+    const mn  = vals.length ? Math.min(...vals) : 0;
+    const mx  = vals.length ? Math.max(...vals) : 0;
+    const color = pal[i%pal.length];
+
+    const makeCard = (label, value, sub) => {
+      const c = document.createElement('div');
+      c.style.cssText=`background:var(--card);border:1.5px solid var(--fog);border-radius:12px;padding:14px 16px;border-top:3px solid ${color};`;
+      c.innerHTML=`<div style="font-size:.65rem;font-weight:700;color:var(--mist);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">${label}</div>
+        <div style="font-size:1.35rem;font-weight:800;letter-spacing:-.03em;color:var(--ink);">${anFmtNum(value)}</div>
+        <div style="font-size:.62rem;color:var(--mist);margin-top:3px;">${sub}</div>`;
+      return c;
+    };
+    row.appendChild(makeCard('∑ ' + col, sum, vals.length + ' values'));
+    row.appendChild(makeCard('Avg ' + col, avg, 'mean'));
+    row.appendChild(makeCard('Max ' + col, mx, 'Min: ' + anFmtNum(mn)));
+  });
+  row.style.display='grid';
+}
+
+function anFmtNum(n) {
+  if (Math.abs(n) >= 1e6) return (n/1e6).toFixed(2) + 'M';
+  if (Math.abs(n) >= 1e3) return (n/1e3).toFixed(1) + 'k';
+  return parseFloat(n.toFixed(2)).toLocaleString();
+}
+
+// ── Data Table ──
+function anRenderTable() {
+  const tbl = document.getElementById('anTable');
+  const visRows = AN.filteredRows.slice(0, 500);
+  let html = '<thead style="position:sticky;top:0;z-index:2;"><tr>';
+  for (const h of AN.headers) {
+    html += `<th style="padding:8px 12px;font-size:.65rem;font-weight:700;color:var(--mist);text-align:left;border-bottom:1.5px solid var(--fog);background:var(--snow);white-space:nowrap;">${h}</th>`;
+  }
+  html += '</tr></thead><tbody>';
+  for (const row of visRows) {
+    html += '<tr style="transition:background .12s;" onmouseover="this.style.background=\'var(--snow)\'" onmouseout="this.style.background=\'\'">';
+    for (const h of AN.headers) {
+      const v = row[h] ?? '';
+      html += `<td style="padding:6px 12px;border-bottom:1px solid var(--fog);font-size:.71rem;white-space:nowrap;max-width:200px;overflow:hidden;text-overflow:ellipsis;" title="${String(v).replace(/"/g,'&quot;')}">${v}</td>`;
+    }
+    html += '</tr>';
+  }
+  html += '</tbody>';
+  tbl.innerHTML = html;
+  document.getElementById('anTableCount').textContent =
+    visRows.length.toLocaleString() + ' of ' + AN.raw.length.toLocaleString() + ' rows';
+}
+
+function anFilterTable(q) {
+  if (!q) { AN.filteredRows = AN.raw.slice(); }
+  else {
+    const lq = q.toLowerCase();
+    AN.filteredRows = AN.raw.filter(r => AN.headers.some(h => String(r[h]||'').toLowerCase().includes(lq)));
+  }
+  anRenderTable();
+}
+
+// ── Theme apply ──
+function anApplyTheme(theme) {
+  AN.theme = theme;
+  if (AN.charts.length) {
+    const pal = AN_PALETTES[theme] || AN_PALETTES.nova;
+    AN.charts.forEach((ch, ci) => {
+      ch.data.datasets.forEach((ds, di) => {
+        const col = pal[(ci+di) % pal.length];
+        if (Array.isArray(ds.backgroundColor)) {
+          ds.backgroundColor = ds.backgroundColor.map((_,i)=>pal[i%pal.length]+'cc');
+          ds.borderColor     = ds.borderColor.map((_,i)=>pal[i%pal.length]);
+        } else {
+          ds.backgroundColor = col + (ch.config.type==='bar'?'cc':'33');
+          ds.borderColor = col;
+          if (ds.pointBackgroundColor) ds.pointBackgroundColor = col;
+        }
+      });
+      ch.update();
+    });
+    showToast('Theme applied ✓','ok');
+  }
+}
+
+// ── Export PNG ──
+function anExportPNG() {
+  if (!AN.charts.length) { showToast('Build charts first','err'); return; }
+  const ch = AN.charts[0];
+  const a = document.createElement('a');
+  a.href = ch.toBase64Image();
+  a.download = (AN.fileName.replace(/\.[^.]+$/,'') || 'analytics') + '_chart.png';
+  a.click();
+  logAct('📊 Analytics', 'Chart exported as PNG');
+}
+
+// ── Sample data ──
+function anLoadSampleData(type) {
+  let rows = [];
+  if (type === 'certificates') {
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const depts  = ['Engineering','Management','Design','Marketing','HR'];
+    for (let i=0;i<120;i++) {
+      rows.push({Month:months[i%12], Department:depts[i%5], Certificates_Issued: Math.floor(Math.random()*80+20), Emails_Sent: Math.floor(Math.random()*70+10), Downloads: Math.floor(Math.random()*60+5)});
+    }
+    AN.fileName = 'sample_certificate_data.csv';
+  } else if (type === 'sales') {
+    const regions = ['North','South','East','West','Central'];
+    const prods   = ['Product A','Product B','Product C','Product D'];
+    for (let i=0;i<150;i++) {
+      rows.push({Region:regions[i%5], Product:prods[i%4], Revenue: Math.floor(Math.random()*50000+5000), Units: Math.floor(Math.random()*200+10), Profit: Math.floor(Math.random()*15000+1000)});
+    }
+    AN.fileName = 'sample_sales_data.csv';
+  } else if (type === 'students') {
+    const courses = ['B.Tech','MBA','BCA','MCA','B.Sc'];
+    const grades  = ['A','B','C','D'];
+    for (let i=0;i<100;i++) {
+      rows.push({Course:courses[i%5], Grade:grades[i%4], Marks: Math.floor(Math.random()*40+60), Attendance: Math.floor(Math.random()*30+70), Projects_Submitted: Math.floor(Math.random()*5+1)});
+    }
+    AN.fileName = 'sample_student_data.csv';
+  }
+  anIngestRows(rows);
+  // Navigate to dashboard to see charts
+  if (typeof goView === 'function') setTimeout(()=>goView('home'), 300);
+}
+
+// Analytics is now embedded in the Dashboard (home view). Data upload is in Settings → Data Upload.
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 🖼️  IMAGE RESIZER & COMPRESSOR — multi-file batch with ZIP download
+// ═══════════════════════════════════════════════════════════════════════════
+(function(){
+
+  // ── State ────────────────────────────────────────────────────────────────
+  // Each entry: { id, file, img, origW, origH, blob(output), selected, status }
+  const IC = {
+    files: [],
+    nextId: 1,
+    activeId: null
+  };
+
+  // ── Helpers ──────────────────────────────────────────────────────────────
+  function el(id){ return document.getElementById(id); }
+
+  function fmtBytes(b){
+    if(!b && b!==0) return '—';
+    if(b < 1024)    return b + ' B';
+    if(b < 1048576) return (b/1024).toFixed(1) + ' KB';
+    return (b/1048576).toFixed(2) + ' MB';
+  }
+
+  function mimeForFmt(fmt, origFile){
+    if(fmt==='keep'){
+      const t = origFile.type;
+      return t && t.startsWith('image/') ? t : 'image/jpeg';
+    }
+    return fmt==='png' ? 'image/png' : fmt==='webp' ? 'image/webp' : 'image/jpeg';
+  }
+
+  function extForMime(mime){
+    if(mime==='image/png')  return 'png';
+    if(mime==='image/webp') return 'webp';
+    return 'jpg';
+  }
+
+  // ── UI refresh ────────────────────────────────────────────────────────────
+  function icRefreshUI(){
+    const count = IC.files.length;
+    el('icEmptyState').style.display = count ? 'none' : 'flex';
+    el('icWorkArea').style.display   = count ? 'flex' : 'none';
+    el('icClearBtn').style.display   = count ? '' : 'none';
+    el('icFileCount').textContent    = count ? count + ' image' + (count>1?'s':'') + ' loaded' : '';
+
+    // show download btn only if any processed
+    const anyDone = IC.files.some(f=>f.blob);
+    el('icDlBtn').style.display = anyDone ? '' : 'none';
+
+    // render cards
+    icRenderCards();
+    icUpdateSummary();
+  }
+
+  function icRenderCards(){
+    const container = el('icCards');
+    if(!container) return;
+    container.innerHTML = '';
+    IC.files.forEach(f=>{
+      const isActive = f.id === IC.activeId;
+      const statusIcon = f.status==='done' ? '✅' : f.status==='processing' ? '⏳' : '⏸';
+      const card = document.createElement('div');
+      card.id = 'icCard_'+f.id;
+      card.style.cssText = `
+        display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:10px;cursor:pointer;
+        background:${isActive?'var(--lime-p)':'var(--surface)'};
+        border:1.5px solid ${isActive?'var(--lime)':'var(--fog)'};
+        transition:background .15s,border-color .15s;
+      `;
+      card.onclick = ()=>icSelectFile(f.id);
+
+      // checkbox
+      const cb = document.createElement('input');
+      cb.type='checkbox';
+      cb.checked = f.selected;
+      cb.style.cssText='accent-color:var(--lime);flex-shrink:0;cursor:pointer;width:15px;height:15px';
+      cb.onclick = e=>{ e.stopPropagation(); f.selected=cb.checked; icUpdateSummary(); icRefreshDlBtn(); };
+      card.appendChild(cb);
+
+      // thumb
+      const thumb = document.createElement('canvas');
+      thumb.width=36; thumb.height=36;
+      thumb.style.cssText='border-radius:5px;flex-shrink:0;background:#ddd;object-fit:cover;';
+      if(f.img){
+        const ctx=thumb.getContext('2d');
+        const scale=Math.min(36/f.origW,36/f.origH);
+        const tw=f.origW*scale, th=f.origH*scale;
+        ctx.drawImage(f.img, (36-tw)/2,(36-th)/2,tw,th);
+      }
+      card.appendChild(thumb);
+
+      // info
+      const info = document.createElement('div');
+      info.style.cssText='flex:1;min-width:0;';
+      const name = document.createElement('div');
+      name.style.cssText='font-size:.68rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ink)';
+      name.textContent = f.file.name;
+      const meta = document.createElement('div');
+      meta.style.cssText='font-size:.62rem;color:var(--mist2);margin-top:2px';
+      meta.textContent = f.origW+'×'+f.origH+' · '+fmtBytes(f.file.size);
+      info.appendChild(name);
+      info.appendChild(meta);
+      card.appendChild(info);
+
+      // Per-image target size input
+      const sizeWrap = document.createElement('div');
+      sizeWrap.style.cssText='display:flex;flex-direction:column;align-items:center;gap:2px;flex-shrink:0;margin-left:2px';
+      const sizeLabel = document.createElement('div');
+      sizeLabel.style.cssText='font-size:.52rem;color:var(--mist2);font-weight:700;text-align:center;line-height:1.1';
+      sizeLabel.textContent='Target';
+      const sizeRow = document.createElement('div');
+      sizeRow.style.cssText='display:flex;align-items:center;gap:2px';
+      const sizeInp = document.createElement('input');
+      sizeInp.type='number';
+      sizeInp.min='1';
+      sizeInp.placeholder='—';
+      sizeInp.value = f.targetKB != null ? f.targetKB : '';
+      sizeInp.title='Target file size for this image only (leave blank = use global settings)';
+      sizeInp.style.cssText='width:44px;padding:3px 4px;border:1.5px solid var(--fog);border-radius:6px;background:var(--surface);color:var(--ink);font-size:.65rem;font-weight:700;text-align:center';
+      if(f.targetKB) sizeInp.style.borderColor='var(--lime)';
+      sizeInp.onclick=e=>e.stopPropagation();
+      sizeInp.oninput=e=>{
+        const v=parseFloat(e.target.value);
+        f.targetKB = (!e.target.value || isNaN(v) || v<=0) ? null : v;
+        sizeInp.style.borderColor = f.targetKB ? 'var(--lime)' : 'var(--fog)';
+        if(f.blob){ f.blob=null; f.status='pending'; icRenderCards(); }
+      };
+      const sizeUnit = document.createElement('span');
+      sizeUnit.style.cssText='font-size:.55rem;color:var(--mist2);font-weight:700';
+      sizeUnit.textContent='KB';
+      sizeRow.appendChild(sizeInp);
+      sizeRow.appendChild(sizeUnit);
+      sizeWrap.appendChild(sizeLabel);
+      sizeWrap.appendChild(sizeRow);
+      card.appendChild(sizeWrap);
+
+      // status + remove
+      const right = document.createElement('div');
+      right.style.cssText='display:flex;flex-direction:column;align-items:center;gap:3px;flex-shrink:0';
+      const stat = document.createElement('span');
+      stat.style.fontSize='.85rem';
+      stat.textContent = statusIcon;
+      const rmBtn = document.createElement('button');
+      rmBtn.title='Remove';
+      rmBtn.textContent='✕';
+      rmBtn.style.cssText='background:none;border:none;font-size:.65rem;color:var(--mist2);cursor:pointer;padding:0;line-height:1';
+      rmBtn.onclick=e=>{e.stopPropagation();icRemoveFile(f.id);};
+      right.appendChild(stat);
+      right.appendChild(rmBtn);
+      // per-card download button (only if processed)
+      if(f.blob){
+        const dlBtn = document.createElement('button');
+        dlBtn.title='Download this image';
+        dlBtn.textContent='⬇';
+        dlBtn.style.cssText='background:none;border:none;font-size:.72rem;color:var(--teal);cursor:pointer;padding:0;line-height:1;font-weight:800';
+        dlBtn.onclick=e=>{e.stopPropagation();icDlSingle(f);};
+        right.appendChild(dlBtn);
+      }
+      card.appendChild(right);
+
+      container.appendChild(card);
+    });
+
+    // sync select-all checkbox
+    const allCb = el('icSelectAll');
+    if(allCb && IC.files.length){
+      allCb.checked = IC.files.every(f=>f.selected);
+      allCb.indeterminate = !allCb.checked && IC.files.some(f=>f.selected);
+    }
+  }
+
+  function icUpdateSummary(){
+    const done = IC.files.filter(f=>f.blob);
+    if(!done.length){ el('icSummary').style.display='none'; return; }
+    const origTotal = IC.files.reduce((s,f)=>s+f.file.size,0);
+    const outTotal  = done.reduce((s,f)=>s+(f.blob?f.blob.size:0),0);
+    el('icSumOrig').textContent = fmtBytes(origTotal);
+    el('icSumOut').textContent  = fmtBytes(outTotal);
+    const pct = Math.min(100,Math.round((outTotal/origTotal)*100));
+    el('icSumBar').style.width      = pct+'%';
+    el('icSumBar').style.background = pct<100?'var(--lime)':'#f87171';
+    const diff = origTotal - outTotal;
+    el('icSumNote').innerHTML = diff>0
+      ? `<span style="color:var(--lime-d)">✅ Saved ${fmtBytes(diff)} (${100-pct}% smaller)</span>`
+      : `<span style="color:#f87171">⬆ ${fmtBytes(-diff)} larger</span>`;
+    el('icSummary').style.display = '';
+  }
+
+  function icRefreshDlBtn(){
+    const anyDone = IC.files.some(f=>f.blob);
+    el('icDlBtn').style.display = anyDone ? '' : 'none';
+  }
+
+  // ── Add files ─────────────────────────────────────────────────────────────
+  window.icAddFiles = function(fileList){
+    const accepted = ['image/jpeg','image/png','image/webp','image/gif','image/bmp','image/svg+xml'];
+    Array.from(fileList).forEach(file=>{
+      if(!file.type.startsWith('image/')) return;
+      const entry = {
+        id: IC.nextId++,
+        file,
+        img: null,
+        origW: 0, origH: 0,
+        blob: null,
+        selected: true,
+        status: 'pending',
+        targetKB: null   // null = use global settings; number = target file size in KB
+      };
+      IC.files.push(entry);
+      // load image
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = function(){
+        entry.img   = img;
+        entry.origW = img.naturalWidth;
+        entry.origH = img.naturalHeight;
+        URL.revokeObjectURL(url);
+        // auto-select first
+        if(!IC.activeId) icSelectFile(entry.id);
+        icRefreshUI();
+      };
+      img.src = url;
+    });
+    icRefreshUI();
+  };
+
+  // ── Select / preview file ─────────────────────────────────────────────────
+  window.icSelectFile = function(id){
+    IC.activeId = id;
+    const f = IC.files.find(x=>x.id===id);
+    if(!f) return;
+
+    icRenderCards();
+
+    el('icPreviewEmpty').style.display = 'none';
+    el('icPreviewWrap').style.display  = 'flex';
+    el('icPvOrigDim').textContent = f.origW+'×'+f.origH+' px';
+    el('icPvOrigSz').textContent  = fmtBytes(f.file.size);
+
+    // Sync target size inputs to this file's setting
+    const tInp = el('icTargetKBInput');
+    const tUnit = el('icTargetUnit');
+    const tHint = el('icTargetHint');
+    if(tInp && tUnit){
+      if(f.targetKB){
+        if(f.targetKB >= 1024){ tUnit.value='mb'; tInp.value = (f.targetKB/1024).toFixed(2).replace(/\.?0+$/,''); }
+        else { tUnit.value='kb'; tInp.value = f.targetKB; }
+        tInp.style.borderColor='var(--lime)';
+        if(tHint) tHint.textContent = 'Target: '+fmtBytes(f.targetKB*1024)+' — binary-search quality to match';
+      } else {
+        tInp.value=''; tInp.style.borderColor='var(--fog)'; tUnit.value='kb';
+        if(tHint) tHint.textContent = 'Leave blank to use global resize settings · supports KB or MB';
+      }
+    }
+
+    // show/hide per-image download button
+    const dlOneBtn = el('icDlOneBtn');
+    if(dlOneBtn) dlOneBtn.style.display = f.blob ? '' : 'none';
+
+    const canvas = el('icCanvas');
+    if(f.blob){
+      // show processed output
+      const url = URL.createObjectURL(f.blob);
+      const img2 = new Image();
+      img2.onload=function(){
+        canvas.width=img2.naturalWidth; canvas.height=img2.naturalHeight;
+        canvas.getContext('2d').drawImage(img2,0,0);
+        URL.revokeObjectURL(url);
+      };
+      img2.src=url;
+      el('icPvOutBadge').style.display='';
+      el('icPvOutDim').textContent = (f.outW||'?')+'×'+(f.outH||'?')+' px';
+      el('icPvOutSz').textContent  = fmtBytes(f.blob.size);
+    } else if(f.img){
+      // show original
+      canvas.width=f.origW; canvas.height=f.origH;
+      canvas.getContext('2d').drawImage(f.img,0,0);
+      el('icPvOutBadge').style.display='none';
+    }
+  };
+
+  // ── Remove file ────────────────────────────────────────────────────────────
+  window.icRemoveFile = function(id){
+    IC.files = IC.files.filter(f=>f.id!==id);
+    if(IC.activeId===id){
+      IC.activeId = IC.files.length ? IC.files[0].id : null;
+      if(IC.activeId) icSelectFile(IC.activeId);
+      else {
+        el('icPreviewEmpty').style.display='';
+        el('icPreviewWrap').style.display='none';
+      }
+    }
+    icRefreshUI();
+  };
+
+  // ── Clear all ──────────────────────────────────────────────────────────────
+  window.icClearAll = function(){
+    IC.files=[];
+    IC.activeId=null;
+    el('icPreviewEmpty').style.display='';
+    el('icPreviewWrap').style.display='none';
+    el('icSummary').style.display='none';
+    icRefreshUI();
+  };
+
+  // ── Toggle all checkboxes ──────────────────────────────────────────────────
+  window.icToggleAll = function(checked){
+    IC.files.forEach(f=>f.selected=checked);
+    icRenderCards();
+    icRefreshDlBtn();
+  };
+
+  // ── Mode switch ────────────────────────────────────────────────────────────
+  window.icSetMode = function(m){
+    el('icModePercent').className = m==='percent'?'btn bl btn-sm':'btn bo btn-sm';
+    el('icModePx').className      = m==='px'     ?'btn bl btn-sm':'btn bo btn-sm';
+    el('icPercentGroup').style.display = m==='percent'?'':'none';
+    el('icPxGroup').style.display      = m==='px'     ?'':'none';
+  };
+
+  window.icUpdatePercent = function(v){
+    el('icPctVal').textContent = v+'%';
+  };
+
+  window.icFmtChanged = function(){
+    el('icQualGroup').style.display = el('icFmt').value==='png'?'none':'';
+  };
+
+  // ── Per-image target size (preview panel) ─────────────────────────────────
+  window.icSetTargetKB = function(val){
+    const f = IC.files.find(x=>x.id===IC.activeId);
+    if(!f) return;
+    const unit = el('icTargetUnit') ? el('icTargetUnit').value : 'kb';
+    const num = parseFloat(val);
+    if(!val || isNaN(num) || num <= 0){
+      f.targetKB = null;
+      el('icTargetKBInput').style.borderColor = 'var(--fog)';
+      el('icTargetHint').textContent = 'Leave blank to use global resize settings · supports KB or MB';
+    } else {
+      f.targetKB = unit === 'mb' ? num * 1024 : num;
+      el('icTargetKBInput').style.borderColor = 'var(--lime)';
+      el('icTargetHint').textContent = 'Target: ' + (unit==='mb' ? num+' MB' : num+' KB') + ' (' + Math.round(f.targetKB)+' KB) — will binary-search quality to match';
+    }
+    // reset processed state so user re-processes
+    if(f.blob){ f.blob=null; f.status='pending'; icRenderCards(); icSelectFile(f.id); }
+  };
+
+  window.icClearTargetKB = function(){
+    const f = IC.files.find(x=>x.id===IC.activeId);
+    if(!f) return;
+    f.targetKB = null;
+    if(el('icTargetKBInput')){ el('icTargetKBInput').value=''; el('icTargetKBInput').style.borderColor='var(--fog)'; }
+    if(el('icTargetUnit')) el('icTargetUnit').value='kb';
+    el('icTargetHint').textContent = 'Leave blank to use global resize settings · supports KB or MB';
+    if(f.blob){ f.blob=null; f.status='pending'; icRenderCards(); icSelectFile(f.id); }
+  };
+
+  // ── Process a single entry ─────────────────────────────────────────────────
+  function icProcessEntry(entry){
+    return new Promise(resolve=>{
+      if(!entry.img){ entry.status='pending'; resolve(); return; }
+      entry.status='processing';
+      icRenderCards();
+
+      const fmt  = el('icFmt').value;
+      const mime = mimeForFmt(fmt, entry.file);
+
+      // Determine output dimensions
+      let nw, nh;
+      if(entry.targetKB && entry.targetKB > 0){
+        // Target size mode: start at full resolution, reduce quality via binary search
+        nw = entry.origW; nh = entry.origH;
+      } else {
+        const mode = el('icModePercent').className.includes('bl') ? 'percent' : 'px';
+        if(mode==='percent'){
+          const pct = parseInt(el('icPctSlider').value)/100;
+          nw = Math.max(1,Math.round(entry.origW*pct));
+          nh = Math.max(1,Math.round(entry.origH*pct));
+        } else {
+          const maxPx = parseInt(el('icPxMax').value)||1920;
+          const scale = Math.min(1, maxPx/Math.max(entry.origW,entry.origH));
+          nw = Math.max(1,Math.round(entry.origW*scale));
+          nh = Math.max(1,Math.round(entry.origH*scale));
+        }
+      }
+
+      const canvas = document.createElement('canvas');
+      canvas.width=nw; canvas.height=nh;
+      canvas.getContext('2d').drawImage(entry.img,0,0,nw,nh);
+
+      // If target KB set, binary-search quality to hit target
+      if(entry.targetKB && entry.targetKB > 0 && fmt !== 'png'){
+        const targetBytes = entry.targetKB * 1024;
+        let lo = 0.01, hi = 1.0, bestBlob = null;
+        let iters = 0;
+
+        function tryQ(q){ return new Promise(r=>{ canvas.toBlob(b=>r(b), mime, q); }); }
+
+        async function binarySearch(){
+          let blob = await tryQ(1.0);
+          if(blob.size <= targetBytes) return blob;
+          bestBlob = blob;
+          while(iters < 14 && (hi - lo) > 0.015){
+            const mid = (lo + hi) / 2;
+            blob = await tryQ(mid);
+            if(blob.size <= targetBytes){ lo = mid; bestBlob = blob; }
+            else hi = mid;
+            iters++;
+          }
+          // If still can't reach target, scale down dimensions too
+          if(!bestBlob || bestBlob.size > targetBytes){
+            let scl = 0.85;
+            while(scl > 0.05){
+              const sw = Math.max(1, Math.round(nw * scl));
+              const sh = Math.max(1, Math.round(nh * scl));
+              const c2 = document.createElement('canvas');
+              c2.width=sw; c2.height=sh;
+              c2.getContext('2d').drawImage(entry.img,0,0,sw,sh);
+              blob = await new Promise(r=>c2.toBlob(b=>r(b), mime, 0.4));
+              if(blob.size <= targetBytes){
+                entry.outW = sw; entry.outH = sh;
+                return blob;
+              }
+              scl -= 0.1;
+            }
+          }
+          return bestBlob || await tryQ(0.05);
+        }
+
+        binarySearch().then(blob=>{
+          entry.blob    = blob;
+          if(!entry.outW) entry.outW = nw;
+          if(!entry.outH) entry.outH = nh;
+          entry.outMime = mime;
+          entry.status  = 'done';
+          if(IC.activeId===entry.id) icSelectFile(entry.id);
+          icRenderCards();
+          resolve();
+        });
+
+      } else {
+        // Normal mode: fixed quality from global slider
+        const qual = parseInt(el('icQualSlider').value)/100;
+        canvas.toBlob(blob=>{
+          entry.blob   = blob;
+          entry.outW   = nw;
+          entry.outH   = nh;
+          entry.outMime= mime;
+          entry.status = 'done';
+          if(IC.activeId===entry.id) icSelectFile(entry.id);
+          icRenderCards();
+          resolve();
+        }, mime, fmt==='png'?undefined:qual);
+      }
+    });
+  }
+
+  // ── Process all ────────────────────────────────────────────────────────────
+  window.icProcessAll = async function(){
+    if(!IC.files.length){ alert('Upload some images first.'); return; }
+    for(const entry of IC.files){
+      await icProcessEntry(entry);
+    }
+    icUpdateSummary();
+    icRefreshDlBtn();
+  };
+
+  // ── Process single (currently selected) image ──────────────────────────────
+  window.icProcessOne = async function(){
+    const f = IC.files.find(x=>x.id===IC.activeId);
+    if(!f){ alert('Select an image first.'); return; }
+    const btn = el('icDlOneBtn');
+    // show spinner state
+    const processBtn = document.querySelector('[onclick="icProcessOne()"]');
+    if(processBtn){ processBtn.disabled=true; processBtn.textContent='⏳ Resizing…'; }
+    await icProcessEntry(f);
+    if(processBtn){ processBtn.disabled=false; processBtn.textContent='⚡ Resize This Image'; }
+    // refresh preview to show output
+    icSelectFile(f.id);
+    icUpdateSummary();
+    icRefreshDlBtn();
+    icRenderCards();
+  };
+
+  // ── Download single (currently selected) processed image ───────────────────
+  window.icDownloadOne = function(){
+    const f = IC.files.find(x=>x.id===IC.activeId);
+    if(!f || !f.blob){ alert('Resize this image first.'); return; }
+    icDlSingle(f);
+  };
+
+  // ── Download selected → ask for ZIP name first ─────────────────────────────
+  window.icDownloadSelected = function(){
+    const selected = IC.files.filter(f=>f.blob && f.selected);
+    if(!selected.length){
+      alert('No processed images selected.\nTick the checkboxes next to images, then hit Process All first.');
+      return;
+    }
+    el('icZipName').value = 'nova-images-' + new Date().toISOString().slice(0,10);
+    const countEl = el('icDlCount');
+    if(countEl) countEl.textContent = selected.length + ' image' + (selected.length>1?'s':'');
+    const modal = el('icNameModal');
+    modal.style.display='flex';
+    setTimeout(()=>{ el('icZipName').select(); }, 80);
+  };
+
+  window.icNameModal = function(show){
+    el('icNameModal').style.display = show?'flex':'none';
+  };
+
+  // Download as ZIP
+  window.icConfirmDownload = async function(){
+    let zipName = (el('icZipName').value.trim() || 'nova-images').replace(/[/\\?%*:|"<>]/g,'_');
+    if(!zipName.endsWith('.zip')) zipName += '.zip';
+    el('icNameModal').style.display='none';
+    const selected = IC.files.filter(f=>f.blob && f.selected);
+    const doZip = async ()=>{
+      if(typeof JSZip !== 'undefined'){
+        await icZipAndDownload(selected, zipName);
+      } else {
+        const script = document.createElement('script');
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+        script.onload = async ()=>{ await icZipAndDownload(selected, zipName); };
+        script.onerror = ()=>{ selected.forEach((f,i)=>{ setTimeout(()=>icDlSingle(f), i*300); }); };
+        document.head.appendChild(script);
+      }
+    };
+    await doZip();
+  };
+
+  // Download directly without ZIP
+  window.icConfirmDownloadDirect = function(){
+    el('icNameModal').style.display='none';
+    const selected = IC.files.filter(f=>f.blob && f.selected);
+    selected.forEach((f,i)=>{ setTimeout(()=>icDlSingle(f), i*350); });
+  };
+
+  async function icZipAndDownload(entries, zipName){
+    const zip = new JSZip();
+    // Track used names to avoid collisions
+    const usedNames = {};
+    entries.forEach(f=>{
+      const origBase = f.file.name.replace(/\.[^.]+$/,'');
+      const ext = extForMime(f.outMime || mimeForFmt(el('icFmt').value, f.file));
+      let candidate = origBase + '_resized.' + ext;
+      if(usedNames[candidate]){
+        usedNames[candidate]++;
+        candidate = origBase + '_resized_' + usedNames[candidate] + '.' + ext;
+      } else {
+        usedNames[candidate] = 1;
+      }
+      zip.file(candidate, f.blob);
+    });
+
+    const content = await zip.generateAsync({type:'blob', compression:'DEFLATE', compressionOptions:{level:6}});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(content);
+    a.download = zipName;
+    a.click();
+    setTimeout(()=>URL.revokeObjectURL(a.href), 8000);
+  }
+
+  function icDlSingle(f){
+    const ext  = extForMime(f.outMime || 'image/jpeg');
+    const base = f.file.name.replace(/\.[^.]+$/,'');
+    const a    = document.createElement('a');
+    a.href     = URL.createObjectURL(f.blob);
+    a.download = base + '_resized.' + ext;
+    a.click();
+    setTimeout(()=>URL.revokeObjectURL(a.href), 5000);
+  }
+
+  // ── Drag-and-drop on the drop zone ────────────────────────────────────────
+  document.addEventListener('DOMContentLoaded', function(){
+    const dz = el('icDropZone');
+    if(!dz) return;
+    ['dragover','dragenter'].forEach(ev=>dz.addEventListener(ev,e=>{
+      e.preventDefault(); dz.style.borderColor='var(--lime)';
+    }));
+    ['dragleave','dragend'].forEach(ev=>dz.addEventListener(ev,()=>{
+      dz.style.borderColor='var(--fog)';
+    }));
+    dz.addEventListener('drop',e=>{
+      e.preventDefault(); dz.style.borderColor='var(--fog)';
+      const files=[...e.dataTransfer.files].filter(f=>f.type.startsWith('image/'));
+      if(files.length) icAddFiles(files);
+    });
+
+    // close modal on backdrop click
+    const modal = el('icNameModal');
+    if(modal) modal.addEventListener('click',e=>{ if(e.target===modal) icNameModal(false); });
+
+    // Enter key in zip name input confirms
+    const inp = el('icZipName');
+    if(inp) inp.addEventListener('keydown',e=>{ if(e.key==='Enter') icConfirmDownload(); });
+  });
+
+})();
+
+// ════════════════════════════════════════════════════════════════
+//  IMAGE EDITOR  (ieXxx namespace)
+// ════════════════════════════════════════════════════════════════
+(function(){
+  // ── State ──────────────────────────────────────────────────
+  let ieTrayFiles = [];       // [{id, file, name, url}]
+  let ieActiveId  = null;     // currently loaded image id
+
+  // Original ImageBitmap for the loaded image (unmodified source)
+  let ieOrigBitmap = null;
+  // Working ImageBitmap after crop/rotate/flip — adjustments applied on top
+  let ieWorkBitmap = null;
+
+  // Adjustment values
+  const ieAdj = { brightness:100, contrast:100, saturation:100, sharpness:0, blur:0, hue:0, opacity:100 };
+  // Active filter name ('none' or a preset key)
+  let ieActiveFilter = 'none';
+
+  // Rotation & flip state applied to ieWorkBitmap
+  let ieRotDeg = 0;
+  let ieFlipH  = false;
+  let ieFlipV  = false;
+
+  // Crop state
+  let ieCropping   = false;
+  let ieCropOrigin = null;   // {x,y} in canvas coords
+  let ieCropRect_  = null;   // {x,y,w,h} in canvas pixel coords
+  let ieCropActive = false;  // true while drag is in progress
+
+  const FILTERS = {
+    none:       {label:'None',        fn:()=>{}},
+    grayscale:  {label:'Grayscale',   fn:(ctx,w,h)=>{ const d=ctx.getImageData(0,0,w,h); for(let i=0;i<d.data.length;i+=4){const g=d.data[i]*.299+d.data[i+1]*.587+d.data[i+2]*.114; d.data[i]=d.data[i+1]=d.data[i+2]=g;} ctx.putImageData(d,0,0); }},
+    sepia:      {label:'Sepia',       fn:(ctx,w,h)=>{ const d=ctx.getImageData(0,0,w,h); for(let i=0;i<d.data.length;i+=4){const r=d.data[i],g=d.data[i+1],b=d.data[i+2]; d.data[i]=Math.min(255,r*.393+g*.769+b*.189); d.data[i+1]=Math.min(255,r*.349+g*.686+b*.168); d.data[i+2]=Math.min(255,r*.272+g*.534+b*.131);} ctx.putImageData(d,0,0); }},
+    invert:     {label:'Invert',      fn:(ctx,w,h)=>{ const d=ctx.getImageData(0,0,w,h); for(let i=0;i<d.data.length;i+=4){d.data[i]=255-d.data[i];d.data[i+1]=255-d.data[i+1];d.data[i+2]=255-d.data[i+2];} ctx.putImageData(d,0,0); }},
+    warm:       {label:'Warm',        fn:(ctx,w,h)=>{ const d=ctx.getImageData(0,0,w,h); for(let i=0;i<d.data.length;i+=4){d.data[i]=Math.min(255,d.data[i]+30);d.data[i+2]=Math.max(0,d.data[i+2]-20);} ctx.putImageData(d,0,0); }},
+    cool:       {label:'Cool',        fn:(ctx,w,h)=>{ const d=ctx.getImageData(0,0,w,h); for(let i=0;i<d.data.length;i+=4){d.data[i]=Math.max(0,d.data[i]-20);d.data[i+2]=Math.min(255,d.data[i+2]+30);} ctx.putImageData(d,0,0); }},
+    vivid:      {label:'Vivid',       fn:(ctx,w,h)=>{ const d=ctx.getImageData(0,0,w,h); for(let i=0;i<d.data.length;i+=4){d.data[i]=Math.min(255,d.data[i]*1.2);d.data[i+1]=Math.min(255,d.data[i+1]*1.1);d.data[i+2]=Math.min(255,d.data[i+2]*1.2);} ctx.putImageData(d,0,0); }},
+    fade:       {label:'Fade',        fn:(ctx,w,h)=>{ const d=ctx.getImageData(0,0,w,h); for(let i=0;i<d.data.length;i+=4){d.data[i]=d.data[i]*.7+80;d.data[i+1]=d.data[i+1]*.7+80;d.data[i+2]=d.data[i+2]*.7+80;} ctx.putImageData(d,0,0); }},
+  };
+
+  const SLIDERS = [
+    {key:'brightness', label:'☀️ Brightness', min:0,   max:200, step:1,  def:100},
+    {key:'contrast',   label:'◑ Contrast',    min:0,   max:200, step:1,  def:100},
+    {key:'saturation', label:'🎨 Saturation',  min:0,   max:200, step:1,  def:100},
+    {key:'hue',        label:'🌈 Hue Rotate',  min:-180,max:180, step:1,  def:0},
+    {key:'blur',       label:'💧 Blur',         min:0,   max:20,  step:.5, def:0},
+    {key:'opacity',    label:'👁 Opacity',      min:10,  max:100, step:1,  def:100},
+  ];
+
+  // ── Init controls ──────────────────────────────────────────
+  function ieInitControls(){
+    // Sliders
+    const wrap = document.getElementById('ieSliders');
+    if(!wrap) return;
+    wrap.innerHTML = SLIDERS.map(s=>`
+      <div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:3px">
+          <label style="font-size:.68rem;font-weight:700;color:var(--ink)">${s.label}</label>
+          <span id="iev_${s.key}" style="font-size:.65rem;color:var(--mist);font-weight:700">${s.def}${s.key==='hue'?'°':s.key==='blur'?'px':'%'}</span>
+        </div>
+        <input type="range" min="${s.min}" max="${s.max}" step="${s.step}" value="${s.def}" id="ies_${s.key}"
+          style="width:100%;accent-color:#ec4899;cursor:pointer"
+          oninput="ieSliderChange('${s.key}',this.value)">
+      </div>
+    `).join('');
+
+    // Filter buttons
+    const fb = document.getElementById('ieFilterBtns');
+    if(fb) fb.innerHTML = Object.entries(FILTERS).map(([k,f])=>`
+      <button id="iefb_${k}" onclick="ieApplyFilter('${k}')"
+        style="background:var(--fog);border:1.5px solid var(--fog);border-radius:7px;padding:6px 4px;font-size:.68rem;font-weight:700;color:var(--ink);cursor:pointer;transition:all .15s">
+        ${f.label}
+      </button>
+    `).join('');
+  }
+
+  // ── Add images to tray ─────────────────────────────────────
+  window.ieAddImages = function(files){
+    const tray = document.getElementById('ieTray');
+    const empty = document.getElementById('ieTrayEmpty');
+    if(empty) empty.style.display='none';
+    Array.from(files).forEach(file=>{
+      if(!file.type.startsWith('image/')) return;
+      const id = Date.now() + Math.random();
+      const url = URL.createObjectURL(file);
+      ieTrayFiles.push({id, file, name:file.name, url});
+      const card = document.createElement('div');
+      card.id = 'ietc_'+id;
+      card.style.cssText='border-radius:8px;border:2px solid var(--fog);overflow:hidden;cursor:pointer;transition:all .15s;position:relative;background:var(--surface)';
+      card.title = file.name;
+      card.innerHTML=`<img src="${url}" style="width:100%;height:70px;object-fit:cover;display:block">
+        <div style="font-size:.6rem;font-weight:700;color:var(--ink);padding:4px 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${file.name}</div>
+        <button onclick="event.stopPropagation();ieRemoveImage(${id})" title="Remove" style="position:absolute;top:4px;right:4px;background:rgba(0,0,0,.55);color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:.6rem;cursor:pointer;line-height:18px;text-align:center">✕</button>`;
+      card.addEventListener('click', ()=>ieLoadToCanvas(id));
+      tray.appendChild(card);
+    });
+    // reset input so same files can be added again if needed
+    const inp = document.getElementById('ieTrayInput');
+    if(inp) inp.value='';
+  };
+
+  window.ieRemoveImage = function(id){
+    ieTrayFiles = ieTrayFiles.filter(f=>f.id!==id);
+    const card = document.getElementById('ietc_'+id);
+    if(card) card.remove();
+    if(ieActiveId===id){ ieCancelCrop(); ieShowEmpty(); }
+    if(!ieTrayFiles.length){
+      const e=document.getElementById('ieTrayEmpty');
+      if(e) e.style.display='';
+    }
+  };
+
+  window.ieClearTray = function(){
+    ieTrayFiles.forEach(f=>URL.revokeObjectURL(f.url));
+    ieTrayFiles=[]; ieActiveId=null; ieOrigBitmap=null; ieWorkBitmap=null;
+    ieCancelCrop();
+    const tray=document.getElementById('ieTray');
+    if(tray) tray.innerHTML='<div id="ieTrayEmpty" style="text-align:center;color:var(--mist2);font-size:.7rem;padding:24px 10px;line-height:1.7">No images yet.<br>Click <b>＋ Add Images</b><br>to get started.</div>';
+    ieShowEmpty();
+  };
+
+  // ── Load image to canvas ───────────────────────────────────
+  async function ieLoadToCanvas(id){
+    const f = ieTrayFiles.find(x=>x.id===id);
+    if(!f) return;
+    ieCancelCrop();
+    ieActiveId = id;
+    // Highlight selected tray card
+    document.querySelectorAll('[id^="ietc_"]').forEach(c=>c.style.border='2px solid var(--fog)');
+    const card=document.getElementById('ietc_'+id);
+    if(card) card.style.border='2px solid #ec4899';
+
+    // Reset state
+    ieRotDeg=0; ieFlipH=false; ieFlipV=false;
+    ieActiveFilter='none';
+    SLIDERS.forEach(s=>{ ieAdj[s.key]=s.def; const el=document.getElementById('ies_'+s.key); if(el)el.value=s.def; const ev=document.getElementById('iev_'+s.key); if(ev)ev.textContent=s.def+(s.key==='hue'?'°':s.key==='blur'?'px':'%'); });
+    document.querySelectorAll('[id^="iefb_"]').forEach(b=>{ b.style.background='var(--fog)'; b.style.borderColor='var(--fog)'; b.style.color='var(--ink)'; });
+    const noneBtn=document.getElementById('iefb_none'); if(noneBtn){noneBtn.style.background='#ec4899';noneBtn.style.borderColor='#ec4899';noneBtn.style.color='#fff';}
+
+    // Create bitmap
+    ieOrigBitmap = await createImageBitmap(f.file);
+    ieWorkBitmap = await createImageBitmap(f.file);
+
+    // Show canvas + controls
+    document.getElementById('ieCanvasEmpty').style.display='none';
+    document.getElementById('ieControlsEmpty').style.display='none';
+    document.getElementById('ieControls').style.display='flex';
+    document.getElementById('ieDownloadBtn').style.display='';
+    document.getElementById('ieResetBtn').style.display='';
+    const cropBtn=document.getElementById('ieCropBtn');
+    if(cropBtn){cropBtn.textContent='Start Crop';cropBtn.style.background='var(--fog)';}
+
+    ieRender();
+  }
+
+  function ieShowEmpty(){
+    document.getElementById('ieCanvasEmpty').style.display='';
+    document.getElementById('ieCanvas').style.display='none';
+    document.getElementById('ieControlsEmpty').style.display='';
+    document.getElementById('ieControls').style.display='none';
+    document.getElementById('ieDownloadBtn').style.display='none';
+    document.getElementById('ieResetBtn').style.display='none';
+    document.querySelectorAll('[id^="ietc_"]').forEach(c=>c.style.border='2px solid var(--fog)');
+  }
+
+  // ── Render canvas with all adjustments ─────────────────────
+  function ieRender(){
+    if(!ieWorkBitmap) return;
+    const canvas = document.getElementById('ieCanvas');
+    canvas.style.display='block';
+
+    // Calculate canvas size after rotation
+    const deg = ((ieRotDeg % 360) + 360) % 360;
+    const sw = ieWorkBitmap.width, sh = ieWorkBitmap.height;
+    const rotated = deg===90||deg===270;
+    canvas.width  = rotated ? sh : sw;
+    canvas.height = rotated ? sw : sh;
+
+    const ctx = canvas.getContext('2d');
+    ctx.save();
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    // Apply rotation + flip transforms
+    ctx.translate(canvas.width/2, canvas.height/2);
+    ctx.rotate(deg * Math.PI/180);
+    if(ieFlipH) ctx.scale(-1,1);
+    if(ieFlipV) ctx.scale(1,-1);
+    ctx.drawImage(ieWorkBitmap, -sw/2, -sh/2);
+    ctx.restore();
+
+    // CSS filter for brightness/contrast/saturation/hue/blur/opacity
+    const cssFilter = [
+      `brightness(${ieAdj.brightness}%)`,
+      `contrast(${ieAdj.contrast}%)`,
+      `saturate(${ieAdj.saturation}%)`,
+      `hue-rotate(${ieAdj.hue}deg)`,
+      `blur(${ieAdj.blur}px)`,
+      `opacity(${ieAdj.opacity}%)`,
+    ].join(' ');
+    canvas.style.filter = cssFilter;
+
+    // Apply pixel-level filter (grayscale, sepia, etc) — skip if 'none'
+    if(ieActiveFilter !== 'none'){
+      // We need to bake the filter into pixels — do it on a temp canvas
+      // First remove css filter temporarily
+      canvas.style.filter='none';
+      // Re-draw clean
+      ctx.save();
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      ctx.translate(canvas.width/2, canvas.height/2);
+      ctx.rotate(deg * Math.PI/180);
+      if(ieFlipH) ctx.scale(-1,1);
+      if(ieFlipV) ctx.scale(1,-1);
+      ctx.drawImage(ieWorkBitmap, -sw/2, -sh/2);
+      ctx.restore();
+      // Apply pixel filter
+      FILTERS[ieActiveFilter]?.fn(ctx, canvas.width, canvas.height);
+      // Re-apply css adjustments on top
+      canvas.style.filter = cssFilter;
+    }
+  }
+
+  // ── Sliders ────────────────────────────────────────────────
+  window.ieSliderChange = function(key, val){
+    ieAdj[key] = parseFloat(val);
+    const ev = document.getElementById('iev_'+key);
+    const unit = key==='hue'?'°':key==='blur'?'px':'%';
+    if(ev) ev.textContent = val + unit;
+    ieRender();
+  };
+
+  // ── Filters ────────────────────────────────────────────────
+  window.ieApplyFilter = function(key){
+    ieActiveFilter = key;
+    document.querySelectorAll('[id^="iefb_"]').forEach(b=>{ b.style.background='var(--fog)'; b.style.borderColor='var(--fog)'; b.style.color='var(--ink)'; });
+    const btn=document.getElementById('iefb_'+key);
+    if(btn){btn.style.background='#ec4899';btn.style.borderColor='#ec4899';btn.style.color='#fff';}
+    ieRender();
+  };
+
+  // ── Rotate ─────────────────────────────────────────────────
+  window.ieRotate = function(deg){
+    ieRotDeg = (ieRotDeg + deg + 360) % 360;
+    ieRender();
+  };
+
+  // ── Flip ───────────────────────────────────────────────────
+  window.ieFlip = function(dir){
+    if(dir==='h') ieFlipH=!ieFlipH;
+    else          ieFlipV=!ieFlipV;
+    ieRender();
+  };
+
+  // ── Crop ───────────────────────────────────────────────────
+  window.ieStartCrop = function(){
+    if(!ieWorkBitmap) return;
+    isCropping = true;
+    const overlay = document.getElementById('ieCropOverlay');
+    const cropCanvas = document.getElementById('ieCropCanvas');
+    const mainCanvas = document.getElementById('ieCanvas');
+    overlay.style.display='block';
+    cropCanvas.width = mainCanvas.offsetWidth;
+    cropCanvas.height = mainCanvas.offsetHeight;
+    const btn=document.getElementById('ieCropBtn');
+    if(btn){btn.textContent='Cancel Crop';btn.style.background='#fecaca';btn.onclick=()=>ieCancelCrop();}
+    document.addEventListener('keydown', ieCropKeyHandler);
+  };
+
+  function ieCancelCrop(){
+    isCropping=false; ieCropActive=false; ieCropOrigin=null; ieCropRect_=null;
+    const overlay=document.getElementById('ieCropOverlay');
+    if(overlay) overlay.style.display='none';
+    const r=document.getElementById('ieCropRect');
+    if(r) r.style.display='none';
+    const btn=document.getElementById('ieCropBtn');
+    if(btn){btn.textContent='Start Crop';btn.style.background='var(--fog)';btn.onclick=()=>ieStartCrop();}
+    document.removeEventListener('keydown', ieCropKeyHandler);
+  }
+
+  function ieCropKeyHandler(e){
+    if(e.key==='Escape') ieCancelCrop();
+    if(e.key==='Enter') ieCropApply();
+  }
+
+  // Convert overlay click coords → canvas pixel coords
+  function ieOverlayToPixel(e){
+    const mainCanvas = document.getElementById('ieCanvas');
+    const rect = mainCanvas.getBoundingClientRect();
+    const scaleX = mainCanvas.width / rect.width;
+    const scaleY = mainCanvas.height / rect.height;
+    return {
+      x: Math.round((e.clientX - rect.left) * scaleX),
+      y: Math.round((e.clientY - rect.top)  * scaleY),
+    };
+  }
+
+  // Convert overlay client coords → overlay-relative coords (for the visible rect div)
+  function ieOverlayLocal(e){
+    const overlay = document.getElementById('ieCropOverlay');
+    const r = overlay.getBoundingClientRect();
+    return { x: e.clientX - r.left, y: e.clientY - r.top };
+  }
+
+  window.ieCropStart = function(e){
+    if(!isCropping) return;
+    ieCropActive=true;
+    ieCropOrigin = { px:ieOverlayToPixel(e), local:ieOverlayLocal(e) };
+    ieCropRect_=null;
+    const r=document.getElementById('ieCropRect');
+    if(r){r.style.display='none';}
+  };
+
+  window.ieCropMove = function(e){
+    if(!isCropActive||!ieCropOrigin) return;
+    const cur = ieOverlayLocal(e);
+    const pxCur = ieOverlayToPixel(e);
+    // Visual rect
+    const x=Math.min(ieCropOrigin.local.x,cur.x);
+    const y=Math.min(ieCropOrigin.local.y,cur.y);
+    const w=Math.abs(cur.x-ieCropOrigin.local.x);
+    const h=Math.abs(cur.y-ieCropOrigin.local.y);
+    const r=document.getElementById('ieCropRect');
+    if(r){r.style.cssText+=`;display:block;left:${x}px;top:${y}px;width:${w}px;height:${h}px`;}
+    // Store pixel rect
+    ieCropRect_={
+      x:Math.min(ieCropOrigin.px.x,pxCur.x),
+      y:Math.min(ieCropOrigin.px.y,pxCur.y),
+      w:Math.abs(pxCur.x-ieCropOrigin.px.x),
+      h:Math.abs(pxCur.y-ieCropOrigin.px.y),
+    };
+  };
+
+  window.ieCropEnd = function(e){
+    if(!isCropActive) return;
+    ieCropActive=false;
+  };
+
+  function ieCropApply(){
+    if(!ieCropRect_||ieCropRect_.w<4||ieCropRect_.h<4){ ieCancelCrop(); return; }
+    const mainCanvas=document.getElementById('ieCanvas');
+    const ctx=mainCanvas.getContext('2d');
+    // Get the cropped region from the rendered canvas
+    const cr=ieCropRect_;
+    // Clamp to canvas bounds
+    const x=Math.max(0,cr.x), y=Math.max(0,cr.y);
+    const w=Math.min(cr.w, mainCanvas.width-x);
+    const h=Math.min(cr.h, mainCanvas.height-y);
+    if(w<4||h<4){ieCancelCrop();return;}
+    const tmp=document.createElement('canvas');
+    tmp.width=w; tmp.height=h;
+    const tctx=tmp.getContext('2d');
+    tctx.drawImage(mainCanvas, x, y, w, h, 0, 0, w, h);
+    // Update workBitmap to the cropped region
+    createImageBitmap(tmp).then(bmp=>{
+      ieWorkBitmap=bmp;
+      ieRotDeg=0; ieFlipH=false; ieFlipV=false;
+      ieCancelCrop();
+      ieRender();
+    });
+  }
+
+  // ── Reset ──────────────────────────────────────────────────
+  window.ieReset = function(){
+    if(!ieOrigBitmap) return;
+    ieCancelCrop();
+    createImageBitmap(ieOrigBitmap).then(bmp=>{
+      ieWorkBitmap=bmp;
+      ieRotDeg=0; ieFlipH=false; ieFlipV=false;
+      ieActiveFilter='none';
+      SLIDERS.forEach(s=>{
+        ieAdj[s.key]=s.def;
+        const el=document.getElementById('ies_'+s.key); if(el)el.value=s.def;
+        const ev=document.getElementById('iev_'+s.key); const unit=s.key==='hue'?'°':s.key==='blur'?'px':'%'; if(ev)ev.textContent=s.def+unit;
+      });
+      document.querySelectorAll('[id^="iefb_"]').forEach(b=>{b.style.background='var(--fog)';b.style.borderColor='var(--fog)';b.style.color='var(--ink)';});
+      const nb=document.getElementById('iefb_none');if(nb){nb.style.background='#ec4899';nb.style.borderColor='#ec4899';nb.style.color='#fff';}
+      ieRender();
+    });
+  };
+
+  // ── Download ───────────────────────────────────────────────
+  window.ieDownload = function(){
+    const canvas=document.getElementById('ieCanvas');
+    if(!canvas||canvas.style.display==='none') return;
+    // Bake css filter into a final canvas
+    const final=document.createElement('canvas');
+    final.width=canvas.width; final.height=canvas.height;
+    const fctx=final.getContext('2d');
+    fctx.filter=canvas.style.filter||'none';
+    fctx.drawImage(canvas,0,0);
+    fctx.filter='none';
+    final.toBlob(blob=>{
+      const f=ieTrayFiles.find(x=>x.id===ieActiveId);
+      const name=(f?f.name.replace(/\.[^.]+$/,''):'image')+'_edited.png';
+      const a=document.createElement('a');
+      a.href=URL.createObjectURL(blob);
+      a.download=name;
+      a.click();
+      setTimeout(()=>URL.revokeObjectURL(a.href),10000);
+    },'image/png');
+  };
+
+  // ── Expose isCropActive fix ────────────────────────────────
+  let isCropping=false, isCropActive=false;
+  // Patch the window references used inside crop handlers
+  window.ieCropStart = function(e){
+    if(!isCropping) return;
+    isCropActive=true;
+    ieCropOrigin = { px:ieOverlayToPixel(e), local:ieOverlayLocal(e) };
+    ieCropRect_=null;
+    const r=document.getElementById('ieCropRect');
+    if(r) r.style.display='none';
+  };
+  window.ieCropMove = function(e){
+    if(!isCropActive||!ieCropOrigin) return;
+    const cur=ieOverlayLocal(e);
+    const pxCur=ieOverlayToPixel(e);
+    const x=Math.min(ieCropOrigin.local.x,cur.x);
+    const y=Math.min(ieCropOrigin.local.y,cur.y);
+    const w=Math.abs(cur.x-ieCropOrigin.local.x);
+    const h=Math.abs(cur.y-ieCropOrigin.local.y);
+    const r=document.getElementById('ieCropRect');
+    if(r){r.style.display='block';r.style.left=x+'px';r.style.top=y+'px';r.style.width=w+'px';r.style.height=h+'px';}
+    ieCropRect_={x:Math.min(ieCropOrigin.px.x,pxCur.x),y:Math.min(ieCropOrigin.px.y,pxCur.y),w:Math.abs(pxCur.x-ieCropOrigin.px.x),h:Math.abs(pxCur.y-ieCropOrigin.px.y)};
+  };
+  window.ieCropEnd = function(e){ isCropActive=false; };
+
+  window.ieStartCrop = function(){
+    if(!ieWorkBitmap) return;
+    isCropping=true;
+    const overlay=document.getElementById('ieCropOverlay');
+    const cropCanvas=document.getElementById('ieCropCanvas');
+    const mainCanvas=document.getElementById('ieCanvas');
+    overlay.style.display='block';
+    cropCanvas.width=mainCanvas.offsetWidth;
+    cropCanvas.height=mainCanvas.offsetHeight;
+    const btn=document.getElementById('ieCropBtn');
+    if(btn){btn.textContent='Cancel Crop';btn.style.background='#fecaca';btn.onclick=()=>ieCancelCrop();}
+    document.addEventListener('keydown',ieCropKeyHandler);
+  };
+
+  function ieCancelCrop(){
+    isCropping=false; isCropActive=false; ieCropOrigin=null; ieCropRect_=null;
+    const overlay=document.getElementById('ieCropOverlay');
+    if(overlay) overlay.style.display='none';
+    const r=document.getElementById('ieCropRect');
+    if(r) r.style.display='none';
+    const btn=document.getElementById('ieCropBtn');
+    if(btn){btn.textContent='Start Crop';btn.style.background='var(--fog)';btn.onclick=()=>ieStartCrop();}
+    document.removeEventListener('keydown',ieCropKeyHandler);
+  }
+
+  // ── Bootstrap ─────────────────────────────────────────────
+  document.addEventListener('DOMContentLoaded', ieInitControls);
+
+})();
+// ═══════════════════════════════════════════════════════════
+//  FILE TYPE CONVERTER  —  Nova Studio v3
+// ═══════════════════════════════════════════════════════════
+(function(){
+  'use strict';
+
+  // ── Supported conversion matrix ──────────────────────────
+  // key = input MIME or extension group, value = array of output formats
+  const FC_MATRIX = {
+    // Images
+    'image': [
+      { label:'JPEG (.jpg)',   ext:'jpg',  mime:'image/jpeg' },
+      { label:'PNG (.png)',    ext:'png',  mime:'image/png' },
+      { label:'WebP (.webp)',  ext:'webp', mime:'image/webp' },
+      { label:'BMP (.bmp)',    ext:'bmp',  mime:'image/bmp' },
+      { label:'GIF (.gif)',    ext:'gif',  mime:'image/gif' },
+    ],
+    // PDF → images (rendered via canvas trick won't work server-side, so we offer what's viable in browser)
+    'pdf': [
+      { label:'PNG (.png)',    ext:'png',  mime:'image/png' },
+      { label:'JPEG (.jpg)',   ext:'jpg',  mime:'image/jpeg' },
+    ],
+    // Text / data
+    'text': [
+      { label:'Plain Text (.txt)',  ext:'txt',  mime:'text/plain' },
+      { label:'Markdown (.md)',     ext:'md',   mime:'text/markdown' },
+      { label:'HTML (.html)',       ext:'html', mime:'text/html' },
+    ],
+    'json': [
+      { label:'Plain Text (.txt)', ext:'txt', mime:'text/plain' },
+      { label:'CSV (.csv)',         ext:'csv', mime:'text/csv' },
+    ],
+    'csv': [
+      { label:'JSON (.json)',       ext:'json', mime:'application/json' },
+      { label:'Plain Text (.txt)', ext:'txt',  mime:'text/plain' },
+    ],
+  };
+
+  // ── State ────────────────────────────────────────────────
+  let fcFiles = [];  // [{file, id, name, ext, group, status, resultBlob, resultName}]
+  let fcNextId = 1;
+  let fcSelId  = null;
+
+  // ── Helpers ──────────────────────────────────────────────
+  const $ = id => document.getElementById(id);
+
+  function fcGroupOf(file){
+    const mime = file.type || '';
+    const name = file.name || '';
+    const ext  = name.includes('.') ? name.split('.').pop().toLowerCase() : '';
+    if(mime.startsWith('image/')) return 'image';
+    if(mime === 'application/pdf' || ext === 'pdf') return 'pdf';
+    if(mime === 'application/json' || ext === 'json') return 'json';
+    if(mime === 'text/csv' || ext === 'csv') return 'csv';
+    if(mime.startsWith('text/') || ['txt','md','html','htm','xml','log','css','js','ts'].includes(ext)) return 'text';
+    return null;
+  }
+
+  function fcFmtSize(b){
+    if(b<1024)return b+'B';
+    if(b<1048576)return (b/1024).toFixed(1)+'KB';
+    return (b/1048576).toFixed(1)+'MB';
+  }
+
+  function fcOutputFormats(group){
+    return FC_MATRIX[group] || [];
+  }
+
+  // ── Add files ─────────────────────────────────────────────
+  window.fcAddFiles = function(fileList){
+    Array.from(fileList).forEach(f=>{
+      const group = fcGroupOf(f);
+      if(!group){ fcToast('⚠️ Unsupported file type: '+f.name); return; }
+      const id = fcNextId++;
+      fcFiles.push({file:f,id,name:f.name,ext:(f.name.includes('.')?f.name.split('.').pop().toLowerCase():''),group,status:'ready',resultBlob:null,resultName:null});
+    });
+    fcRenderList();
+    fcUpdateDropzone();
+    if(fcFiles.length && !fcSelId) fcSelect(fcFiles[0].id);
+  };
+
+  // ── Render file list ──────────────────────────────────────
+  function fcRenderList(){
+    const cards = $('fcCards');
+    if(!cards) return;
+    if(fcFiles.length===0){
+      cards.innerHTML='';
+      $('fcEmptyState').style.display='flex';
+      $('fcDetail').style.display='none';
+      $('fcFileCount').textContent='';
+      return;
+    }
+    $('fcEmptyState').style.display='none';
+    $('fcFileCount').textContent = fcFiles.length+' file'+(fcFiles.length===1?'':'s');
+
+    cards.innerHTML = fcFiles.map(fc=>{
+      const statusColor = fc.status==='done'?'var(--lime-d)':fc.status==='error'?'#ef4444':fc.status==='converting'?'#f59e0b':'var(--mist)';
+      const statusIcon  = fc.status==='done'?'✅':fc.status==='error'?'❌':fc.status==='converting'?'⏳':'⏸';
+      const sel = fc.id===fcSelId;
+      return `<div onclick="fcSelect(${fc.id})" style="border-radius:10px;border:1.5px solid ${sel?'var(--lime)':'var(--fog)'};background:${sel?'var(--lime-p)':'var(--card)'};padding:9px 10px;cursor:pointer;transition:all .15s;">
+        <div style="font-size:.72rem;font-weight:800;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${fc.name}">${fc.name}</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:4px">
+          <span style="font-size:.62rem;color:var(--mist2)">${fcFmtSize(fc.file.size)}</span>
+          <span style="font-size:.65rem;font-weight:700;color:${statusColor}">${statusIcon} ${fc.status}</span>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  // ── Select file & populate right panel ───────────────────
+  window.fcSelect = function(id){
+    fcSelId = id;
+    fcRenderList();
+    const fc = fcFiles.find(f=>f.id===id);
+    if(!fc){ $('fcDetail').style.display='none'; return; }
+
+    $('fcDetail').style.display='flex';
+    $('fcDetailName').textContent = fc.name;
+    $('fcDetailSize').textContent = fcFmtSize(fc.file.size);
+    $('fcDetailType').textContent = fc.group.toUpperCase();
+
+    // populate output format selector
+    const fmts = fcOutputFormats(fc.group);
+    const sel = $('fcOutFmt');
+    sel.innerHTML = fmts.map((f,i)=>`<option value="${i}">${f.label}</option>`).join('');
+
+    // restore previously chosen format for this file
+    if(fc._fmtIdx !== undefined) sel.value = fc._fmtIdx;
+
+    // show preview
+    fcShowPreview(fc);
+
+    // show result if done
+    fcShowResult(fc);
+  };
+
+  function fcShowPreview(fc){
+    const wrap = $('fcPreviewWrap');
+    wrap.innerHTML='';
+    if(fc.group==='image'){
+      const url = URL.createObjectURL(fc.file);
+      const img = document.createElement('img');
+      img.src=url; img.onload=()=>URL.revokeObjectURL(url);
+      img.style.cssText='max-width:100%;max-height:220px;border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,.18)';
+      wrap.appendChild(img);
+    } else if(fc.group==='text'||fc.group==='json'||fc.group==='csv'){
+      const reader=new FileReader();
+      reader.onload=e=>{
+        const pre=document.createElement('pre');
+        pre.style.cssText='font-size:.65rem;line-height:1.6;background:var(--surface);border:1.5px solid var(--fog);border-radius:10px;padding:12px;overflow:auto;max-height:220px;white-space:pre-wrap;word-break:break-all;color:var(--ink);text-align:left;width:100%;box-sizing:border-box';
+        pre.textContent=e.target.result.slice(0,3000)+(e.target.result.length>3000?'\n…(truncated)':'');
+        wrap.appendChild(pre);
+      };
+      reader.readAsText(fc.file);
+    } else if(fc.group==='pdf'){
+      const div=document.createElement('div');
+      div.style.cssText='font-size:.8rem;color:var(--mist2);padding:20px;text-align:center';
+      div.innerHTML='📄 PDF preview not available<br><span style="font-size:.68rem">Convert to see output</span>';
+      wrap.appendChild(div);
+    }
+  }
+
+  function fcShowResult(fc){
+    const btn=$('fcDownloadBtn');
+    if(fc.status==='done'&&fc.resultBlob){
+      btn.style.display='block';
+      btn.onclick=()=>fcDownloadOne(fc);
+      // Update button label to clarify ZIP for PDFs
+      if(fc.group==='pdf'){
+        btn.textContent='⬇️ Download ZIP (all pages)';
+      } else {
+        btn.textContent='⬇️ Download';
+      }
+    } else {
+      btn.style.display='none';
+    }
+  }
+
+  // ── Convert selected file ────────────────────────────────
+  window.fcConvertSelected = async function(){
+    const fc = fcFiles.find(f=>f.id===fcSelId);
+    if(!fc) return;
+    const fmts = fcOutputFormats(fc.group);
+    const idx  = parseInt($('fcOutFmt').value)||0;
+    fc._fmtIdx = idx;
+    const fmt  = fmts[idx];
+    if(!fmt) return;
+
+    fc.status='converting';
+    fcRenderList();
+    $('fcConvertBtn').disabled=true;
+    $('fcConvertBtn').textContent='⏳ Converting…';
+
+    try{
+      const blob = await fcDoConvert(fc.file, fc.group, fmt);
+      fc.resultBlob = blob;
+      // PDF → ZIP (all pages in a named folder)
+      if(fc.group==='pdf'){
+        fc.resultName = fc.name.replace(/\.[^.]+$/,'')+'.zip';
+      } else {
+        fc.resultName = fc.name.replace(/\.[^.]+$/,'')+'_converted.'+fmt.ext;
+      }
+      fc.status='done';
+    } catch(e){
+      fc.status='error';
+      fcToast('❌ Conversion failed: '+e.message);
+    }
+
+    $('fcConvertBtn').disabled=false;
+    $('fcConvertBtn').textContent='⚡ Convert';
+    fcRenderList();
+    fcShowResult(fcFiles.find(f=>f.id===fcSelId));
+  };
+
+  // ── Core conversion logic ─────────────────────────────────
+  async function fcDoConvert(file, group, fmt){
+    // IMAGE → IMAGE
+    if(group==='image'){
+      return new Promise((res,rej)=>{
+        const url=URL.createObjectURL(file);
+        const img=new Image();
+        img.onload=()=>{
+          URL.revokeObjectURL(url);
+          const c=document.createElement('canvas');
+          c.width=img.naturalWidth; c.height=img.naturalHeight;
+          const ctx=c.getContext('2d');
+          // fill white bg for jpeg
+          if(fmt.mime==='image/jpeg'||fmt.mime==='image/bmp'){ctx.fillStyle='#fff';ctx.fillRect(0,0,c.width,c.height);}
+          ctx.drawImage(img,0,0);
+          c.toBlob(b=>b?res(b):rej(new Error('Canvas toBlob failed')), fmt.mime, fmt.mime==='image/jpeg'?0.92:undefined);
+        };
+        img.onerror=()=>rej(new Error('Could not load image'));
+        img.src=url;
+      });
+    }
+
+    // PDF → IMAGE  (all pages via pdf.js, packaged into a named folder ZIP)
+    if(group==='pdf'){
+      // Load pdf.js
+      if(!window.pdfjsLib){
+        await fcLoadScript('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js');
+        window.pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      }
+      // Load JSZip for packaging
+      if(!window.JSZip){
+        await fcLoadScript('https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js');
+      }
+      const ab = await file.arrayBuffer();
+      const pdf = await window.pdfjsLib.getDocument({data:new Uint8Array(ab)}).promise;
+      const numPages = pdf.numPages;
+      const scale = 2;
+      // Derive a clean folder name from the original file name (strip extension)
+      const baseName = file.name.replace(/\.[^.]+$/, '');
+      const zip = new window.JSZip();
+      const folder = zip.folder(baseName);
+      const digits = String(numPages).length; // for zero-padded page numbers
+      for(let i = 1; i <= numPages; i++){
+        const page = await pdf.getPage(i);
+        const vp = page.getViewport({scale});
+        const c = document.createElement('canvas');
+        c.width = vp.width; c.height = vp.height;
+        const ctx = c.getContext('2d');
+        // White background for jpeg/bmp
+        if(fmt.mime==='image/jpeg'||fmt.mime==='image/bmp'){ctx.fillStyle='#fff';ctx.fillRect(0,0,c.width,c.height);}
+        await page.render({canvasContext:ctx, viewport:vp}).promise;
+        const pageBlob = await new Promise((res,rej)=>c.toBlob(b=>b?res(b):rej(new Error('toBlob failed')),fmt.mime,0.92));
+        const pageNum = String(i).padStart(digits,'0');
+        folder.file(`${baseName}_page_${pageNum}.${fmt.ext}`, pageBlob);
+      }
+      return await zip.generateAsync({type:'blob'});
+    }
+
+    // TEXT → TEXT variants
+    if(group==='text'){
+      const text = await file.text();
+      let out = text;
+      if(fmt.ext==='html'){
+        const esc=s=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        out=`<!DOCTYPE html>\n<html><head><meta charset="UTF-8"><title>Converted</title></head>\n<body><pre style="white-space:pre-wrap;font-family:sans-serif">${esc(text)}</pre>\n</body></html>`;
+      } else if(fmt.ext==='md'){
+        // wrap plain text as markdown code block if it doesn't look like markdown
+        out = text;
+      }
+      return new Blob([out],{type:fmt.mime});
+    }
+
+    // JSON → CSV
+    if(group==='json' && fmt.ext==='csv'){
+      const text=await file.text();
+      const data=JSON.parse(text);
+      const arr=Array.isArray(data)?data:[data];
+      const keys=Object.keys(arr[0]||{});
+      const csvRows=[keys.join(','),...arr.map(r=>keys.map(k=>JSON.stringify(r[k]??'')).join(','))];
+      return new Blob([csvRows.join('\n')],{type:'text/csv'});
+    }
+
+    // JSON → TXT
+    if(group==='json' && fmt.ext==='txt'){
+      const text=await file.text();
+      const data=JSON.parse(text);
+      return new Blob([JSON.stringify(data,null,2)],{type:'text/plain'});
+    }
+
+    // CSV → JSON
+    if(group==='csv' && fmt.ext==='json'){
+      const text=await file.text();
+      const lines=text.trim().split('\n');
+      const headers=lines[0].split(',').map(h=>h.trim().replace(/^"|"$/g,''));
+      const rows=lines.slice(1).map(line=>{
+        const vals=line.match(/(".*?"|[^,]+|(?<=,)(?=,)|^(?=,)|(?<=,)$)/g)||[];
+        const obj={};
+        headers.forEach((h,i)=>{ obj[h]=(vals[i]||'').trim().replace(/^"|"$/g,''); });
+        return obj;
+      });
+      return new Blob([JSON.stringify(rows,null,2)],{type:'application/json'});
+    }
+
+    // CSV → TXT
+    if(group==='csv' && fmt.ext==='txt'){
+      const text=await file.text();
+      return new Blob([text],{type:'text/plain'});
+    }
+
+    throw new Error('Conversion not supported for this combination');
+  }
+
+  // ── Convert all ────────────────────────────────────────────
+  window.fcConvertAll = async function(){
+    const btn=$('fcConvertAllBtn');
+    btn.disabled=true; btn.textContent='⏳ Converting all…';
+    for(const fc of fcFiles){
+      if(fc.status==='done') continue;
+      const fmts=fcOutputFormats(fc.group);
+      const idx=fc._fmtIdx||0;
+      const fmt=fmts[idx];
+      if(!fmt) continue;
+      fc.status='converting'; fcRenderList();
+      try{
+        fc.resultBlob=await fcDoConvert(fc.file,fc.group,fmt);
+        // PDF → ZIP (all pages in a named folder)
+        if(fc.group==='pdf'){
+          fc.resultName=fc.name.replace(/\.[^.]+$/,'')+'.zip';
+        } else {
+          fc.resultName=fc.name.replace(/\.[^.]+$/,'')+'_converted.'+fmt.ext;
+        }
+        fc.status='done';
+      } catch(e){ fc.status='error'; }
+      fcRenderList();
+    }
+    btn.disabled=false; btn.textContent='⚡ Convert All';
+    if(fcSelId) fcShowResult(fcFiles.find(f=>f.id===fcSelId));
+  };
+
+  // ── Download ───────────────────────────────────────────────
+  function fcDownloadOne(fc){
+    if(!fc.resultBlob) return;
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(fc.resultBlob);
+    a.download=fc.resultName||'converted';
+    a.click();
+    setTimeout(()=>URL.revokeObjectURL(a.href),10000);
+  }
+
+  window.fcDownloadAll = async function(){
+    const done=fcFiles.filter(f=>f.status==='done'&&f.resultBlob);
+    if(!done.length){fcToast('No converted files yet');return;}
+    if(done.length===1){fcDownloadOne(done[0]);return;}
+    // Load JSZip if needed
+    if(!window.JSZip) await fcLoadScript('https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js');
+    const masterZip = new window.JSZip();
+    for(const fc of done){
+      if(fc.group==='pdf'){
+        // PDF result is already a zip (folder of images) — merge its contents directly into master
+        const innerZip = await window.JSZip.loadAsync(fc.resultBlob);
+        innerZip.forEach((relativePath, zipEntry)=>{
+          if(!zipEntry.dir){
+            masterZip.file(relativePath, zipEntry.async('blob'));
+          }
+        });
+      } else {
+        masterZip.file(fc.resultName, fc.resultBlob);
+      }
+    }
+    const b = await masterZip.generateAsync({type:'blob'});
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(b);
+    a.download='nova_converted.zip';
+    a.click();
+    setTimeout(()=>URL.revokeObjectURL(a.href),10000);
+  };
+
+  // ── Clear ──────────────────────────────────────────────────
+  window.fcClearAll = function(){
+    fcFiles=[]; fcSelId=null;
+    $('fcCards').innerHTML='';
+    $('fcDetail').style.display='none';
+    fcRenderList();
+    fcUpdateDropzone();
+  };
+
+  // ── Dropzone helpers ────────────────────────────────────────
+  function fcUpdateDropzone(){
+    const dz=$('fcDropzone');
+    if(!dz) return;
+  }
+
+  // ── Drag & drop ───────────────────────────────────────────
+  document.addEventListener('DOMContentLoaded',()=>{
+    const dz=$('fcDropzone');
+    if(!dz) return;
+    dz.addEventListener('dragover',e=>{e.preventDefault();dz.style.borderColor='var(--lime)';});
+    dz.addEventListener('dragleave',()=>dz.style.borderColor='var(--fog)');
+    dz.addEventListener('drop',e=>{
+      e.preventDefault();
+      dz.style.borderColor='var(--fog)';
+      if(e.dataTransfer.files.length) fcAddFiles(e.dataTransfer.files);
+    });
+  });
+
+  // ── Toast ─────────────────────────────────────────────────
+  function fcToast(msg){
+    if(typeof window.showToast==='function'){window.showToast(msg);return;}
+    const t=document.createElement('div');
+    t.style.cssText='position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:#111;color:#fff;padding:9px 18px;border-radius:24px;font-size:.78rem;font-weight:700;z-index:99999;pointer-events:none;opacity:0;transition:opacity .25s';
+    t.textContent=msg; document.body.appendChild(t);
+    requestAnimationFrame(()=>t.style.opacity='1');
+    setTimeout(()=>{t.style.opacity='0';setTimeout(()=>t.remove(),300);},2800);
+  }
+
+  // ── Lazy script loader ────────────────────────────────────
+  function fcLoadScript(src){
+    return new Promise((res,rej)=>{
+      const s=document.createElement('script');
+      s.src=src; s.onload=res; s.onerror=rej;
+      document.head.appendChild(s);
+    });
+  }
+
+})();

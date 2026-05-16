@@ -8,12 +8,31 @@
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,300;12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Instrument+Serif:ital@0;1&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/styles.css">
 <script src="https://accounts.google.com/gsi/client" async defer id="gsiScript"></script>
+<!-- ✅ Storage polyfill — MUST be first: patches localStorage before any other script runs -->
+<script>
+(function(){
+  var _mem = function(){
+    var s={};
+    return {
+      getItem:    function(k){ return s.hasOwnProperty(k)?s[k]:null; },
+      setItem:    function(k,v){ s[k]=String(v); },
+      removeItem: function(k){ delete s[k]; },
+      clear:      function(){ s={}; },
+      key:        function(i){ return Object.keys(s)[i]||null; },
+      get length(){ return Object.keys(s).length; }
+    };
+  };
+  try { localStorage.setItem('__t','1'); localStorage.removeItem('__t'); }
+  catch(e) { try { Object.defineProperty(window,'localStorage',{value:_mem(),writable:false}); } catch(e2){window.localStorage=_mem();} }
+  try { sessionStorage.setItem('__t','1'); sessionStorage.removeItem('__t'); }
+  catch(e) { try { Object.defineProperty(window,'sessionStorage',{value:_mem(),writable:false}); } catch(e2){window.sessionStorage=_mem();} }
+})();
+</script>
 <script src="https://cdn.jsdelivr.net/npm/firebase@10.12.0/firebase-app-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/firebase@10.12.0/firebase-auth-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/firebase@10.12.0/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/firebase@10.12.0/firebase-storage-compat.js"></script>
 <script src="assets/js/config.js"></script>
-<script src="assets/js/storage-polyfill.js"></script>
 <script src="assets/js/vendor.sheetjs.js"></script>
 </head>
 <body data-initial-view="sync">
@@ -93,6 +112,7 @@
   <div class="app-body">
     <!-- SIDEBAR -->
     <div class="sidebar">
+      <div class="sb-scroll-area">
       <div class="sb-s">
         <div class="sb-l">Main</div>
         <div class="sb-i on" id="sbHome" onclick="goView('home')"><span class="sb-ic">🏠</span>Dashboard</div>
@@ -109,8 +129,10 @@
         <div class="sb-l">Account</div>
         <div class="sb-i" id="sbProfile" onclick="goView('profile')"><span class="sb-ic">👤</span>My Profile</div>
         <div class="sb-i" id="sbSettings" onclick="goView('settings')"><span class="sb-ic">⚙️</span>Settings</div>
+        <div class="sb-i" id="sbHelp" onclick="goView('help')"><span class="sb-ic">📖</span>Help &amp; Guide</div>
         <div class="sb-i" onclick="doLogout()"><span class="sb-ic">🚪</span>Logout</div>
       </div>
+      </div><!-- /sb-scroll-area -->
       <div class="sb-foot" onclick="goView('profile')">
         <div class="sb-fav" id="sbAv"></div>
         <div style="flex:1;min-width:0"><div class="sb-fn" id="sbName">—</div><div class="sb-fr" id="sbRole">Member</div></div>
@@ -1591,6 +1613,374 @@
 </div><!-- viewPortal -->
 
 
+
+<!-- ═══════════════════════════════════════════════════════ HELP VIEW -->
+<div class="view" id="viewHelp">
+<div class="vp">
+<div class="help-content">
+  <!-- Back -->
+  <div class="help-back-btn" onclick="goView('home')">← Back to Dashboard</div>
+
+  <!-- Hero -->
+  <div class="help-hero">
+    <div class="help-hero-badge">📖 Quick Start Guide</div>
+    <div class="help-hero-title">How to use NOVA Studio</div>
+    <div class="help-hero-sub">Everything you need to know to get started — from signing in to generating bulk certificates and managing your college portal.</div>
+  </div>
+
+  <!-- Table of Contents -->
+  <div class="help-toc">
+    <div class="help-toc-title">Jump to a section</div>
+    <div class="help-toc-grid">
+      <div class="help-toc-item" onclick="document.getElementById('help-getting-started').scrollIntoView({behavior:'smooth'})"><span class="help-toc-ic">🚀</span>Getting Started</div>
+      <div class="help-toc-item" onclick="document.getElementById('help-certificates').scrollIntoView({behavior:'smooth'})"><span class="help-toc-ic">🎓</span>Certificates</div>
+      <div class="help-toc-item" onclick="document.getElementById('help-mailer').scrollIntoView({behavior:'smooth'})"><span class="help-toc-ic">📧</span>Cert Mailer</div>
+      <div class="help-toc-item" onclick="document.getElementById('help-portal').scrollIntoView({behavior:'smooth'})"><span class="help-toc-ic">🏫</span>College Portal</div>
+      <div class="help-toc-item" onclick="document.getElementById('help-datasync').scrollIntoView({behavior:'smooth'})"><span class="help-toc-ic">🔄</span>Data Sync</div>
+      <div class="help-toc-item" onclick="document.getElementById('help-projects').scrollIntoView({behavior:'smooth'})"><span class="help-toc-ic">📁</span>Projects</div>
+      <div class="help-toc-item" onclick="document.getElementById('help-settings').scrollIntoView({behavior:'smooth'})"><span class="help-toc-ic">⚙️</span>Settings</div>
+      <div class="help-toc-item" onclick="document.getElementById('help-faq').scrollIntoView({behavior:'smooth'})"><span class="help-toc-ic">❓</span>FAQ</div>
+    </div>
+  </div>
+
+  <!-- 1. Getting Started -->
+  <div class="help-section" id="help-getting-started">
+    <div class="help-section-header">
+      <div class="help-section-ic">🚀</div>
+      <div>
+        <div class="help-section-title">Getting Started</div>
+        <div class="help-section-sub">Sign up, log in, and explore your workspace</div>
+      </div>
+    </div>
+    <div class="help-step-list">
+      <div class="help-step">
+        <div class="help-step-num">1</div>
+        <div class="help-step-body">
+          <div class="help-step-title">Create your account</div>
+          <div class="help-step-desc">On the login screen, click <strong>Create account</strong>. Enter your first name, last name, email, and a password (min. 6 characters). You can also sign up instantly using <strong>Sign up with Google</strong> — no password needed.</div>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">2</div>
+        <div class="help-step-body">
+          <div class="help-step-title">Sign in to your workspace</div>
+          <div class="help-step-desc">Enter your email and password, or use <strong>Continue with Google</strong>. First-time users can also click <strong>Continue with Demo Account</strong> to explore NOVA Studio without signing up.</div>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">3</div>
+        <div class="help-step-body">
+          <div class="help-step-title">Understand the layout</div>
+          <div class="help-step-desc">After login you'll see the <strong>Dashboard</strong> (your home base), a left <strong>Sidebar</strong> for navigation, and a top <strong>Navbar</strong> with search and your profile. All tools are accessible from the sidebar under <em>Main</em> and <em>Tools</em>.</div>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">4</div>
+        <div class="help-step-body">
+          <div class="help-step-title">Quick Actions on Dashboard</div>
+          <div class="help-step-desc">The Dashboard shows quick-access buttons for all major tools — Certificate Maker, College Portal, My Projects, My Profile, and Settings. Use the tool cards at the top for one-click access to your most-used features.</div>
+        </div>
+      </div>
+    </div>
+    <div class="help-tip"><span class="help-tip-icon">💡</span><span class="help-tip-text"><strong>Tip:</strong> Your activity log on the Dashboard tracks everything you do — great for picking up where you left off.</span></div>
+  </div>
+
+  <!-- 2. Certificate Maker -->
+  <div class="help-section" id="help-certificates">
+    <div class="help-section-header">
+      <div class="help-section-ic">🎓</div>
+      <div>
+        <div class="help-section-title">Certificate Maker</div>
+        <div class="help-section-sub">Design and bulk-generate certificates using your own template</div>
+      </div>
+    </div>
+    <div class="help-step-list">
+      <div class="help-step">
+        <div class="help-step-num">1</div>
+        <div class="help-step-body">
+          <div class="help-step-title">Open the Certificate Maker</div>
+          <div class="help-step-desc">Click <strong>🎓 Certificates</strong> in the sidebar, or press <strong>+ New Certificate</strong> from the Dashboard. The tool opens in a full canvas editor.</div>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">2</div>
+        <div class="help-step-body">
+          <div class="help-step-title">Upload your certificate template</div>
+          <div class="help-step-desc">In the left panel, click <strong>Upload Template</strong> and select a PNG or JPG image of your blank certificate design. The canvas will display it as your background.</div>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">3</div>
+        <div class="help-step-body">
+          <div class="help-step-title">Add text fields</div>
+          <div class="help-step-desc">Use the <strong>Add Text</strong> tool to place name, date, course, or any other fields on your certificate. Click on a text element on the canvas to select it, then drag it to position. Use the right panel to change font, size, colour, and alignment.</div>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">4</div>
+        <div class="help-step-body">
+          <div class="help-step-title">Upload your recipient CSV for bulk generation</div>
+          <div class="help-step-desc">Prepare a <strong>CSV file</strong> with columns matching your text fields (e.g. <em>Name, Course, Date</em>). Click <strong>Upload CSV</strong> in the Data panel, then map each CSV column to the corresponding field on your certificate.</div>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">5</div>
+        <div class="help-step-body">
+          <div class="help-step-title">Preview &amp; Generate</div>
+          <div class="help-step-desc">Use the row navigation arrows to preview how each certificate will look. When satisfied, click <strong>Generate All</strong> — NOVA will create a certificate for every row in your CSV. You can then download them individually or as a ZIP.</div>
+        </div>
+      </div>
+    </div>
+    <div class="help-tip"><span class="help-tip-icon">💡</span><span class="help-tip-text"><strong>Tip:</strong> Use the <strong>Fit to Screen</strong> button if your canvas looks too large or small. The canvas is A4 landscape (2480 × 1754 px) to match standard certificate print sizes.</span></div>
+    <div class="help-warn"><span class="help-tip-icon">⚠️</span><span class="help-warn-text"><strong>Important:</strong> CSV column headers are case-sensitive. Make sure they exactly match the field names you defined in the editor.</span></div>
+  </div>
+
+  <!-- 3. Certificate Mailer -->
+  <div class="help-section" id="help-mailer">
+    <div class="help-section-header">
+      <div class="help-section-ic">📧</div>
+      <div>
+        <div class="help-section-title">Certificate Mailer</div>
+        <div class="help-section-sub">Send generated certificates directly to recipients via Gmail</div>
+      </div>
+    </div>
+    <div class="help-step-list">
+      <div class="help-step">
+        <div class="help-step-num">1</div>
+        <div class="help-step-body">
+          <div class="help-step-title">Open Cert Mailer</div>
+          <div class="help-step-desc">Click <strong>📧 Cert Mailer</strong> in the sidebar. The mailer works after you have generated certificates using the Certificate Maker.</div>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">2</div>
+        <div class="help-step-body">
+          <div class="help-step-title">Upload your recipient CSV</div>
+          <div class="help-step-desc">The CSV must include a column named <strong>Email</strong>. The mailer will read each row and send a personalised certificate to that address. Supported columns: <em>Name, Email, Course, Date, Organisation</em>.</div>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">3</div>
+        <div class="help-step-body">
+          <div class="help-step-title">Customise your email subject &amp; message</div>
+          <div class="help-step-desc">Edit the email subject line and body in the compose panel. You can use merge tags like <span class="help-kbd">{{Name}}</span> or <span class="help-kbd">{{Course}}</span> to personalise each email automatically.</div>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">4</div>
+        <div class="help-step-body">
+          <div class="help-step-title">Start sending</div>
+          <div class="help-step-desc">Click <strong>Send All</strong>. The Live Feed panel tracks the status of each email in real time — Pending → Generating → Sending → Sent (or Failed). You can monitor success rates and retry failed entries.</div>
+        </div>
+      </div>
+    </div>
+    <div class="help-warn"><span class="help-tip-icon">⚠️</span><span class="help-warn-text"><strong>Gmail Daily Limit:</strong> Google limits email sends per day. NOVA tracks your daily send count in the Dashboard's Gmail Tracker. Avoid exceeding ~400–500 emails/day on a standard Gmail account to prevent suspension.</span></div>
+  </div>
+
+  <!-- 4. College Portal -->
+  <div class="help-section" id="help-portal">
+    <div class="help-section-header">
+      <div class="help-section-ic">🏫</div>
+      <div>
+        <div class="help-section-title">College Portal</div>
+        <div class="help-section-sub">Create and manage student portals with sharable verification links</div>
+      </div>
+    </div>
+    <div class="help-step-list">
+      <div class="help-step">
+        <div class="help-step-num">1</div>
+        <div class="help-step-body">
+          <div class="help-step-title">Open College Portal</div>
+          <div class="help-step-desc">Click <strong>🏫 College Portal</strong> in the sidebar. This is where you create and manage portals for different colleges or batches.</div>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">2</div>
+        <div class="help-step-body">
+          <div class="help-step-title">Create a new portal</div>
+          <div class="help-step-desc">Click <strong>+ New Portal</strong>. Enter the portal name (e.g. "BFSI Batch 2025") and a short URL slug. The wizard will guide you through 4 steps: Name → Upload Logo → Upload Student Data → Done.</div>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">3</div>
+        <div class="help-step-body">
+          <div class="help-step-title">Upload student data via CSV or Excel</div>
+          <div class="help-step-desc">In step 3 of the wizard, upload an Excel (.xlsx) or CSV file with your student records. Required columns: <em>Name, Roll No, Course, Grade/Marks</em>. You can also manually add or edit rows in the table after upload.</div>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">4</div>
+        <div class="help-step-body">
+          <div class="help-step-title">Share the portal link</div>
+          <div class="help-step-desc">Once created, a unique URL is generated for your portal. Copy and share it with students — they can visit the link to view and verify their own records without needing a NOVA account.</div>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">5</div>
+        <div class="help-step-body">
+          <div class="help-step-title">Manage existing portals</div>
+          <div class="help-step-desc">From the portal list, you can <strong>Edit</strong> student data, <strong>Toggle</strong> the portal live/offline, <strong>Copy</strong> the shareable link, or <strong>Delete</strong> the portal entirely.</div>
+        </div>
+      </div>
+    </div>
+    <div class="help-tip"><span class="help-tip-icon">💡</span><span class="help-tip-text"><strong>Tip:</strong> Set a portal to <em>Offline</em> if you need to update data before making it public again. Students will see a maintenance message until you re-enable it.</span></div>
+  </div>
+
+  <!-- 5. Data Sync -->
+  <div class="help-section" id="help-datasync">
+    <div class="help-section-header">
+      <div class="help-section-ic">🔄</div>
+      <div>
+        <div class="help-section-title">Data Sync</div>
+        <div class="help-section-sub">Real-time collaborative workbook rooms for collecting college data</div>
+      </div>
+    </div>
+    <div class="help-step-list">
+      <div class="help-step">
+        <div class="help-step-num">1</div>
+        <div class="help-step-body">
+          <div class="help-step-title">Create a Workbook Room</div>
+          <div class="help-step-desc">Click <strong>+ Create Room</strong>. Give it a descriptive name like "BFSI Batch 2025 · College Data". A unique room key is generated automatically.</div>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">2</div>
+        <div class="help-step-body">
+          <div class="help-step-title">Share the room key with colleges</div>
+          <div class="help-step-desc">Copy the room key and send it to your college coordinators. They can join the room by entering the key in their Data Sync page — no account required if you share the direct join link.</div>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">3</div>
+        <div class="help-step-body">
+          <div class="help-step-title">Collect &amp; review data live</div>
+          <div class="help-step-desc">Each college fills their assigned sheet in real time. You can see updates as they happen. A <span style="background:var(--teal);color:#fff;font-size:.65rem;font-weight:700;padding:2px 7px;border-radius:10px">Live</span> badge appears in the sidebar when a room is active.</div>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">4</div>
+        <div class="help-step-body">
+          <div class="help-step-title">Export the compiled workbook</div>
+          <div class="help-step-desc">Once all colleges have submitted, click <strong>Export XLSX</strong> to download the full workbook with each college's data in a separate sheet — ready to use in your Certificate Maker or College Portal.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6. Projects -->
+  <div class="help-section" id="help-projects">
+    <div class="help-section-header">
+      <div class="help-section-ic">📁</div>
+      <div>
+        <div class="help-section-title">My Projects</div>
+        <div class="help-section-sub">Organise and revisit your saved certificate and design work</div>
+      </div>
+    </div>
+    <div class="help-card-grid">
+      <div class="help-card">
+        <div class="help-card-ic">💾</div>
+        <div class="help-card-title">Saving a project</div>
+        <div class="help-card-desc">In the Certificate Maker, click <strong>Save Project</strong> at any time. Give it a name — it will appear in My Projects for you to continue later.</div>
+      </div>
+      <div class="help-card">
+        <div class="help-card-ic">🔁</div>
+        <div class="help-card-title">Resuming a project</div>
+        <div class="help-card-desc">Go to <strong>📁 My Projects</strong> in the sidebar. Click on any saved project to re-open it in the editor with all your settings intact.</div>
+      </div>
+      <div class="help-card">
+        <div class="help-card-ic">🗑️</div>
+        <div class="help-card-title">Deleting a project</div>
+        <div class="help-card-desc">Open a project from the list and click <strong>Delete</strong>. Projects moved to the bin can be restored before they are permanently removed.</div>
+      </div>
+      <div class="help-card">
+        <div class="help-card-ic">📤</div>
+        <div class="help-card-title">Exporting</div>
+        <div class="help-card-desc">From the Certificate Maker, use the <strong>Export</strong> button to download certificates as PNG images or a ZIP archive of all generated files.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 7. Settings -->
+  <div class="help-section" id="help-settings">
+    <div class="help-section-header">
+      <div class="help-section-ic">⚙️</div>
+      <div>
+        <div class="help-section-title">Settings &amp; Profile</div>
+        <div class="help-section-sub">Personalise your workspace and manage your account</div>
+      </div>
+    </div>
+    <div class="help-card-grid">
+      <div class="help-card">
+        <div class="help-card-ic">🎨</div>
+        <div class="help-card-title">Theme &amp; Accent colour</div>
+        <div class="help-card-desc">Go to <strong>⚙️ Settings → Appearance</strong>. Switch between Light and Dark mode, and choose an accent colour (Lime, Teal, Violet, Blue, Coral).</div>
+      </div>
+      <div class="help-card">
+        <div class="help-card-ic">👤</div>
+        <div class="help-card-title">Edit your profile</div>
+        <div class="help-card-desc">Go to <strong>👤 My Profile</strong> to update your display name, profile photo, and role. Changes are saved to your account automatically.</div>
+      </div>
+      <div class="help-card">
+        <div class="help-card-ic">🔒</div>
+        <div class="help-card-title">Change password</div>
+        <div class="help-card-desc">In <strong>Settings → Security</strong>, you can update your password. Google-login users do not need a NOVA password.</div>
+      </div>
+      <div class="help-card">
+        <div class="help-card-ic">🗄️</div>
+        <div class="help-card-title">Storage usage</div>
+        <div class="help-card-desc">Settings shows how much of your storage quota is used by saved projects and uploads. Clear old projects from My Projects to free up space.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 8. FAQ -->
+  <div class="help-section" id="help-faq">
+    <div class="help-section-header">
+      <div class="help-section-ic">❓</div>
+      <div>
+        <div class="help-section-title">Frequently Asked Questions</div>
+        <div class="help-section-sub">Quick answers to common questions</div>
+      </div>
+    </div>
+    <div class="help-faq">
+      <div class="help-faq-item">
+        <div class="help-faq-q" onclick="this.parentElement.classList.toggle('open')">Is NOVA Studio free to use? <span class="faq-arrow">▶</span></div>
+        <div class="help-faq-a">Yes! NOVA Studio is free forever for core features including the Certificate Maker, College Portal, and Data Sync. Sign up with your email or Google — no credit card required.</div>
+      </div>
+      <div class="help-faq-item">
+        <div class="help-faq-q" onclick="this.parentElement.classList.toggle('open')">What CSV format do I need for bulk certificates? <span class="faq-arrow">▶</span></div>
+        <div class="help-faq-a">Your CSV should have column headers in the first row (e.g. Name, Email, Course, Date). The header names must match the field names you set in the Certificate Maker. Save your file as UTF-8 CSV for best results.</div>
+      </div>
+      <div class="help-faq-item">
+        <div class="help-faq-q" onclick="this.parentElement.classList.toggle('open')">Can I use my own certificate design? <span class="faq-arrow">▶</span></div>
+        <div class="help-faq-a">Absolutely. Upload any PNG or JPG image as your template — your company letterhead, branded design, or a blank frame. NOVA overlays the text fields on top of your image.</div>
+      </div>
+      <div class="help-faq-item">
+        <div class="help-faq-q" onclick="this.parentElement.classList.toggle('open')">Why are some emails failing in the Cert Mailer? <span class="faq-arrow">▶</span></div>
+        <div class="help-faq-a">Common reasons: (1) the recipient's email address is invalid or misspelled in your CSV, (2) you have hit Gmail's daily sending limit, or (3) your Gmail account requires you to allow less-secure app access. Check the failed row in the Live Feed for a specific error message.</div>
+      </div>
+      <div class="help-faq-item">
+        <div class="help-faq-q" onclick="this.parentElement.classList.toggle('open')">Can students verify their certificates online? <span class="faq-arrow">▶</span></div>
+        <div class="help-faq-a">Yes. When you generate certificates through the College Portal, each one gets a unique Certificate ID. Students can visit the Verify page and enter their ID to confirm authenticity — no login needed.</div>
+      </div>
+      <div class="help-faq-item">
+        <div class="help-faq-q" onclick="this.parentElement.classList.toggle('open')">How do I add multiple colleges to a Data Sync room? <span class="faq-arrow">▶</span></div>
+        <div class="help-faq-a">Create a room and share the room key with all your coordinators. Each coordinator joins with the same key and fills their assigned sheet. You can see all sheets updating in real time from your host view.</div>
+      </div>
+      <div class="help-faq-item">
+        <div class="help-faq-q" onclick="this.parentElement.classList.toggle('open')">I lost my work — can I recover it? <span class="faq-arrow">▶</span></div>
+        <div class="help-faq-a">If you saved your project before the issue, go to My Projects and look for it there. Projects deleted recently appear in the Bin and can be restored. NOVA auto-saves your progress periodically while you are working in the editor.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div style="text-align:center;padding:24px 0 0;color:var(--mist);font-size:.73rem;border-top:1px solid var(--fog)">
+    Still stuck? Reach out to the NOVA Studio team — we're happy to help. &nbsp;✦
+  </div>
+</div><!-- /help-content -->
+</div><!-- /vp -->
+</div><!-- viewHelp -->
 </div><!-- /app-body -->
 
   <!-- Data Sync Modals -->

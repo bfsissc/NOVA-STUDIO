@@ -8,12 +8,31 @@
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,300;12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Instrument+Serif:ital@0;1&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/styles.css">
 <script src="https://accounts.google.com/gsi/client" async defer id="gsiScript"></script>
+<!-- ✅ Storage polyfill — MUST be first: patches localStorage before any other script runs -->
+<script>
+(function(){
+  var _mem = function(){
+    var s={};
+    return {
+      getItem:    function(k){ return s.hasOwnProperty(k)?s[k]:null; },
+      setItem:    function(k,v){ s[k]=String(v); },
+      removeItem: function(k){ delete s[k]; },
+      clear:      function(){ s={}; },
+      key:        function(i){ return Object.keys(s)[i]||null; },
+      get length(){ return Object.keys(s).length; }
+    };
+  };
+  try { localStorage.setItem('__t','1'); localStorage.removeItem('__t'); }
+  catch(e) { try { Object.defineProperty(window,'localStorage',{value:_mem(),writable:false}); } catch(e2){window.localStorage=_mem();} }
+  try { sessionStorage.setItem('__t','1'); sessionStorage.removeItem('__t'); }
+  catch(e) { try { Object.defineProperty(window,'sessionStorage',{value:_mem(),writable:false}); } catch(e2){window.sessionStorage=_mem();} }
+})();
+</script>
 <script src="https://cdn.jsdelivr.net/npm/firebase@10.12.0/firebase-app-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/firebase@10.12.0/firebase-auth-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/firebase@10.12.0/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/firebase@10.12.0/firebase-storage-compat.js"></script>
 <script src="assets/js/config.js"></script>
-<script src="assets/js/storage-polyfill.js"></script>
 <script src="assets/js/vendor.sheetjs.js"></script>
 </head>
 <body data-initial-view="verify">

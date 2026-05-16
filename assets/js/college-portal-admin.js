@@ -42,6 +42,8 @@ function cpSaveDraft() {
         headerColor:   getVal('cpHeaderColor'),
         accentColor:   getVal('cpAccentColor'),
         googleFormUrl: getVal('cpGoogleFormUrl'),
+        state:         getVal('cpState'),
+        district:      getVal('cpDistrict'),
       }
     };
     try {
@@ -80,6 +82,8 @@ function cpRestoreDraft() {
     _set('cpHeaderColor',    'value',       f.headerColor   || '#1a1a2e');
     _set('cpAccentColor',    'value',       f.accentColor   || '#4f46e5');
     _set('cpGoogleFormUrl',  'value',       f.googleFormUrl || '');
+    _set('cpState',          'value',       f.state         || '');
+    _set('cpDistrict',       'value',       f.district      || '');
     _set('cpFontSize',       'value',       CP.nameStyle.fontSize   || 60);
     _set('cpFontFamily',     'value',       CP.nameStyle.fontFamily || 'Georgia');
     _set('cpFontColor',      'value',       CP.nameStyle.color      || '#1a1a1a');
@@ -160,7 +164,147 @@ async function cpDeletePortal(slug, name) {
 }
 
 // ── Init ──
+function cpEnsureAdminLayout() {
+  var view = document.getElementById('viewPortal') || document.getElementById('cpPortalPanel');
+  var body = view ? view.querySelector('.cp-body') : null;
+  var wizard = body ? body.querySelector('#cpWizard') : document.getElementById('cpWizard');
+  var list = body ? body.querySelector('#cpPortalList') : document.getElementById('cpPortalList');
+  if (!view || !body || !wizard || !list) return;
+
+  var dual = body.querySelector('.cp-dual');
+  if (!dual) {
+    dual = document.createElement('div');
+    dual.className = 'cp-dual';
+
+    var createPanel = document.createElement('div');
+    createPanel.className = 'cp-panel cp-panel-create';
+    createPanel.innerHTML =
+      '<div class="cp-panel-head">' +
+      '<div class="cp-panel-title">Create Portal</div>' +
+      '<button class="btn bl btn-sm" onclick="cpNewPortal()" style="font-size:.7rem;padding:6px 12px">+ New Portal</button>' +
+      '</div><div class="cp-panel-body" style="padding:0"></div>';
+    createPanel.querySelector('.cp-panel-body').appendChild(wizard);
+
+    var portalsPanel = document.createElement('div');
+    portalsPanel.className = 'cp-panel cp-panel-list';
+    portalsPanel.innerHTML =
+      '<div class="cp-panel-head">' +
+      '<div class="cp-panel-title">My Portals</div>' +
+      '<span id="cpPortalCountBadge" style="font-size:.68rem;font-weight:700;color:var(--mist);background:var(--fog);padding:3px 9px;border-radius:20px">0 portals</span>' +
+      '</div>';
+    cpEnsureFilterBar(portalsPanel);
+    var listBody = document.createElement('div');
+    listBody.className = 'cp-panel-body';
+    listBody.style.padding = '12px';
+    listBody.appendChild(list);
+    portalsPanel.appendChild(listBody);
+
+    dual.appendChild(createPanel);
+    dual.appendChild(portalsPanel);
+    body.innerHTML = '';
+    body.appendChild(dual);
+  } else {
+    var panels = dual.querySelectorAll('.cp-panel');
+    if (panels[0]) panels[0].classList.add('cp-panel-create');
+    if (panels[1]) {
+      panels[1].classList.add('cp-panel-list');
+      cpEnsureFilterBar(panels[1]);
+    }
+  }
+
+  var wizardPanel = wizard.closest('.cp-panel');
+  var listPanel = list.closest('.cp-panel');
+  if (wizardPanel) wizardPanel.classList.add('cp-panel-create');
+  if (listPanel) {
+    listPanel.classList.add('cp-panel-list');
+    cpEnsureFilterBar(listPanel);
+  }
+
+  cpEnsurePortalModeSwitch(body);
+  cpEnsurePortalModeStyles();
+  cpEnsureWizardFilters();
+  cpSetPortalView((view && view.getAttribute('data-cp-mode')) || 'create');
+}
+
+function cpEnsurePortalModeSwitch(body) {
+  if (!body || body.querySelector('.cp-mode-switch')) return;
+  var switcher = document.createElement('div');
+  switcher.className = 'cp-mode-switch';
+  switcher.innerHTML =
+    '<button id="cpPortalModeCreate" class="cp-mode-btn active" onclick="cpSetPortalView(\'create\')">Create Portal</button>' +
+    '<button id="cpPortalModeList" class="cp-mode-btn" onclick="cpSetPortalView(\'list\')">College List</button>';
+  body.insertBefore(switcher, body.firstChild);
+}
+
+function cpSetPortalView(mode) {
+  mode = mode === 'list' ? 'list' : 'create';
+  var view = document.getElementById('viewPortal') || document.getElementById('cpPortalPanel');
+  if (!view) return;
+  view.setAttribute('data-cp-mode', mode);
+  var createBtn = document.getElementById('cpPortalModeCreate');
+  var listBtn = document.getElementById('cpPortalModeList');
+  if (createBtn) createBtn.classList.toggle('active', mode === 'create');
+  if (listBtn) listBtn.classList.toggle('active', mode === 'list');
+}
+
+function cpEnsurePortalModeStyles() {
+  if (document.getElementById('cpPortalModeStyles')) return;
+  var style = document.createElement('style');
+  style.id = 'cpPortalModeStyles';
+  style.textContent =
+    '#viewPortal:not([data-cp-mode]) .cp-panel-list,#cpPortalPanel:not([data-cp-mode]) .cp-panel-list{display:none!important}' +
+    '#viewPortal[data-cp-mode="create"] .cp-panel-list,#cpPortalPanel[data-cp-mode="create"] .cp-panel-list,' +
+    '#viewPortal[data-cp-mode="create"] .cp-dual>.cp-panel:nth-of-type(2),#cpPortalPanel[data-cp-mode="create"] .cp-dual>.cp-panel:nth-of-type(2){display:none!important}' +
+    '#viewPortal[data-cp-mode="list"] .cp-panel-create,#cpPortalPanel[data-cp-mode="list"] .cp-panel-create,' +
+    '#viewPortal[data-cp-mode="list"] .cp-dual>.cp-panel:nth-of-type(1),#cpPortalPanel[data-cp-mode="list"] .cp-dual>.cp-panel:nth-of-type(1){display:none!important}' +
+    '#viewPortal[data-cp-mode] .cp-dual,#cpPortalPanel[data-cp-mode] .cp-dual{grid-template-columns:minmax(0,1fr)!important}';
+  document.head.appendChild(style);
+}
+
+function cpEnsureFilterBar(panel) {
+  if (!panel || panel.querySelector('.cp-filter-bar')) return;
+  var bar = document.createElement('div');
+  bar.className = 'cp-filter-bar';
+  bar.innerHTML =
+    '<input class="cp-filter-select" id="cpFilterState" list="cpStateFilterOptions" placeholder="Type state" oninput="cpFilterPortalList()">' +
+    '<datalist id="cpStateFilterOptions"></datalist>' +
+    '<input class="cp-filter-select" id="cpFilterDistrict" list="cpDistrictFilterOptions" placeholder="Type district" oninput="cpFilterPortalList()">' +
+    '<datalist id="cpDistrictFilterOptions"></datalist>' +
+    '<select class="cp-filter-select" id="cpFilterStatus" onchange="cpFilterPortalList()" style="min-width:100px">' +
+    '<option value="">All Status</option><option value="active">Active</option><option value="paused">Paused</option>' +
+    '</select><span class="cp-filter-count" id="cpFilterCount"></span>';
+  var head = panel.querySelector('.cp-panel-head');
+  if (head && head.nextSibling) panel.insertBefore(bar, head.nextSibling);
+  else panel.appendChild(bar);
+}
+
+function cpEnsureWizardFilters() {
+  if (document.getElementById('cpState') || !document.getElementById('cpStep1')) return;
+  var googleInput = document.getElementById('cpGoogleFormUrl');
+  var anchor = googleInput ? googleInput.closest('div[style*="margin-top"]') : null;
+  var row = document.createElement('div');
+  row.className = 'cp-row2';
+  row.style.marginTop = '14px';
+  row.innerHTML =
+    '<div><div class="cp-label">State <span style="font-weight:400;color:var(--mist)">(for filtering)</span></div>' +
+    '<input class="cp-fi" id="cpState" list="cpStateWizardOptions" placeholder="Type any state" oninput="cpUpdateDistrictOptions()">' +
+    '<datalist id="cpStateWizardOptions">' +
+    '<option value="Andhra Pradesh"><option value="Arunachal Pradesh"><option value="Assam">' +
+    '<option value="Bihar"><option value="Chhattisgarh"><option value="Goa"><option value="Gujarat"><option value="Haryana">' +
+    '<option value="Himachal Pradesh"><option value="Jharkhand"><option value="Karnataka"><option value="Kerala">' +
+    '<option value="Madhya Pradesh"><option value="Maharashtra"><option value="Manipur"><option value="Meghalaya">' +
+    '<option value="Mizoram"><option value="Nagaland"><option value="Odisha"><option value="Punjab"><option value="Rajasthan">' +
+    '<option value="Sikkim"><option value="Tamil Nadu"><option value="Telangana"><option value="Tripura"><option value="Uttar Pradesh">' +
+    '<option value="Uttarakhand"><option value="West Bengal"><option value="Delhi"><option value="Jammu & Kashmir">' +
+    '<option value="Ladakh"><option value="Chandigarh"><option value="Puducherry"><option value="Other">' +
+    '</datalist></div>' +
+    '<div><div class="cp-label">District <span style="font-weight:400;color:var(--mist)">(for filtering)</span></div>' +
+    '<input class="cp-fi" id="cpDistrict" placeholder="e.g. Mumbai, Pune"></div>';
+  if (anchor && anchor.parentNode) anchor.parentNode.insertBefore(row, anchor);
+}
+
 function cpInit() {
+  cpEnsureAdminLayout();
   cpLoadPortalList();
 
   // Restore any unsaved wizard draft from before the page refresh
@@ -169,6 +313,7 @@ function cpInit() {
     cpRenderStep(CP.step || 1);
     var wiz = document.getElementById('cpWizard');
     if (wiz) wiz.style.display = 'block';
+    cpSetPortalView('create');
     cpToast('📋 Draft restored — your unsaved work is back!', 'ok');
   } else {
     cpRenderStep(1);
@@ -628,6 +773,8 @@ async function cpPublishPortal() {
     var headerColor  = document.getElementById('cpHeaderColor').value;
     var accentColor  = document.getElementById('cpAccentColor').value;
     var googleFormUrl= (document.getElementById('cpGoogleFormUrl') ? document.getElementById('cpGoogleFormUrl').value.trim() : '');
+    var state        = (document.getElementById('cpState') ? document.getElementById('cpState').value.trim() : '');
+    var district     = (document.getElementById('cpDistrict') ? document.getElementById('cpDistrict').value.trim() : '');
 
     if (!CP.currentSlug || !collegeName) { cpToast('Missing college name.', 'err'); btn.disabled = false; btn.textContent = '🚀 Publish Portal'; return; }
     if (!CP.templateUrl) { cpToast('No template — go back to Step 2 and load a template.', 'err'); btn.disabled = false; btn.textContent = '🚀 Publish Portal'; return; }
@@ -652,6 +799,8 @@ async function cpPublishPortal() {
       namePosition:   { xPct: CP.namePos.xPct, yPct: CP.namePos.yPct },
       nameStyle:      Object.assign({}, CP.nameStyle),
       googleFormUrl:  googleFormUrl,
+      state:          state,
+      district:       district,
       active:         true,
       createdAt:      firebase.firestore.FieldValue.serverTimestamp(),
       createdBy:      (typeof U !== 'undefined' && U) ? U.email : 'unknown',
@@ -722,27 +871,83 @@ async function cpLoadPortalList() {
   } catch(e) { /* ignore */ }
 }
 
-function cpRenderPortalList() {
+// ── Populate filter suggestions from portals data ──
+function cpPopulateFilters() {
+  var stateEl    = document.getElementById('cpFilterState');
+  var districtEl = document.getElementById('cpFilterDistrict');
+  if (!stateEl || !districtEl) return;
+
+  var states    = [];
+  var districts = [];
+  CP.portals.forEach(function(p) {
+    if (p.state    && states.indexOf(p.state) < 0)       states.push(p.state);
+    if (p.district && districts.indexOf(p.district) < 0) districts.push(p.district);
+  });
+  states.sort(); districts.sort();
+
+  var stateList = document.getElementById('cpStateFilterOptions');
+  var districtList = document.getElementById('cpDistrictFilterOptions');
+  if (stateList) stateList.innerHTML = states.map(function(s){ return '<option value="' + escH(s) + '"></option>'; }).join('');
+  if (districtList) districtList.innerHTML = districts.map(function(d){ return '<option value="' + escH(d) + '"></option>'; }).join('');
+}
+
+// ── Filter portal list based on typed filters ──
+function cpFilterPortalList() {
+  var filterState    = (document.getElementById('cpFilterState')    ? document.getElementById('cpFilterState').value.trim().toLowerCase()    : '');
+  var filterDistrict = (document.getElementById('cpFilterDistrict') ? document.getElementById('cpFilterDistrict').value.trim().toLowerCase() : '');
+  var filterStatus   = (document.getElementById('cpFilterStatus')   ? document.getElementById('cpFilterStatus').value   : '');
+
+  var filtered = CP.portals.filter(function(p) {
+    var portalState = String(p.state || '').toLowerCase();
+    var portalDistrict = String(p.district || '').toLowerCase();
+    if (filterState    && portalState.indexOf(filterState) < 0)                       return false;
+    if (filterDistrict && portalDistrict.indexOf(filterDistrict) < 0)                 return false;
+    if (filterStatus === 'active' && p.active === false)                              return false;
+    if (filterStatus === 'paused' && p.active !== false)                              return false;
+    return true;
+  });
+
+  var countEl = document.getElementById('cpFilterCount');
+  if (countEl) countEl.textContent = filtered.length + ' / ' + CP.portals.length + ' portals';
+
+  var badgeEl = document.getElementById('cpPortalCountBadge');
+  if (badgeEl) badgeEl.textContent = CP.portals.length + ' portal' + (CP.portals.length !== 1 ? 's' : '');
+
   var wrap = document.getElementById('cpPortalList');
   if (!wrap) return;
-  if (CP.portals.length === 0) {
-    wrap.innerHTML = '<div style="color:var(--mist);font-size:.8rem;text-align:center;padding:20px">No portals created yet</div>';
+
+  if (filtered.length === 0) {
+    wrap.innerHTML = '<div style="color:var(--mist);font-size:.8rem;text-align:center;padding:30px">No portals match the selected filters.</div>';
     return;
   }
+
+  cpRenderPortalItems(filtered, wrap);
+}
+
+function cpRenderPortalList() {
+  cpPopulateFilters();
+  cpFilterPortalList();
+}
+
+function cpRenderPortalItems(portals, wrap) {
   var base = location.href.replace(/\/[^/]*$/, '/');
-  wrap.innerHTML = CP.portals.map(function(p) {
+  wrap.innerHTML = portals.map(function(p) {
     var link = base + 'college-portal.html?c=' + p.slug;
     var statusDot = p.active !== false
       ? '<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#22c55e;margin-right:5px"></span>Active'
       : '<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#9ca3af;margin-right:5px"></span>Paused';
+    var tags = '';
+    if (p.state)    tags += '<span class="cp-pi-tag state">' + escH(p.state) + '</span>';
+    if (p.district) tags += '<span class="cp-pi-tag district">📍' + escH(p.district) + '</span>';
     return '<div class="cp-portal-item" id="cppi-' + p.slug + '">'
       + '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">'
-      + '<div>'
+      + '<div style="flex:1;min-width:0">'
       + '<div class="cp-pi-name">' + escH(p.collegeName || p.slug) + '</div>'
       + '<div class="cp-pi-slug" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">'
       + '<span>/' + p.slug + '</span>'
       + '<span style="font-size:.65rem;font-weight:600;color:var(--mist);display:flex;align-items:center">' + statusDot + '</span>'
       + '</div>'
+      + (tags ? '<div class="cp-pi-meta" style="margin-top:5px">' + tags + '</div>' : '')
       + '</div>'
       + '<div id="cppi-stats-' + p.slug + '" style="font-size:.7rem;color:var(--mist);text-align:right;flex-shrink:0">Loading…</div>'
       + '</div>'
@@ -752,7 +957,7 @@ function cpRenderPortalList() {
       + '<button class="cp-pi-btn" onclick="cpOpenManage(\'' + p.slug + '\',\'' + escH(p.collegeName || p.slug) + '\')">&#9881;&#65039; Manage Students</button>'
       + '<button class="cp-pi-btn" onclick="cpOpenEditor(\'' + p.slug + '\')">🎨 Edit Settings</button>'
       + '<button class="cp-pi-btn" id="cpReqBtn-' + p.slug + '" onclick="cpOpenRequests(\'' + p.slug + '\',\'' + escH(p.collegeName || p.slug) + '\')">&#x1F514; View Requests <span id="cpReqBadge-' + p.slug + '" style="display:none;background:#ef4444;color:#fff;font-size:.65rem;font-weight:800;padding:1px 6px;border-radius:99px;margin-left:4px">0</span></button>'
-      + '<button class="cp-pi-btn danger" onclick="cpToggleActive(\'' + p.slug + '\',' + !p.active + ')">' 
+      + '<button class="cp-pi-btn danger" onclick="cpToggleActive(\'' + p.slug + '\',' + !p.active + ')">'
       + (p.active !== false ? '&#x23F8; Pause' : '&#x25B6; Activate') + '</button>'
       + '<button class="cp-pi-btn" onclick="cpDeletePortal(\'' + p.slug + '\',\'' + escH(p.collegeName || p.slug) + '\')" style="background:#fef2f2;color:#dc2626;border-color:#fecaca;border:1.5px solid #fecaca">&#x1F5D1; Delete</button>'
       + '</div>'
@@ -761,7 +966,7 @@ function cpRenderPortalList() {
       + '<div class="cp-manage-panel" id="cpreq-' + p.slug + '" style="display:none"></div>'
       + '</div>';
   }).join('');
-  CP.portals.forEach(function(p) { cpLoadPortalStats(p.slug); });
+  portals.forEach(function(p) { cpLoadPortalStats(p.slug); });
 }
 
 
@@ -1103,6 +1308,7 @@ async function cpToggleActive(slug, active) {
 }
 
 async function cpLoadPortal(slug) {
+  cpSetPortalView('create');
   try {
     var doc = await fbDb.collection('college_portals').doc(slug).get();
     if (!doc.exists) { cpToast('Portal not found.', 'err'); return; }
@@ -1124,6 +1330,8 @@ async function cpLoadPortal(slug) {
     _set('cpHeaderColor',   'value',       d.headerColor    || '#1a1a2e');
     _set('cpAccentColor',   'value',       d.accentColor    || '#4f46e5');
     _set('cpGoogleFormUrl', 'value',       d.googleFormUrl  || '');
+    _set('cpState',         'value',       d.state          || '');
+    _set('cpDistrict',      'value',       d.district       || '');
     _set('cpFontSize',      'value',       CP.nameStyle.fontSize   || 60);
     _set('cpFontFamily',    'value',       CP.nameStyle.fontFamily || 'Georgia');
     _set('cpFontColor',     'value',       CP.nameStyle.color      || '#1a1a1a');
@@ -1178,7 +1386,14 @@ async function cpLoadPortal(slug) {
   } catch(e) { cpToast('Error: ' + e.message, 'err'); }
 }
 
+// ── Helper: auto-update filter district when state changes in wizard ──
+function cpUpdateDistrictOptions() {
+  // Just saves draft when state changes — district is free-text input
+  cpSaveDraft && cpSaveDraft();
+}
+
 function cpNewPortal() {
+  cpSetPortalView('create');
   cpClearDraft();
   CP.currentSlug = ''; CP.templateImg = null; CP.templateUrl = ''; CP.csvDriveUrl = ''; CP.students = [];
   CP.namePos   = { xPct: 50, yPct: 62 };
@@ -1187,6 +1402,7 @@ function cpNewPortal() {
   _set('cpCollegeName','value',''); _set('cpSlugPreview','textContent','your-college');
   _set('cpCardMessage','value',''); _set('cpDefaultLimit','value',3);
   _set('cpOpenAccess','checked',false); _set('cpGoogleFormUrl','value','');
+  _set('cpState','value',''); _set('cpDistrict','value','');
   _set('cpTemplateDriveUrl','value',''); _set('cpCsvDriveUrl','value','');
   ['cpTemplateBadgeWrap','cpCsvBadgeWrap','cpPublishedSuccess'].forEach(function(id){ var el=document.getElementById(id); if(el) el.style.display='none'; });
   var wiz = document.getElementById('cpWizard'); if (wiz) wiz.style.display = 'block';
@@ -1330,4 +1546,3 @@ function cpCopyEmail(email) {
     prompt('Copy this email:', email);
   });
 }
-
