@@ -1,0 +1,1948 @@
+/* ═══════════════════════════════════════════════════════════════
+   NOVA STUDIO — LIQUID GLASS UI  ·  iOS-Inspired Design System
+   Drop this file AFTER styles.css in your HTML <head>
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── GOOGLE FONTS — refined pairing ── */
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=DM+Mono:wght@300;400;500&family=Instrument+Serif:ital@0;1&display=swap');
+
+/* ══════════════════════════════════════════════════════════════
+   SECTION 1 · CSS CUSTOM PROPERTIES — GLASS DESIGN TOKENS
+   ══════════════════════════════════════════════════════════════ */
+:root {
+  /* Glass surface tones */
+  --glass-white:        rgba(255, 255, 255, 0.72);
+  --glass-white-dense:  rgba(255, 255, 255, 0.88);
+  --glass-white-ultra:  rgba(255, 255, 255, 0.96);
+  --glass-tint:         rgba(200, 241, 53, 0.08);
+  --glass-border:       rgba(255, 255, 255, 0.55);
+  --glass-border-dim:   rgba(255, 255, 255, 0.28);
+  --glass-shadow:       0 8px 32px rgba(0, 0, 0, 0.10), 0 2px 8px rgba(0, 0, 0, 0.06);
+  --glass-shadow-lift:  0 20px 60px rgba(0, 0, 0, 0.14), 0 4px 16px rgba(0, 0, 0, 0.08);
+  --glass-shadow-deep:  0 32px 80px rgba(0, 0, 0, 0.18), 0 8px 24px rgba(0, 0, 0, 0.10);
+  --glass-blur:         blur(24px) saturate(180%);
+  --glass-blur-sm:      blur(12px) saturate(150%);
+  --glass-blur-xl:      blur(40px) saturate(200%);
+
+  /* Glow tokens — lime, teal, violet accents */
+  --glow-lime:    0 0 20px rgba(200, 241, 53, 0.45),  0 0 60px rgba(200, 241, 53, 0.20);
+  --glow-teal:    0 0 20px rgba(15, 217, 180, 0.40),  0 0 60px rgba(15, 217, 180, 0.18);
+  --glow-violet:  0 0 20px rgba(124, 92, 252, 0.40),  0 0 60px rgba(124, 92, 252, 0.18);
+  --glow-coral:   0 0 20px rgba(255, 107, 82, 0.40),  0 0 60px rgba(255, 107, 82, 0.18);
+  --glow-white:   0 0 30px rgba(255, 255, 255, 0.50),  0 0 80px rgba(255, 255, 255, 0.20);
+  --glow-active:  var(--glow-lime);
+
+  /* Mesh gradient background */
+  --mesh-1: radial-gradient(ellipse 80% 60% at 20% 20%, rgba(200, 241, 53, 0.18) 0%, transparent 60%);
+  --mesh-2: radial-gradient(ellipse 60% 80% at 80% 80%, rgba(15, 217, 180, 0.15) 0%, transparent 60%);
+  --mesh-3: radial-gradient(ellipse 70% 50% at 50% 10%, rgba(124, 92, 252, 0.08) 0%, transparent 55%);
+
+  /* Motion */
+  --ease-glass:   cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  --ease-spring:  cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-smooth:  cubic-bezier(0.4, 0, 0.2, 1);
+  --dur-fast:     150ms;
+  --dur-med:      280ms;
+  --dur-slow:     480ms;
+
+  /* Radius */
+  --r-xs:  6px;
+  --r-sm:  10px;
+  --r-md:  16px;
+  --r-lg:  22px;
+  --r-xl:  30px;
+  --r-pill: 999px;
+
+  /* Override base font */
+  --font-sans: 'Sora', 'Bricolage Grotesque', sans-serif;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   SECTION 2 · GLOBAL RESET & BASE
+   ══════════════════════════════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  font-family: var(--font-sans) !important;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── Mesh background on app body ── */
+body {
+  background:
+    var(--mesh-1),
+    var(--mesh-2),
+    var(--mesh-3),
+    linear-gradient(160deg, #f0f5e8 0%, #e8f4f8 35%, #f0ecff 65%, #faf6f0 100%) !important;
+  background-attachment: fixed !important;
+}
+
+[data-theme="dark"] body {
+  background:
+    radial-gradient(ellipse 80% 60% at 20% 20%, rgba(200, 241, 53, 0.07) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 80% at 80% 80%, rgba(15, 217, 180, 0.06) 0%, transparent 60%),
+    radial-gradient(ellipse 70% 50% at 50% 10%, rgba(124, 92, 252, 0.05) 0%, transparent 55%),
+    linear-gradient(160deg, #080a0f 0%, #0d1118 40%, #0f0d18 70%, #0a0e08 100%) !important;
+  background-attachment: fixed !important;
+}
+
+/* ── Scrollbars — hidden to match Nova glass theme ── */
+::-webkit-scrollbar { width: 0; height: 0; display: none; }
+* { scrollbar-width: none; -ms-overflow-style: none; }
+
+/* ══════════════════════════════════════════════════════════════
+   SECTION 3 · KEYFRAME ANIMATIONS
+   ══════════════════════════════════════════════════════════════ */
+
+/* Glow pulse on active sidebar items */
+@keyframes glowPulse {
+  0%, 100% { box-shadow: var(--glow-active), var(--glass-shadow); }
+  50%       { box-shadow: 0 0 30px rgba(200,241,53,0.65), 0 0 80px rgba(200,241,53,0.28), var(--glass-shadow); }
+}
+
+/* Shimmer sweep */
+@keyframes shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+/* Orb float */
+@keyframes orbFloat {
+  0%, 100% { transform: translateY(0px) scale(1); }
+  33%       { transform: translateY(-12px) scale(1.02); }
+  66%       { transform: translateY(6px) scale(0.98); }
+}
+
+/* Fade up entrance */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(14px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Slide in from left */
+@keyframes slideInLeft {
+  from { opacity: 0; transform: translateX(-16px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+/* Glass ripple on click */
+@keyframes glassRipple {
+  0%   { transform: scale(0); opacity: 0.6; }
+  100% { transform: scale(4); opacity: 0; }
+}
+
+/* Badge bounce */
+@keyframes badgePop {
+  0%   { transform: scale(0.5); opacity: 0; }
+  70%  { transform: scale(1.15); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* Spinner glass */
+@keyframes spinGlass {
+  to { transform: rotate(360deg); }
+}
+
+/* Gradient border rotate */
+@keyframes gradientSpin {
+  0%   { --angle: 0deg; }
+  100% { --angle: 360deg; }
+}
+
+/* Notification dot pulse */
+@keyframes dotPulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50%       { transform: scale(1.4); opacity: 0.7; }
+}
+
+/* Intro stagger */
+@keyframes cardReveal {
+  from { opacity: 0; transform: translateY(20px) scale(0.97); filter: blur(4px); }
+  to   { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   SECTION 4 · FLOATING AMBIENT ORBS (decorative background)
+   ══════════════════════════════════════════════════════════════ */
+body::before,
+body::after {
+  content: '';
+  position: fixed;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 0;
+  animation: orbFloat 8s ease-in-out infinite;
+}
+body::before {
+  width: 420px; height: 420px;
+  top: -80px; left: -80px;
+  background: radial-gradient(circle, rgba(200, 241, 53, 0.12) 0%, transparent 70%);
+  animation-delay: 0s;
+}
+body::after {
+  width: 360px; height: 360px;
+  bottom: -60px; right: -60px;
+  background: radial-gradient(circle, rgba(15, 217, 180, 0.10) 0%, transparent 70%);
+  animation-delay: -4s;
+}
+
+[data-theme="dark"] body::before {
+  background: radial-gradient(circle, rgba(200, 241, 53, 0.06) 0%, transparent 70%);
+}
+[data-theme="dark"] body::after {
+  background: radial-gradient(circle, rgba(15, 217, 180, 0.05) 0%, transparent 70%);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   SECTION 5 · NAVBAR — LIQUID GLASS
+   ══════════════════════════════════════════════════════════════ */
+.navbar {
+  background: var(--glass-white) !important;
+  backdrop-filter: var(--glass-blur) !important;
+  -webkit-backdrop-filter: var(--glass-blur) !important;
+  border-bottom: 1px solid var(--glass-border) !important;
+  box-shadow:
+    0 1px 0 rgba(255,255,255,0.8) inset,
+    0 4px 24px rgba(0,0,0,0.07),
+    0 1px 3px rgba(0,0,0,0.05) !important;
+  position: relative;
+  z-index: 200;
+  animation: slideInLeft var(--dur-slow) var(--ease-glass) both;
+}
+
+[data-theme="dark"] .navbar {
+  background: rgba(18, 22, 32, 0.80) !important;
+  border-bottom: 1px solid rgba(255,255,255,0.08) !important;
+  box-shadow: 0 1px 0 rgba(255,255,255,0.06) inset, 0 4px 24px rgba(0,0,0,0.30) !important;
+}
+
+/* Logo gem — glowing */
+.nb-gem {
+  border-radius: 10px !important;
+  box-shadow: var(--glow-lime) !important;
+  transition: transform var(--dur-med) var(--ease-spring), box-shadow var(--dur-med) !important;
+}
+.nb-gem:hover {
+  transform: scale(1.08) rotate(-3deg) !important;
+  box-shadow: 0 0 28px rgba(200,241,53,0.65), 0 0 80px rgba(200,241,53,0.28) !important;
+}
+
+/* Search bar — glass pill */
+.nb-search {
+  background: rgba(255,255,255,0.55) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(255,255,255,0.70) !important;
+  border-radius: var(--r-pill) !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06), 0 1px 0 rgba(255,255,255,0.9) inset !important;
+  transition: all var(--dur-med) var(--ease-glass) !important;
+  height: 36px !important;
+}
+.nb-search:focus-within {
+  background: rgba(255,255,255,0.82) !important;
+  border-color: rgba(200,241,53,0.60) !important;
+  box-shadow: 0 0 0 3px rgba(200,241,53,0.20), 0 4px 16px rgba(0,0,0,0.08), 0 1px 0 rgba(255,255,255,0.9) inset !important;
+}
+
+[data-theme="dark"] .nb-search {
+  background: rgba(255,255,255,0.06) !important;
+  border-color: rgba(255,255,255,0.12) !important;
+}
+[data-theme="dark"] .nb-search:focus-within {
+  background: rgba(255,255,255,0.10) !important;
+  border-color: rgba(200,241,53,0.40) !important;
+}
+
+/* Navbar icon buttons */
+.nb-ic {
+  background: rgba(255,255,255,0.55) !important;
+  backdrop-filter: blur(10px) !important;
+  border: 1px solid rgba(255,255,255,0.70) !important;
+  border-radius: 10px !important;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.06), 0 1px 0 rgba(255,255,255,0.9) inset !important;
+  transition: all var(--dur-med) var(--ease-spring) !important;
+  width: 34px !important; height: 34px !important;
+}
+.nb-ic:hover {
+  background: rgba(255,255,255,0.88) !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.10), 0 1px 0 rgba(255,255,255,0.9) inset !important;
+}
+
+/* Avatar — glowing ring */
+.nb-av {
+  box-shadow: 0 0 0 2px var(--lime), var(--glow-lime) !important;
+  transition: all var(--dur-med) var(--ease-spring) !important;
+}
+.nb-av:hover {
+  transform: scale(1.08) !important;
+  box-shadow: 0 0 0 3px var(--lime), 0 0 30px rgba(200,241,53,0.60), 0 0 70px rgba(200,241,53,0.25) !important;
+}
+
+/* Notification dot */
+.nb-dot {
+  animation: dotPulse 2s ease-in-out infinite !important;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   SECTION 6 · SIDEBAR — LIQUID GLASS
+   ══════════════════════════════════════════════════════════════ */
+.sidebar {
+  background: var(--glass-white) !important;
+  backdrop-filter: var(--glass-blur) !important;
+  -webkit-backdrop-filter: var(--glass-blur) !important;
+  border-right: 1px solid var(--glass-border) !important;
+  box-shadow: 1px 0 0 rgba(255,255,255,0.6) inset, 4px 0 24px rgba(0,0,0,0.06) !important;
+  animation: slideInLeft var(--dur-slow) var(--ease-glass) both;
+  animation-delay: 60ms;
+  position: relative;
+  z-index: 100;
+}
+
+[data-theme="dark"] .sidebar {
+  background: rgba(14, 18, 28, 0.82) !important;
+  border-right: 1px solid rgba(255,255,255,0.07) !important;
+  box-shadow: 1px 0 0 rgba(255,255,255,0.04) inset, 4px 0 24px rgba(0,0,0,0.28) !important;
+}
+
+/* Sidebar section label */
+.sb-l {
+  font-size: 0.58rem !important;
+  letter-spacing: 0.14em !important;
+  font-weight: 700 !important;
+  opacity: 0.5 !important;
+  text-transform: uppercase !important;
+}
+
+/* Sidebar item */
+.sb-i {
+  border-radius: 12px !important;
+  margin: 1px 4px !important;
+  padding: 8px 12px !important;
+  font-size: 0.78rem !important;
+  font-weight: 500 !important;
+  transition: all var(--dur-med) var(--ease-glass) !important;
+  position: relative !important;
+  overflow: hidden !important;
+}
+
+/* Ripple layer */
+.sb-i::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, transparent 60%);
+  opacity: 0;
+  transition: opacity var(--dur-med) !important;
+}
+
+.sb-i:hover {
+  background: rgba(255,255,255,0.60) !important;
+  backdrop-filter: blur(8px) !important;
+  color: var(--ink) !important;
+  transform: translateX(3px) !important;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.07), 0 1px 0 rgba(255,255,255,0.8) inset !important;
+}
+.sb-i:hover::before { opacity: 1 !important; }
+
+/* Active sidebar item — GLOWING GLASS */
+.sb-i.on {
+  background: linear-gradient(135deg, rgba(200,241,53,0.90) 0%, rgba(180,225,30,0.85) 100%) !important;
+  color: #1a2000 !important;
+  font-weight: 700 !important;
+  box-shadow:
+    var(--glow-lime),
+    0 4px 16px rgba(200,241,53,0.30),
+    0 1px 0 rgba(255,255,255,0.6) inset !important;
+  animation: glowPulse 3s ease-in-out infinite !important;
+  transform: translateX(2px) !important;
+}
+.sb-i.on::before { opacity: 1 !important; }
+
+[data-theme="dark"] .sb-i.on {
+  background: linear-gradient(135deg, rgba(200,241,53,0.85) 0%, rgba(158,192,0,0.80) 100%) !important;
+}
+[data-theme="dark"] .sb-i:hover {
+  background: rgba(255,255,255,0.08) !important;
+}
+
+/* Badge on sidebar */
+.sb-bx {
+  background: linear-gradient(135deg, var(--teal), #0ab899) !important;
+  box-shadow: 0 0 10px rgba(15,217,180,0.50) !important;
+  border-radius: var(--r-pill) !important;
+  animation: badgePop 0.4s var(--ease-spring) both !important;
+  font-size: 0.55rem !important;
+}
+
+/* Sidebar footer user card */
+.sb-foot {
+  background: rgba(255,255,255,0.50) !important;
+  backdrop-filter: blur(12px) !important;
+  border-top: 1px solid rgba(255,255,255,0.55) !important;
+  border-radius: 0 0 0 0 !important;
+  margin: 0 !important;
+  transition: all var(--dur-med) var(--ease-glass) !important;
+}
+.sb-foot:hover {
+  background: rgba(255,255,255,0.75) !important;
+  box-shadow: 0 -4px 20px rgba(0,0,0,0.05) inset !important;
+}
+
+[data-theme="dark"] .sb-foot {
+  background: rgba(255,255,255,0.04) !important;
+  border-top: 1px solid rgba(255,255,255,0.07) !important;
+}
+
+/* Avatar glow */
+.sb-fav {
+  box-shadow: 0 0 12px rgba(200,241,53,0.40) !important;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   SECTION 7 · STAT CARDS — LIQUID GLASS
+   ══════════════════════════════════════════════════════════════ */
+.sc {
+  background: var(--glass-white) !important;
+  backdrop-filter: var(--glass-blur) !important;
+  -webkit-backdrop-filter: var(--glass-blur) !important;
+  border: 1px solid var(--glass-border) !important;
+  border-radius: var(--r-lg) !important;
+  box-shadow: var(--glass-shadow), 0 1px 0 rgba(255,255,255,0.85) inset !important;
+  transition: all var(--dur-med) var(--ease-spring) !important;
+  position: relative !important;
+  overflow: hidden !important;
+  animation: cardReveal var(--dur-slow) var(--ease-glass) both;
+}
+
+.sc:nth-child(1) { animation-delay: 80ms; }
+.sc:nth-child(2) { animation-delay: 140ms; }
+.sc:nth-child(3) { animation-delay: 200ms; }
+.sc:nth-child(4) { animation-delay: 260ms; }
+
+/* Glass glare top edge */
+.sc::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.9) 40%, rgba(255,255,255,0.9) 60%, transparent);
+  pointer-events: none;
+}
+
+/* Shimmer sweep on hover */
+.sc::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg,
+    transparent 30%,
+    rgba(255,255,255,0.30) 50%,
+    transparent 70%);
+  background-size: 200% 100%;
+  background-position: -200% center;
+  border-radius: inherit;
+  pointer-events: none;
+  transition: background-position 0s;
+}
+.sc:hover::after {
+  background-position: 200% center;
+  transition: background-position 0.6s ease !important;
+}
+
+.sc:hover {
+  transform: translateY(-5px) scale(1.01) !important;
+  box-shadow: var(--glass-shadow-lift), 0 1px 0 rgba(255,255,255,0.9) inset !important;
+  border-color: rgba(255,255,255,0.80) !important;
+}
+
+[data-theme="dark"] .sc {
+  background: rgba(255,255,255,0.05) !important;
+  border-color: rgba(255,255,255,0.10) !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.25), 0 1px 0 rgba(255,255,255,0.06) inset !important;
+}
+[data-theme="dark"] .sc:hover {
+  background: rgba(255,255,255,0.08) !important;
+  border-color: rgba(255,255,255,0.16) !important;
+}
+
+/* Stat icon pill */
+.sc-i {
+  border-radius: 10px !important;
+  background: rgba(200,241,53,0.15) !important;
+  backdrop-filter: blur(6px) !important;
+  box-shadow: 0 2px 8px rgba(200,241,53,0.20) !important;
+}
+
+/* Stat number */
+.sc-n {
+  font-family: var(--font-sans) !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.05em !important;
+  background: linear-gradient(135deg, var(--ink) 0%, var(--ink3) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+[data-theme="dark"] .sc-n {
+  background: linear-gradient(135deg, #ffffff 0%, rgba(255,255,255,0.7) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Trend chip */
+.sc-tr.up {
+  background: rgba(34,197,94,0.12) !important;
+  color: #16a34a !important;
+  padding: 2px 7px !important;
+  border-radius: var(--r-pill) !important;
+  font-size: 0.62rem !important;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   SECTION 8 · TOOL CARDS (tc) — LIQUID GLASS
+   ══════════════════════════════════════════════════════════════ */
+.tc {
+  background: var(--glass-white) !important;
+  backdrop-filter: var(--glass-blur) !important;
+  -webkit-backdrop-filter: var(--glass-blur) !important;
+  border: 1px solid var(--glass-border) !important;
+  border-radius: var(--r-lg) !important;
+  box-shadow: var(--glass-shadow), 0 1px 0 rgba(255,255,255,0.85) inset !important;
+  transition: all var(--dur-med) var(--ease-spring) !important;
+  position: relative !important;
+  overflow: hidden !important;
+  animation: cardReveal var(--dur-slow) var(--ease-glass) both;
+}
+
+.tc-grid .tc:nth-child(1) { animation-delay: 100ms; }
+.tc-grid .tc:nth-child(2) { animation-delay: 160ms; }
+.tc-grid .tc:nth-child(3) { animation-delay: 220ms; }
+.tc-grid .tc:nth-child(4) { animation-delay: 280ms; }
+.tc-grid .tc:nth-child(5) { animation-delay: 340ms; }
+.tc-grid .tc:nth-child(6) { animation-delay: 400ms; }
+
+/* Color-tinted top bar — enhanced */
+.tc::before {
+  height: 3px !important;
+  background: linear-gradient(90deg, var(--ac, var(--lime)), color-mix(in srgb, var(--ac, var(--lime)) 60%, var(--teal))) !important;
+  box-shadow: 0 0 10px var(--ac, var(--lime)) !important;
+  opacity: 1 !important;
+}
+
+/* Glass glare */
+.tc::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 50%;
+  background: linear-gradient(180deg, rgba(255,255,255,0.18) 0%, transparent 100%);
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+.tc:hover {
+  transform: translateY(-6px) scale(1.02) !important;
+  box-shadow: var(--glass-shadow-lift), 0 0 0 1px rgba(255,255,255,0.7) inset !important;
+  border-color: rgba(255,255,255,0.85) !important;
+}
+
+[data-theme="dark"] .tc {
+  background: rgba(255,255,255,0.05) !important;
+  border-color: rgba(255,255,255,0.10) !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.28), 0 1px 0 rgba(255,255,255,0.06) inset !important;
+}
+[data-theme="dark"] .tc:hover {
+  background: rgba(255,255,255,0.08) !important;
+}
+
+/* Tool icon circle */
+.tc-i {
+  border-radius: 13px !important;
+  backdrop-filter: blur(6px) !important;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.10) !important;
+  width: 46px !important; height: 46px !important;
+  transition: transform var(--dur-med) var(--ease-spring) !important;
+}
+.tc:hover .tc-i {
+  transform: scale(1.10) rotate(-4deg) !important;
+}
+
+/* Tags */
+.tc-tag {
+  backdrop-filter: blur(4px) !important;
+  border: 1px solid rgba(255,255,255,0.40) !important;
+  border-radius: 6px !important;
+  font-size: 0.58rem !important;
+}
+
+/* Arrow */
+.tc-go { font-weight: 600 !important; }
+
+/* ══════════════════════════════════════════════════════════════
+   SECTION 9 · PANEL CARDS (.pan) — LIQUID GLASS
+   ══════════════════════════════════════════════════════════════ */
+.pan {
+  background: var(--glass-white) !important;
+  backdrop-filter: var(--glass-blur) !important;
+  -webkit-backdrop-filter: var(--glass-blur) !important;
+  border: 1px solid var(--glass-border) !important;
+  border-radius: var(--r-lg) !important;
+  box-shadow: var(--glass-shadow), 0 1px 0 rgba(255,255,255,0.85) inset !important;
+  animation: cardReveal var(--dur-slow) var(--ease-glass) 320ms both;
+}
+
+[data-theme="dark"] .pan {
+  background: rgba(255,255,255,0.05) !important;
+  border-color: rgba(255,255,255,0.09) !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.25), 0 1px 0 rgba(255,255,255,0.05) inset !important;
+}
+
+/* Panel header */
+.pan-h {
+  padding: 16px 18px 12px !important;
+  border-bottom: 1px solid rgba(255,255,255,0.55) !important;
+}
+[data-theme="dark"] .pan-h { border-bottom-color: rgba(255,255,255,0.08) !important; }
+
+/* ══════════════════════════════════════════════════════════════
+   SECTION 10 · GREET BANNER — LIQUID GLASS DARK
+   ══════════════════════════════════════════════════════════════ */
+.greet {
+  background:
+    linear-gradient(135deg,
+      rgba(13,17,23,0.92) 0%,
+      rgba(20,28,48,0.90) 60%,
+      rgba(16,22,40,0.88) 100%) !important;
+  backdrop-filter: var(--glass-blur) !important;
+  -webkit-backdrop-filter: var(--glass-blur) !important;
+  border: 1px solid rgba(255,255,255,0.12) !important;
+  border-radius: var(--r-xl) !important;
+  box-shadow:
+    0 20px 60px rgba(0,0,0,0.22),
+    0 1px 0 rgba(255,255,255,0.12) inset,
+    0 -1px 0 rgba(0,0,0,0.20) inset !important;
+  overflow: hidden !important;
+  position: relative !important;
+  animation: cardReveal var(--dur-slow) var(--ease-glass) 40ms both;
+}
+
+/* Animated lime orb */
+.greet::before {
+  content: '';
+  position: absolute;
+  top: -60px; right: -60px;
+  width: 220px; height: 220px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(200,241,53,0.22) 0%, transparent 65%);
+  animation: orbFloat 6s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* Teal orb */
+.greet::after {
+  content: '';
+  position: absolute;
+  bottom: -40px; left: -40px;
+  width: 180px; height: 180px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(15,217,180,0.18) 0%, transparent 65%);
+  animation: orbFloat 8s ease-in-out infinite;
+  animation-delay: -3s;
+  pointer-events: none;
+}
+
+.gr-title { font-weight: 800 !important; letter-spacing: -0.03em !important; }
+.gr-title span { text-shadow: var(--glow-lime) !important; }
+.gr-sub { font-weight: 300 !important; }
+
+/* Greet buttons */
+.greet .btn {
+  position: relative !important;
+  z-index: 1 !important;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   SECTION 11 · BUTTONS — LIQUID GLASS
+   ══════════════════════════════════════════════════════════════ */
+
+/* Base button glass enhancement */
+.btn {
+  backdrop-filter: blur(8px) !important;
+  border-radius: var(--r-sm) !important;
+  transition: all var(--dur-med) var(--ease-spring) !important;
+  position: relative !important;
+  overflow: hidden !important;
+  font-family: var(--font-sans) !important;
+  font-weight: 600 !important;
+  letter-spacing: -0.01em !important;
+}
+
+/* Shimmer on hover */
+.btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 30%, rgba(255,255,255,0.25) 50%, transparent 70%);
+  background-size: 200% 100%;
+  background-position: -200% center;
+  border-radius: inherit;
+  pointer-events: none;
+}
+.btn:hover::after {
+  background-position: 200% center;
+  transition: background-position 0.5s ease !important;
+}
+
+/* Dark (primary) button */
+.bd {
+  background: linear-gradient(135deg, rgba(13,15,18,0.92) 0%, rgba(29,35,48,0.88) 100%) !important;
+  border: 1px solid rgba(255,255,255,0.12) !important;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.20), 0 1px 0 rgba(255,255,255,0.08) inset !important;
+}
+.bd:hover {
+  transform: translateY(-2px) scale(1.02) !important;
+  box-shadow: 0 8px 28px rgba(0,0,0,0.25), 0 1px 0 rgba(255,255,255,0.12) inset !important;
+}
+
+/* Lime (accent) button */
+.bl {
+  background: linear-gradient(135deg, #c8f135 0%, #b0d820 60%, #9ec000 100%) !important;
+  border: 1px solid rgba(255,255,255,0.35) !important;
+  color: #1a2000 !important;
+  box-shadow: var(--glow-lime), 0 4px 16px rgba(200,241,53,0.30), 0 1px 0 rgba(255,255,255,0.50) inset !important;
+}
+.bl:hover {
+  transform: translateY(-2px) scale(1.02) !important;
+  box-shadow: 0 0 28px rgba(200,241,53,0.65), 0 0 70px rgba(200,241,53,0.28), 0 6px 20px rgba(200,241,53,0.35), 0 1px 0 rgba(255,255,255,0.50) inset !important;
+}
+
+/* Outline button */
+.bo {
+  background: rgba(255,255,255,0.45) !important;
+  backdrop-filter: blur(8px) !important;
+  border: 1px solid rgba(255,255,255,0.65) !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06), 0 1px 0 rgba(255,255,255,0.85) inset !important;
+}
+.bo:hover {
+  background: rgba(255,255,255,0.72) !important;
+  border-color: rgba(255,255,255,0.85) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.08), 0 1px 0 rgba(255,255,255,0.9) inset !important;
+}
+
+[data-theme="dark"] .bo {
+  background: rgba(255,255,255,0.06) !important;
+  border-color: rgba(255,255,255,0.14) !important;
+}
+[data-theme="dark"] .bo:hover {
+  background: rgba(255,255,255,0.10) !important;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   SECTION 12 · LOGIN SCREEN — LIQUID GLASS
+   ══════════════════════════════════════════════════════════════ */
+#loginScreen {
+  background:
+    radial-gradient(ellipse 80% 60% at 25% 30%, rgba(200,241,53,0.20) 0%, transparent 55%),
+    radial-gradient(ellipse 60% 70% at 75% 70%, rgba(15,217,180,0.18) 0%, transparent 55%),
+    radial-gradient(ellipse 50% 50% at 50% 50%, rgba(124,92,252,0.10) 0%, transparent 60%),
+    linear-gradient(160deg, #e8f5d0 0%, #d4f5ef 30%, #ede8ff 65%, #f5f0e8 100%) !important;
+}
+
+.lw {
+  background: transparent !important;
+  border-radius: 28px !important;
+  overflow: hidden !important;
+  box-shadow: 0 40px 100px rgba(0,0,0,0.20), 0 0 0 1px rgba(255,255,255,0.60) !important;
+  animation: fadeUp 0.6s var(--ease-spring) both;
+}
+
+/* Left panel — dark glass */
+.ll {
+  background: linear-gradient(148deg,
+    rgba(8,10,15,0.94) 0%,
+    rgba(14,20,32,0.92) 55%,
+    rgba(16,20,36,0.90) 100%) !important;
+  backdrop-filter: var(--glass-blur-xl) !important;
+  -webkit-backdrop-filter: var(--glass-blur-xl) !important;
+  border-right: 1px solid rgba(255,255,255,0.08) !important;
+}
+
+/* Right panel — bright glass */
+.lr {
+  background: var(--glass-white-dense) !important;
+  backdrop-filter: var(--glass-blur) !important;
+  -webkit-backdrop-filter: var(--glass-blur) !important;
+}
+
+/* Login form fields */
+.fi {
+  background: rgba(255,255,255,0.65) !important;
+  backdrop-filter: blur(8px) !important;
+  border: 1px solid rgba(255,255,255,0.75) !important;
+  border-radius: var(--r-sm) !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05), 0 1px 0 rgba(255,255,255,0.90) inset !important;
+  transition: all var(--dur-med) var(--ease-glass) !important;
+}
+.fi:focus {
+  background: rgba(255,255,255,0.90) !important;
+  border-color: rgba(200,241,53,0.55) !important;
+  box-shadow: 0 0 0 3px rgba(200,241,53,0.18), 0 4px 16px rgba(0,0,0,0.07), 0 1px 0 rgba(255,255,255,0.9) inset !important;
+}
+
+/* Primary login button */
+.btn-pri {
+  background: linear-gradient(135deg, #0d0f12 0%, #1a1f28 100%) !important;
+  border: 1px solid rgba(255,255,255,0.12) !important;
+  border-radius: var(--r-sm) !important;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.22), 0 1px 0 rgba(255,255,255,0.08) inset !important;
+  font-family: var(--font-sans) !important;
+  font-weight: 600 !important;
+  letter-spacing: -0.01em !important;
+  transition: all var(--dur-med) var(--ease-spring) !important;
+}
+.btn-pri:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.28), 0 1px 0 rgba(255,255,255,0.12) inset !important;
+}
+
+.btn-sec {
+  background: rgba(255,255,255,0.55) !important;
+  backdrop-filter: blur(8px) !important;
+  border: 1px solid rgba(255,255,255,0.75) !important;
+  border-radius: var(--r-sm) !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06), 0 1px 0 rgba(255,255,255,0.90) inset !important;
+  font-family: var(--font-sans) !important;
+  transition: all var(--dur-med) var(--ease-spring) !important;
+}
+.btn-sec:hover {
+  background: rgba(255,255,255,0.80) !important;
+  border-color: rgba(200,241,53,0.45) !important;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.08) !important;
+}
+
+.btn-google {
+  background: rgba(255,255,255,0.72) !important;
+  backdrop-filter: blur(10px) !important;
+  border: 1px solid rgba(255,255,255,0.80) !important;
+  border-radius: var(--r-sm) !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.07), 0 1px 0 rgba(255,255,255,0.90) inset !important;
+  transition: all var(--dur-med) var(--ease-spring) !important;
+}
+.btn-google:hover {
+  background: rgba(255,255,255,0.92) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 6px 20px rgba(66,133,244,0.18) !important;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   SECTION 13 · FORM INPUTS — LIQUID GLASS
+   ══════════════════════════════════════════════════════════════ */
+input:not([type="range"]):not([type="checkbox"]):not([type="radio"]):not([type="color"]):not([type="file"]),
+select,
+textarea {
+  background: rgba(255,255,255,0.60) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+  border: 1px solid rgba(255,255,255,0.70) !important;
+  border-radius: var(--r-sm) !important;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.05), 0 1px 0 rgba(255,255,255,0.85) inset !important;
+  transition: all var(--dur-med) var(--ease-glass) !important;
+  font-family: var(--font-sans) !important;
+}
+input:not([type="range"]):not([type="checkbox"]):not([type="radio"]):not([type="color"]):not([type="file"]):focus,
+select:focus,
+textarea:focus {
+  background: rgba(255,255,255,0.88) !important;
+  border-color: rgba(200,241,53,0.55) !important;
+  box-shadow: 0 0 0 3px rgba(200,241,53,0.18), 0 2px 8px rgba(0,0,0,0.06), 0 1px 0 rgba(255,255,255,0.9) inset !important;
+  outline: none !important;
+}
+
+[data-theme="dark"] input:not([type="range"]):not([type="checkbox"]):not([type="radio"]):not([type="color"]):not([type="file"]),
+[data-theme="dark"] select,
+[data-theme="dark"] textarea {
+  background: rgba(255,255,255,0.07) !important;
+  border-color: rgba(255,255,255,0.12) !important;
+  color: var(--ink) !important;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   SECTION 14 · VIEW / PAGE PANELS — LIQUID GLASS SURFACES
+   ══════════════════════════════════════════════════════════════ */
+
+/* General white surface cards */
+.pdc, .stg-card, .proj-card,
+.cert-panel, .cert-topbar, .cert-toolbar,
+#editPanel, .psm-box,
+.cp-portals-panel, .cp-wizard, .cp-panel,
+.sync-sidebar, .sync-room-header, .sync-table-wrap,
+.wb-toolbar, .wb-fmt-bar, .wb-tabs-bar {
+  background: var(--glass-white) !important;
+  backdrop-filter: var(--glass-blur-sm) !important;
+  -webkit-backdrop-filter: var(--glass-blur-sm) !important;
+  border: 1px solid var(--glass-border) !important;
+  box-shadow: var(--glass-shadow), 0 1px 0 rgba(255,255,255,0.80) inset !important;
+}
+
+[data-theme="dark"] .pdc, [data-theme="dark"] .stg-card, [data-theme="dark"] .proj-card,
+[data-theme="dark"] .cert-panel, [data-theme="dark"] .cert-topbar, [data-theme="dark"] .cert-toolbar,
+[data-theme="dark"] #editPanel, [data-theme="dark"] .psm-box,
+[data-theme="dark"] .cp-portals-panel, [data-theme="dark"] .cp-wizard, [data-theme="dark"] .cp-panel,
+[data-theme="dark"] .sync-sidebar, [data-theme="dark"] .sync-room-header, [data-theme="dark"] .sync-table-wrap,
+[data-theme="dark"] .wb-toolbar, [data-theme="dark"] .wb-fmt-bar, [data-theme="dark"] .wb-tabs-bar {
+  background: rgba(255,255,255,0.05) !important;
+  border-color: rgba(255,255,255,0.09) !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.25), 0 1px 0 rgba(255,255,255,0.05) inset !important;
+}
+
+/* View containers */
+.view {
+  background: transparent !important;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   SECTION 15 · MODALS & OVERLAYS — LIQUID GLASS
+   ══════════════════════════════════════════════════════════════ */
+.sync-modal-box, .psm-box {
+  background: var(--glass-white-ultra) !important;
+  backdrop-filter: var(--glass-blur-xl) !important;
+  -webkit-backdrop-filter: var(--glass-blur-xl) !important;
+  border: 1px solid var(--glass-border) !important;
+  border-radius: var(--r-xl) !important;
+  box-shadow: var(--glass-shadow-deep), 0 1px 0 rgba(255,255,255,0.90) inset !important;
+  animation: fadeUp var(--dur-med) var(--ease-spring) both;
+}
+
+/* Modal overlays */
+.sync-modal-ovl.show {
+  backdrop-filter: blur(12px) saturate(140%) !important;
+  -webkit-backdrop-filter: blur(12px) saturate(140%) !important;
+  background: rgba(0,0,0,0.30) !important;
+}
+
+#projSaveModal {
+  backdrop-filter: blur(14px) saturate(150%) !important;
+  -webkit-backdrop-filter: blur(14px) saturate(150%) !important;
+}
+#projSaveModal.show {
+  background: rgba(0,0,0,0.28) !important;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   SECTION 16 · TOAST NOTIFICATIONS — LIQUID GLASS
+   ══════════════════════════════════════════════════════════════ */
+.sync-toast, .toast, .cp-toast {
+  background: rgba(13,15,18,0.88) !important;
+  backdrop-filter: var(--glass-blur) !important;
+  -webkit-backdrop-filter: var(--glass-blur) !important;
+  border: 1px solid rgba(255,255,255,0.14) !important;
+  border-radius: var(--r-md) !important;
+  box-shadow: 0 16px 40px rgba(0,0,0,0.25), 0 1px 0 rgba(255,255,255,0.08) inset !important;
+  color: #fff !important;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   SECTION 17 · BADGES & PILLS — GLOW
+   ══════════════════════════════════════════════════════════════ */
+.ml-feed-badge.b-sent {
+  background: rgba(34,197,94,0.15) !important;
+  color: #16a34a !important;
+  box-shadow: 0 0 8px rgba(34,197,94,0.30) !important;
+}
+.ml-feed-badge.b-failed {
+  background: rgba(239,68,68,0.15) !important;
+  color: #dc2626 !important;
+  box-shadow: 0 0 8px rgba(239,68,68,0.25) !important;
+}
+.ml-feed-badge.b-sending {
+  background: rgba(99,102,241,0.15) !important;
+  color: #4338ca !important;
+  box-shadow: 0 0 8px rgba(99,102,241,0.25) !important;
+}
+.ml-feed-badge.b-pending {
+  background: rgba(245,158,11,0.15) !important;
+  color: #b45309 !important;
+}
+.ml-feed-badge.b-generating {
+  background: rgba(234,179,8,0.15) !important;
+  color: #a16207 !important;
+}
+
+/* Sync room pills */
+.sync-room-pill {
+  backdrop-filter: blur(8px) !important;
+  border-radius: var(--r-pill) !important;
+}
+.sync-room-pill.connected {
+  background: rgba(34,197,94,0.12) !important;
+  border-color: rgba(34,197,94,0.30) !important;
+  box-shadow: 0 0 10px rgba(34,197,94,0.20) !important;
+}
+
+/* Live dot glow */
+.sync-live-dot {
+  box-shadow: 0 0 8px rgba(21,128,61,0.60) !important;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   SECTION 18 · WORKBOOK / TABLE SURFACES
+   ══════════════════════════════════════════════════════════════ */
+.wb-grid th {
+  background: rgba(248,250,252,0.75) !important;
+  backdrop-filter: blur(8px) !important;
+}
+.wb-tab.active {
+  background: rgba(255,255,255,0.85) !important;
+  backdrop-filter: blur(6px) !important;
+  border-top-color: var(--lime-d) !important;
+  box-shadow: 0 -2px 12px rgba(200,241,53,0.20) inset !important;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   SECTION 19 · QUICK ACTION BUTTONS (.qa-b)
+   ══════════════════════════════════════════════════════════════ */
+.qa-b {
+  background: rgba(255,255,255,0.55) !important;
+  backdrop-filter: blur(10px) !important;
+  border: 1px solid rgba(255,255,255,0.72) !important;
+  border-radius: var(--r-md) !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06), 0 1px 0 rgba(255,255,255,0.85) inset !important;
+  transition: all var(--dur-med) var(--ease-spring) !important;
+}
+.qa-b:hover {
+  background: rgba(200,241,53,0.18) !important;
+  border-color: rgba(200,241,53,0.55) !important;
+  box-shadow: var(--glow-lime), 0 4px 16px rgba(200,241,53,0.22) !important;
+  transform: translateY(-3px) scale(1.03) !important;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   SECTION 20 · ACTIVITY ITEMS (.ai)
+   ══════════════════════════════════════════════════════════════ */
+.ai {
+  border-bottom: 1px solid rgba(255,255,255,0.55) !important;
+  padding: 9px 0 !important;
+  transition: background var(--dur-fast) !important;
+}
+.ai:hover {
+  background: rgba(255,255,255,0.40) !important;
+  border-radius: 10px !important;
+  padding-left: 8px !important;
+  padding-right: 8px !important;
+}
+.ai-ic {
+  border-radius: 10px !important;
+  backdrop-filter: blur(4px) !important;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   SECTION 21 · COLLEGE PORTAL / CP COMPONENTS
+   ══════════════════════════════════════════════════════════════ */
+.cp-portal-item {
+  background: var(--glass-white) !important;
+  backdrop-filter: blur(12px) !important;
+  border: 1px solid var(--glass-border) !important;
+  border-radius: var(--r-md) !important;
+  box-shadow: var(--glass-shadow), 0 1px 0 rgba(255,255,255,0.80) inset !important;
+  transition: all var(--dur-med) var(--ease-spring) !important;
+}
+.cp-portal-item:hover {
+  transform: translateY(-3px) !important;
+  box-shadow: var(--glass-shadow-lift), 0 1px 0 rgba(255,255,255,0.85) inset !important;
+}
+
+.cp-pi-btn {
+  background: rgba(255,255,255,0.55) !important;
+  backdrop-filter: blur(8px) !important;
+  border: 1px solid rgba(255,255,255,0.72) !important;
+  border-radius: var(--r-sm) !important;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.05), 0 1px 0 rgba(255,255,255,0.80) inset !important;
+  transition: all var(--dur-med) var(--ease-spring) !important;
+}
+.cp-pi-btn:hover {
+  background: rgba(255,255,255,0.80) !important;
+  transform: translateY(-1px) !important;
+}
+
+/* CP dots */
+.cp-dot.active {
+  background: linear-gradient(135deg, var(--lime), #b0d820) !important;
+  box-shadow: 0 0 10px rgba(200,241,53,0.50) !important;
+}
+.cp-dot.done {
+  background: linear-gradient(135deg, var(--ink), var(--ink2)) !important;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   SECTION 22 · VERIFY PAGE COMPONENTS
+   ══════════════════════════════════════════════════════════════ */
+.vfy-stat {
+  background: var(--glass-white) !important;
+  backdrop-filter: blur(10px) !important;
+  border: 1px solid var(--glass-border) !important;
+  border-radius: var(--r-md) !important;
+  box-shadow: var(--glass-shadow) !important;
+  transition: all var(--dur-med) var(--ease-spring) !important;
+}
+.vfy-stat:hover, .vfy-stat.active {
+  transform: translateY(-2px) !important;
+  box-shadow: var(--glass-shadow-lift) !important;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   SECTION 23 · BACK BUTTONS — GLASS
+   ══════════════════════════════════════════════════════════════ */
+.nova-back-btn, .t-back, .ml-back, .help-back-btn {
+  background: rgba(255,255,255,0.55) !important;
+  backdrop-filter: blur(10px) !important;
+  border: 1px solid rgba(255,255,255,0.72) !important;
+  border-radius: var(--r-sm) !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06), 0 1px 0 rgba(255,255,255,0.85) inset !important;
+  transition: all var(--dur-med) var(--ease-spring) !important;
+}
+.nova-back-btn:hover, .t-back:hover, .ml-back:hover, .help-back-btn:hover {
+  background: rgba(255,255,255,0.80) !important;
+  border-color: rgba(200,241,53,0.50) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 0 12px rgba(200,241,53,0.25), 0 4px 12px rgba(0,0,0,0.08) !important;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   SECTION 24 · FEED ROWS — GLASS
+   ══════════════════════════════════════════════════════════════ */
+.ml-feed-row {
+  transition: background var(--dur-fast), backdrop-filter var(--dur-fast) !important;
+  border-radius: 0 !important;
+}
+.ml-feed-row:hover {
+  background: rgba(255,255,255,0.55) !important;
+  backdrop-filter: blur(6px) !important;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   SECTION 25 · FILTER BUTTONS — GLASS
+   ══════════════════════════════════════════════════════════════ */
+.ml-feed-filter-btn {
+  background: rgba(255,255,255,0.55) !important;
+  backdrop-filter: blur(8px) !important;
+  border: 1px solid rgba(255,255,255,0.72) !important;
+  border-radius: var(--r-pill) !important;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.05) !important;
+  transition: all var(--dur-med) var(--ease-spring) !important;
+}
+.ml-feed-filter-btn.active {
+  background: linear-gradient(135deg, rgba(13,15,18,0.90) 0%, rgba(29,35,48,0.86) 100%) !important;
+  border-color: rgba(255,255,255,0.12) !important;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.18) !important;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   SECTION 26 · DARK THEME — SURFACE OVERRIDES
+   ══════════════════════════════════════════════════════════════ */
+[data-theme="dark"] .navbar,
+[data-theme="dark"] .sidebar,
+[data-theme="dark"] .pan,
+[data-theme="dark"] .sc,
+[data-theme="dark"] .tc,
+[data-theme="dark"] .pdc,
+[data-theme="dark"] .stg-card,
+[data-theme="dark"] .proj-card,
+[data-theme="dark"] .cert-panel,
+[data-theme="dark"] .cert-topbar,
+[data-theme="dark"] .cert-toolbar,
+[data-theme="dark"] #editPanel,
+[data-theme="dark"] .psm-box {
+  background: rgba(18, 22, 32, 0.80) !important;
+  border-color: rgba(255,255,255,0.08) !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.35), 0 1px 0 rgba(255,255,255,0.05) inset !important;
+}
+
+/* Dark card shimmer */
+[data-theme="dark"] .sc::before,
+[data-theme="dark"] .tc::after {
+  opacity: 0.4 !important;
+}
+
+/* Dark active sidebar */
+[data-theme="dark"] .sb-i.on {
+  color: #0d1200 !important;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   SECTION 27 · ACCENT GLOW OVERRIDES
+   ══════════════════════════════════════════════════════════════ */
+[data-accent="teal"] .sb-i.on     { box-shadow: var(--glow-teal), 0 4px 16px rgba(15,217,180,0.30), 0 1px 0 rgba(255,255,255,0.5) inset !important; animation: none !important; }
+[data-accent="teal"] .bl          { box-shadow: var(--glow-teal), 0 4px 16px rgba(15,217,180,0.30) !important; }
+[data-accent="teal"] .nb-av       { box-shadow: 0 0 0 2px var(--lime), var(--glow-teal) !important; }
+
+[data-accent="violet"] .sb-i.on   { box-shadow: var(--glow-violet), 0 4px 16px rgba(124,92,252,0.30), 0 1px 0 rgba(255,255,255,0.5) inset !important; animation: none !important; }
+[data-accent="violet"] .bl        { box-shadow: var(--glow-violet), 0 4px 16px rgba(124,92,252,0.30) !important; }
+
+[data-accent="coral"] .sb-i.on    { box-shadow: var(--glow-coral), 0 4px 16px rgba(255,107,82,0.30), 0 1px 0 rgba(255,255,255,0.5) inset !important; animation: none !important; }
+[data-accent="coral"] .bl         { box-shadow: var(--glow-coral), 0 4px 16px rgba(255,107,82,0.30) !important; }
+
+/* ══════════════════════════════════════════════════════════════
+   SECTION 28 · RANGE SLIDERS — GLASS STYLE
+   ══════════════════════════════════════════════════════════════ */
+#ieSliders input[type=range]::-webkit-slider-thumb {
+  box-shadow: 0 0 8px rgba(200,241,53,0.60) !important;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   SECTION 29 · TYPOGRAPHY REFINEMENTS
+   ══════════════════════════════════════════════════════════════ */
+.pg-t, .gr-title, .lf-title, .sync-modal-t,
+.pan-ht, .wb-toolbar-title, .cp-head-title {
+  font-family: var(--font-sans) !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.03em !important;
+}
+
+.pg-s, .gr-sub, .lf-sub, .cp-head-sub {
+  font-family: var(--font-sans) !important;
+  font-weight: 300 !important;
+}
+
+/* Mono text */
+.ml-feed-idx, .ml-feed-certid, .sync-table-meta,
+.wb-toolbar-meta, .cp-pr-slug, .cp-pi-slug {
+  font-family: 'DM Mono', monospace !important;
+  letter-spacing: 0.02em !important;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   SECTION 30 · CERT CANVAS AREA
+   ══════════════════════════════════════════════════════════════ */
+.cert-canvas-area, [data-theme="dark"] .cert-canvas-area {
+  background: rgba(8,10,15,0.95) !important;
+  backdrop-filter: blur(30px) !important;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   SECTION 31 · DIVIDERS — GLASS EDGE
+   ══════════════════════════════════════════════════════════════ */
+.sb-dv {
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.50), transparent) !important;
+  height: 1px !important;
+  margin: 5px 12px !important;
+}
+[data-theme="dark"] .sb-dv {
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent) !important;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   SECTION 32 · REDUCED MOTION SUPPORT
+   ══════════════════════════════════════════════════════════════ */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+body.no-animations * {
+  animation: none !important;
+  transition: none !important;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   SECTION 33 · GLOW UTILITY CLASSES
+   Add these classes in HTML for instant glow effects
+   ══════════════════════════════════════════════════════════════ */
+.glow-lime   { box-shadow: var(--glow-lime) !important; }
+.glow-teal   { box-shadow: var(--glow-teal) !important; }
+.glow-violet { box-shadow: var(--glow-violet) !important; }
+.glow-coral  { box-shadow: var(--glow-coral) !important; }
+.glow-white  { box-shadow: var(--glow-white) !important; }
+
+.glass-sm {
+  background: rgba(255,255,255,0.55) !important;
+  backdrop-filter: var(--glass-blur-sm) !important;
+  border: 1px solid var(--glass-border) !important;
+  border-radius: var(--r-sm) !important;
+}
+.glass-md {
+  background: var(--glass-white) !important;
+  backdrop-filter: var(--glass-blur) !important;
+  border: 1px solid var(--glass-border) !important;
+  border-radius: var(--r-md) !important;
+  box-shadow: var(--glass-shadow) !important;
+}
+.glass-dark {
+  background: rgba(13,15,18,0.82) !important;
+  backdrop-filter: var(--glass-blur) !important;
+  border: 1px solid rgba(255,255,255,0.10) !important;
+  border-radius: var(--r-md) !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.25), 0 1px 0 rgba(255,255,255,0.07) inset !important;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   SECTION 34 · DARK THEME — COMPREHENSIVE SURFACE FIXES
+   ══════════════════════════════════════════════════════════════ */
+
+/* Dark body background — proper override on html element */
+[data-theme="dark"],
+[data-theme="dark"] html {
+  background: linear-gradient(160deg, #080a0f 0%, #0d1118 40%, #0f0d18 70%, #0a0e08 100%) !important;
+}
+
+/* Settings nav active — use accent glass in dark */
+[data-theme="dark"] .stg-nav-item.active {
+  background: rgba(200,241,53,0.14) !important;
+  color: var(--lime) !important;
+}
+[data-theme="dark"][data-accent="teal"] .stg-nav-item.active   { background: rgba(15,217,180,0.14) !important; color: var(--teal) !important; }
+[data-theme="dark"][data-accent="violet"] .stg-nav-item.active { background: rgba(124,92,252,0.14) !important; color: var(--violet) !important; }
+[data-theme="dark"][data-accent="blue"] .stg-nav-item.active   { background: rgba(59,130,246,0.14) !important; color: var(--blue) !important; }
+[data-theme="dark"][data-accent="coral"] .stg-nav-item.active  { background: rgba(255,107,82,0.14) !important; color: var(--coral) !important; }
+
+/* Workbook grid dark */
+[data-theme="dark"] .wb-grid th { background: var(--snow) !important; color: var(--mist) !important; }
+[data-theme="dark"] .wb-grid td.wb-num-td { background: var(--snow) !important; }
+[data-theme="dark"] .wb-cell-in { color: var(--ink) !important; }
+[data-theme="dark"] .wb-col-dropdown { background: var(--white) !important; }
+[data-theme="dark"] .wb-del-btn:hover { background: rgba(220,38,38,.25) !important; }
+
+/* Navbar search dark */
+[data-theme="dark"] .nb-search { background: var(--snow) !important; border-color: var(--fog) !important; }
+[data-theme="dark"] .nb-search input { color: var(--ink) !important; }
+
+/* Canvas toolbar in mailer — dark */
+[data-theme="dark"] .ml-canvas-area {
+  background: linear-gradient(135deg, #080b14, #0c0e20) !important;
+}
+
+/* Sync content area dark */
+[data-theme="dark"] .sync-content-area { background: var(--snow) !important; }
+
+/* Login form dark — glass surface */
+[data-theme="dark"] .lw { background: var(--snow) !important; }
+[data-theme="dark"] .lr { background: var(--white) !important; }
+[data-theme="dark"] .lf { background: transparent !important; }
+[data-theme="dark"] .btn-google {
+  background: var(--snow) !important;
+  border-color: var(--fog) !important;
+  color: var(--ink) !important;
+}
+
+/* Progress + zip modal backdrop for dark */
+[data-theme="dark"] .prog-count { background: var(--snow) !important; border-color: var(--fog) !important; }
+[data-theme="dark"] .prog-name-row { background: var(--snow) !important; border-color: var(--fog) !important; }
+
+/* Help page dark */
+[data-theme="dark"] .help-toc { background: var(--white) !important; border-color: var(--fog) !important; }
+[data-theme="dark"] .help-step { background: var(--white) !important; border-color: var(--fog) !important; }
+[data-theme="dark"] .help-card { background: var(--white) !important; border-color: var(--fog) !important; }
+[data-theme="dark"] .help-faq  { background: var(--white) !important; border-color: var(--fog) !important; }
+[data-theme="dark"] .help-faq-q:hover { background: var(--snow) !important; }
+[data-theme="dark"] .help-warn { background: rgba(250,204,21,.08) !important; border-color: rgba(250,204,21,.25) !important; }
+[data-theme="dark"] .help-warn-text { color: #fde68a !important; }
+
+/* ML tracker feed area */
+[data-theme="dark"] .ml-tracker { background: var(--snow) !important; }
+
+/* Cert mailer left panel inner section blocks */
+[data-theme="dark"] .ml-sec { background: var(--snow) !important; border-color: var(--fog) !important; }
+
+/* Cert col chips */
+[data-theme="dark"] .cert-col-chip {
+  background: var(--snow) !important;
+  border-color: var(--fog) !important;
+  color: var(--ink3) !important;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   SECTION 35 · ACCENT COLOR — DARK THEME SURFACE OVERRIDES
+   Ensure accent switching looks correct in dark mode
+   ══════════════════════════════════════════════════════════════ */
+
+/* Accent buttons in dark mode */
+[data-theme="dark"] .bl {
+  color: var(--snow) !important;
+}
+
+/* Accent active glow updates in dark — also apply to sidebar */
+[data-theme="dark"] .sb-i.on {
+  background: rgba(200,241,53,0.18) !important;
+  color: var(--lime) !important;
+}
+[data-theme="dark"][data-accent="teal"]   .sb-i.on { background: rgba(15,217,180,0.18) !important; color: var(--teal) !important; }
+[data-theme="dark"][data-accent="violet"] .sb-i.on { background: rgba(124,92,252,0.18) !important; color: var(--violet) !important; }
+[data-theme="dark"][data-accent="blue"]   .sb-i.on { background: rgba(59,130,246,0.18) !important; color: var(--blue) !important; }
+[data-theme="dark"][data-accent="coral"]  .sb-i.on { background: rgba(255,107,82,0.18) !important; color: var(--coral) !important; }
+
+/* Stg-theme-btn (dark/light toggle) active in dark mode */
+[data-theme="dark"] .stg-theme-btn.active {
+  background: var(--fog) !important;
+  border-color: var(--fog) !important;
+  color: var(--ink) !important;
+}
+
+/* Vfy stat rows — dark theme */
+[data-theme="dark"] .vfy-stat.s-all  { background: var(--white) !important; }
+[data-theme="dark"] .vfy-stat.s-match { background: rgba(22,163,74,.12) !important; border-color: rgba(34,197,94,.25) !important; }
+[data-theme="dark"] .vfy-stat.s-miss  { background: rgba(220,38,38,.12) !important; border-color: rgba(239,68,68,.25) !important; }
+[data-theme="dark"] .vfy-stat.s-extra { background: rgba(217,119,6,.12) !important; border-color: rgba(251,191,36,.25) !important; }
+
+/* Project cards dark */
+[data-theme="dark"] .proj-card { background: var(--white) !important; border-color: var(--fog) !important; }
+
+/* ══════════════════════════════════════════════════════════════
+   SECTION 36 · BORDER-RADIUS — NOVA GLASS CONSISTENCY
+   Replace all remaining hardcoded square radii
+   ══════════════════════════════════════════════════════════════ */
+
+/* Cert toggle buttons — square -> rounded */
+.cert-toggle-btn { border-radius: var(--r-xs) !important; }
+
+/* ML badge — fully pill */
+.ml-badge { border-radius: var(--r-pill) !important; }
+.ml-b-pending,.ml-b-sent,.ml-b-failed { border-radius: var(--r-pill) !important; }
+
+/* Toasts — more rounded */
+.toast { border-radius: var(--r-md) !important; }
+.sync-toast { border-radius: var(--r-sm) !important; }
+
+/* Quick access buttons */
+.qa-b { border-radius: var(--r-sm) !important; }
+
+/* Col dropdown */
+.wb-col-dropdown { border-radius: var(--r-md) !important; }
+.wb-col-dd-item  { border-radius: var(--r-xs) !important; }
+
+/* Skill chips */
+.sk-chip { border-radius: var(--r-pill) !important; }
+
+/* Help badge */
+.help-hero-badge { border-radius: var(--r-pill) !important; }
+.vfy-title-badge { border-radius: var(--r-pill) !important; }
+
+/* ══════════════════════════════════════════════════════════════
+   EOF ADDITIONS — NOVA STUDIO LIQUID GLASS UI PATCH v2
+   ══════════════════════════════════════════════════════════════ */
+
+
+/* ══════════════════════════════════════════════════════════════
+   SECTION 37 · GLOBAL SMOOTH ANIMATIONS — NOVA STUDIO v3
+   Applies fluid motion to every interactive surface & view
+   ══════════════════════════════════════════════════════════════ */
+
+/* ── Extra keyframes ── */
+@keyframes novaFadeIn {
+  from { opacity: 0; transform: translateY(12px) scale(0.97); filter: blur(2px); }
+  to   { opacity: 1; transform: translateY(0)  scale(1);    filter: blur(0); }
+}
+@keyframes novaSlideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes novaSlideRight {
+  from { opacity: 0; transform: translateX(-18px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes novaSlideLeft {
+  from { opacity: 0; transform: translateX(18px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes novaZoomIn {
+  from { opacity: 0; transform: scale(0.92); filter: blur(4px); }
+  to   { opacity: 1; transform: scale(1);    filter: blur(0); }
+}
+@keyframes novaPopIn {
+  0%   { opacity: 0; transform: scale(0.80) translateY(10px); }
+  60%  { transform: scale(1.03) translateY(-2px); }
+  100% { opacity: 1; transform: scale(1)    translateY(0); }
+}
+@keyframes novaRowIn {
+  from { opacity: 0; transform: translateX(-8px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes novaChipPop {
+  0%   { transform: scale(0.7); opacity: 0; }
+  70%  { transform: scale(1.08); }
+  100% { transform: scale(1);   opacity: 1; }
+}
+@keyframes novaDrawerIn {
+  from { transform: translateX(100%); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+@keyframes novaOverlayIn {
+  from { opacity: 0; backdrop-filter: blur(0); }
+  to   { opacity: 1; backdrop-filter: blur(6px); }
+}
+@keyframes novaTabIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes novaShake {
+  0%,100% { transform: translateX(0); }
+  20%      { transform: translateX(-4px); }
+  40%      { transform: translateX(4px); }
+  60%      { transform: translateX(-3px); }
+  80%      { transform: translateX(3px); }
+}
+@keyframes novaPulseRing {
+  0%   { box-shadow: 0 0 0 0   rgba(200,241,53,0.45); }
+  70%  { box-shadow: 0 0 0 10px rgba(200,241,53,0); }
+  100% { box-shadow: 0 0 0 0   rgba(200,241,53,0); }
+}
+@keyframes novaLineGrow {
+  from { width: 0; }
+  to   { width: 100%; }
+}
+@keyframes novaSpin {
+  to { transform: rotate(360deg); }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   A · VIEW TRANSITIONS — every page switch is animated
+   ══════════════════════════════════════════════════════════════ */
+
+/* All views fade/slide in when activated */
+.view.active {
+  animation: novaFadeIn 0.38s var(--ease-glass) both !important;
+}
+
+/* Specific views get directional entrance */
+#viewMailer.active,
+#viewCert.active     { animation: novaFadeIn 0.34s var(--ease-glass) both !important; }
+#viewSettings.active { animation: novaSlideRight 0.32s var(--ease-glass) both !important; }
+#viewProfile.active  { animation: novaZoomIn 0.30s var(--ease-glass) both !important; }
+#viewProjects.active { animation: novaFadeIn 0.36s var(--ease-glass) both !important; }
+#viewSync.active     { animation: novaSlideUp 0.32s var(--ease-glass) both !important; }
+#viewHelp.active     { animation: novaFadeIn 0.32s var(--ease-glass) both !important; }
+#viewHome.active     { animation: novaFadeIn 0.40s var(--ease-glass) both !important; }
+
+/* ══════════════════════════════════════════════════════════════
+   B · MODAL ANIMATIONS — open/close with spring bounce
+   ══════════════════════════════════════════════════════════════ */
+
+/* Overlays */
+#editOvl,
+#zipModal,
+#progressModal,
+#projSaveModal,
+.sync-modal-ovl,
+#verifyModal {
+  transition: opacity 0.25s var(--ease-smooth) !important;
+}
+
+/* Modal boxes — zoom+pop spring */
+.zip-box,
+.prog-box,
+.psm-box,
+.sync-modal-box {
+  transition: transform 0.35s var(--ease-spring), opacity 0.30s var(--ease-smooth) !important;
+  transform: scale(0.90) translateY(16px);
+  opacity: 0;
+}
+#zipModal.show .zip-box,
+#progressModal.show .prog-box,
+#projSaveModal.show .psm-box,
+.sync-modal-ovl.show .sync-modal-box {
+  transform: scale(1) translateY(0);
+  opacity: 1;
+}
+
+/* Edit drawer — slide from right */
+#editPanel {
+  transition: right 0.38s var(--ease-spring), opacity 0.30s var(--ease-smooth) !important;
+}
+#editPanel.show {
+  /* right:0 already set, add opacity */
+  opacity: 1 !important;
+}
+
+/* Verify modal — full-screen zoom */
+#verifyModal {
+  transition: opacity 0.28s var(--ease-smooth) !important;
+}
+#verifyModal .vfy-header,
+#verifyModal .vfy-body {
+  animation: novaFadeIn 0.35s var(--ease-glass) 0.05s both;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   C · CARD ENTRANCE ANIMATIONS — staggered reveal on page open
+   ══════════════════════════════════════════════════════════════ */
+
+/* Stat cards (home) */
+.stats .sc:nth-child(1) { animation: novaSlideUp 0.30s var(--ease-spring) 0.05s both; }
+.stats .sc:nth-child(2) { animation: novaSlideUp 0.30s var(--ease-spring) 0.10s both; }
+.stats .sc:nth-child(3) { animation: novaSlideUp 0.30s var(--ease-spring) 0.15s both; }
+.stats .sc:nth-child(4) { animation: novaSlideUp 0.30s var(--ease-spring) 0.20s both; }
+
+/* Tool cards */
+.tc-grid .tc:nth-child(1) { animation: novaFadeIn 0.32s var(--ease-spring) 0.06s both; }
+.tc-grid .tc:nth-child(2) { animation: novaFadeIn 0.32s var(--ease-spring) 0.12s both; }
+.tc-grid .tc:nth-child(3) { animation: novaFadeIn 0.32s var(--ease-spring) 0.18s both; }
+.tc-grid .tc:nth-child(4) { animation: novaFadeIn 0.32s var(--ease-spring) 0.24s both; }
+.tc-grid .tc:nth-child(5) { animation: novaFadeIn 0.32s var(--ease-spring) 0.30s both; }
+.tc-grid .tc:nth-child(6) { animation: novaFadeIn 0.32s var(--ease-spring) 0.36s both; }
+
+/* Project cards */
+.proj-card { animation: novaFadeIn 0.32s var(--ease-spring) both; }
+
+/* Settings cards */
+.stg-card { animation: novaSlideUp 0.30s var(--ease-glass) both; }
+.stg-panel .stg-card:nth-child(1) { animation-delay: 0.04s; }
+.stg-panel .stg-card:nth-child(2) { animation-delay: 0.10s; }
+.stg-panel .stg-card:nth-child(3) { animation-delay: 0.16s; }
+.stg-panel .stg-card:nth-child(4) { animation-delay: 0.22s; }
+
+/* Profile cards */
+.pdc { animation: novaFadeIn 0.30s var(--ease-glass) both; }
+.pd-cards .pdc:nth-child(1) { animation-delay: 0.05s; }
+.pd-cards .pdc:nth-child(2) { animation-delay: 0.10s; }
+.pd-cards .pdc:nth-child(3) { animation-delay: 0.15s; }
+
+/* Mailer stat cards */
+.ml-stats-strip .ml-stat-card:nth-child(1) { animation: novaSlideUp 0.28s var(--ease-spring) 0.04s both; }
+.ml-stats-strip .ml-stat-card:nth-child(2) { animation: novaSlideUp 0.28s var(--ease-spring) 0.09s both; }
+.ml-stats-strip .ml-stat-card:nth-child(3) { animation: novaSlideUp 0.28s var(--ease-spring) 0.14s both; }
+.ml-stats-strip .ml-stat-card:nth-child(4) { animation: novaSlideUp 0.28s var(--ease-spring) 0.19s both; }
+
+/* Verify stat cards */
+.vfy-stat { animation: novaChipPop 0.30s var(--ease-spring) both; }
+.vfy-stats-bar .vfy-stat:nth-child(1) { animation-delay: 0.03s; }
+.vfy-stats-bar .vfy-stat:nth-child(2) { animation-delay: 0.08s; }
+.vfy-stats-bar .vfy-stat:nth-child(3) { animation-delay: 0.13s; }
+.vfy-stats-bar .vfy-stat:nth-child(4) { animation-delay: 0.18s; }
+
+/* ══════════════════════════════════════════════════════════════
+   D · LIST ROW ANIMATIONS — feed rows, cand rows, vfy rows
+   ══════════════════════════════════════════════════════════════ */
+
+.ml-feed-row  { animation: novaRowIn 0.22s var(--ease-glass) both; }
+.ml-cand-row  { animation: novaRowIn 0.22s var(--ease-glass) both; }
+.vfy-row      { animation: novaRowIn 0.20s var(--ease-glass) both; }
+.ml-list-item { animation: novaRowIn 0.20s var(--ease-glass) both; }
+.ai           { animation: novaRowIn 0.22s var(--ease-glass) both; }
+.sync-room-item { animation: novaRowIn 0.18s var(--ease-glass) both; }
+
+/* Stagger rows — JS adds nth-child context, CSS handles base */
+.ml-feed-row:nth-child(1)  { animation-delay: 0.02s; }
+.ml-feed-row:nth-child(2)  { animation-delay: 0.04s; }
+.ml-feed-row:nth-child(3)  { animation-delay: 0.06s; }
+.ml-feed-row:nth-child(4)  { animation-delay: 0.08s; }
+.ml-feed-row:nth-child(5)  { animation-delay: 0.10s; }
+.ml-feed-row:nth-child(n+6){ animation-delay: 0.12s; }
+
+.vfy-row:nth-child(1)  { animation-delay: 0.02s; }
+.vfy-row:nth-child(2)  { animation-delay: 0.04s; }
+.vfy-row:nth-child(3)  { animation-delay: 0.06s; }
+.vfy-row:nth-child(4)  { animation-delay: 0.08s; }
+.vfy-row:nth-child(5)  { animation-delay: 0.10s; }
+.vfy-row:nth-child(n+6){ animation-delay: 0.12s; }
+
+/* ══════════════════════════════════════════════════════════════
+   E · BUTTON & INTERACTIVE TRANSITIONS — all clickables
+   ══════════════════════════════════════════════════════════════ */
+
+/* Universal button polish */
+button, .btn, .bd, .bo, .bl,
+.ml-btn, .wb-fmt-btn, .cert-toggle-btn,
+.stg-theme-btn, .proj-act-btn, .cp-pi-btn,
+.qa-b, .sync-create-room, .nova-back-btn,
+.t-back, .ml-back, .help-back-btn,
+.vfy-export-btn, .vfy-run-btn,
+.nb-ic, .ep-x, .vfy-close,
+.sb-i, .stg-nav-item {
+  transition:
+    background     var(--dur-fast) var(--ease-smooth),
+    border-color   var(--dur-fast) var(--ease-smooth),
+    color          var(--dur-fast) var(--ease-smooth),
+    box-shadow     var(--dur-med)  var(--ease-spring),
+    transform      var(--dur-med)  var(--ease-spring),
+    opacity        var(--dur-fast) var(--ease-smooth) !important;
+}
+
+/* Hover lift for primary actions */
+.btn:hover, .bd:hover, .bl:hover,
+.ml-btn-primary:hover, .ml-btn-success:hover,
+.vfy-run-btn:hover, .psm-ok:hover,
+.zip-ok:hover, .prog-done-btn:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: var(--glass-shadow-lift) !important;
+}
+
+/* Active/press feedback */
+.btn:active, .bd:active, .bl:active,
+.ml-btn:active, .nb-ic:active,
+.sb-i:active, .qa-b:active {
+  transform: scale(0.96) translateY(0) !important;
+  transition-duration: 80ms !important;
+}
+
+/* Sidebar item entrance stagger */
+.sb-s .sb-i:nth-child(1)  { animation: novaSlideRight 0.24s var(--ease-glass) 0.05s both; }
+.sb-s .sb-i:nth-child(2)  { animation: novaSlideRight 0.24s var(--ease-glass) 0.09s both; }
+.sb-s .sb-i:nth-child(3)  { animation: novaSlideRight 0.24s var(--ease-glass) 0.13s both; }
+.sb-s .sb-i:nth-child(4)  { animation: novaSlideRight 0.24s var(--ease-glass) 0.17s both; }
+.sb-s .sb-i:nth-child(5)  { animation: novaSlideRight 0.24s var(--ease-glass) 0.21s both; }
+.sb-s .sb-i:nth-child(n+6){ animation: novaSlideRight 0.24s var(--ease-glass) 0.25s both; }
+
+/* ══════════════════════════════════════════════════════════════
+   F · TAB ANIMATIONS — mailer tabs, workbook tabs, settings nav
+   ══════════════════════════════════════════════════════════════ */
+
+.ml-tab { transition: background var(--dur-fast) var(--ease-smooth), color var(--dur-fast) var(--ease-smooth), box-shadow var(--dur-med) var(--ease-spring) !important; }
+.wb-tab { transition: background var(--dur-fast) var(--ease-smooth), color var(--dur-fast) var(--ease-smooth), border-color var(--dur-med) var(--ease-smooth) !important; }
+.stg-nav-item { transition: background var(--dur-fast) var(--ease-smooth), color var(--dur-fast) var(--ease-smooth), transform var(--dur-med) var(--ease-spring) !important; }
+
+/* Mailer page switch */
+.ml-page { transition: opacity 0.28s var(--ease-smooth), transform 0.30s var(--ease-glass) !important; }
+.ml-page:not(.active) { opacity: 0; transform: translateY(8px); pointer-events: none; }
+.ml-page.active { opacity: 1; transform: translateY(0); animation: novaTabIn 0.28s var(--ease-glass) both; }
+
+/* Settings panel */
+.stg-panel { animation: novaFadeIn 0.28s var(--ease-glass) both !important; }
+
+/* ══════════════════════════════════════════════════════════════
+   G · INPUT & FORM ANIMATIONS — focus states
+   ══════════════════════════════════════════════════════════════ */
+
+.fi, .ml-input, .fi:focus, .ml-input:focus,
+.stg-select, .sync-push-input, .sync-modal-inp,
+.psm-inp, .zip-inp, .wb-cell-in,
+.ep-in, input, select, textarea {
+  transition:
+    border-color var(--dur-fast) var(--ease-smooth),
+    box-shadow   var(--dur-med)  var(--ease-spring),
+    background   var(--dur-fast) var(--ease-smooth) !important;
+}
+
+/* Label/field group entrance */
+.fg { animation: novaSlideUp 0.24s var(--ease-glass) both; }
+.lf .fg:nth-child(1) { animation-delay: 0.06s; }
+.lf .fg:nth-child(2) { animation-delay: 0.12s; }
+.lf .fg:nth-child(3) { animation-delay: 0.18s; }
+
+/* ══════════════════════════════════════════════════════════════
+   H · TOAST NOTIFICATION — enhanced spring entrance
+   ══════════════════════════════════════════════════════════════ */
+
+.toast {
+  transition:
+    transform var(--dur-med) var(--ease-spring),
+    opacity   var(--dur-fast) var(--ease-smooth),
+    box-shadow var(--dur-med) var(--ease-spring) !important;
+}
+.toast.show {
+  transform: translateY(0) scale(1) !important;
+  box-shadow: var(--glass-shadow-deep) !important;
+}
+
+.sync-toast {
+  transition: transform var(--dur-med) var(--ease-spring), opacity var(--dur-fast) var(--ease-smooth) !important;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   I · CERTIFICATE MAILER — canvas & panel transitions
+   ══════════════════════════════════════════════════════════════ */
+
+.cert-panel,
+.cert-topbar,
+.cert-toolbar { transition: background var(--dur-med) var(--ease-smooth), border-color var(--dur-med) var(--ease-smooth) !important; }
+
+.cert-el { animation: novaChipPop 0.22s var(--ease-spring) both; }
+.cert-col-chip { 
+  animation: novaChipPop 0.20s var(--ease-spring) both;
+  transition: all var(--dur-fast) var(--ease-spring) !important;
+}
+
+/* Cert preview bar slide in */
+.cert-preview-bar.visible {
+  animation: novaSlideUp 0.22s var(--ease-spring) both !important;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   J · WORKBOOK — grid, toolbar, tab animations
+   ══════════════════════════════════════════════════════════════ */
+
+.wb-toolbar    { transition: background var(--dur-med) var(--ease-smooth) !important; }
+.wb-fmt-bar    { transition: background var(--dur-med) var(--ease-smooth) !important; }
+.wb-tabs-bar   { transition: background var(--dur-med) var(--ease-smooth) !important; }
+.wb-grid td    { transition: background var(--dur-fast) var(--ease-smooth) !important; }
+.wb-grid th    { transition: background var(--dur-fast) var(--ease-smooth) !important; }
+.wb-del-btn    { transition: all var(--dur-fast) var(--ease-spring) !important; }
+.wb-add-row-btn{ transition: background var(--dur-fast) var(--ease-smooth), color var(--dur-fast) var(--ease-smooth) !important; }
+
+/* ══════════════════════════════════════════════════════════════
+   K · DATA SYNC VIEW animations
+   ══════════════════════════════════════════════════════════════ */
+
+.sync-room-item {
+  transition: background var(--dur-fast) var(--ease-smooth), color var(--dur-fast) var(--ease-smooth), border-color var(--dur-fast) var(--ease-smooth) !important;
+}
+.sync-room-item.active {
+  animation: novaChipPop 0.22s var(--ease-spring) both !important;
+}
+.sync-table-wrap { animation: novaFadeIn 0.30s var(--ease-glass) both; }
+#syncDataTable tr { transition: background var(--dur-fast) var(--ease-smooth) !important; }
+
+/* ══════════════════════════════════════════════════════════════
+   L · PROJECTS VIEW animations
+   ══════════════════════════════════════════════════════════════ */
+
+.proj-card {
+  transition:
+    transform    var(--dur-med)  var(--ease-spring),
+    box-shadow   var(--dur-med)  var(--ease-spring),
+    border-color var(--dur-fast) var(--ease-smooth) !important;
+}
+.proj-thumb-overlay { transition: all var(--dur-med) var(--ease-glass) !important; }
+.proj-act-btn {
+  transition:
+    background   var(--dur-fast) var(--ease-smooth),
+    border-color var(--dur-fast) var(--ease-smooth),
+    color        var(--dur-fast) var(--ease-smooth),
+    transform    var(--dur-med)  var(--ease-spring) !important;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   M · HELP VIEW — section / step / faq animations
+   ══════════════════════════════════════════════════════════════ */
+
+.help-section { animation: novaFadeIn 0.30s var(--ease-glass) both; }
+.help-section:nth-child(1) { animation-delay: 0.04s; }
+.help-section:nth-child(2) { animation-delay: 0.10s; }
+.help-section:nth-child(3) { animation-delay: 0.16s; }
+.help-section:nth-child(4) { animation-delay: 0.22s; }
+.help-section:nth-child(n+5){ animation-delay: 0.28s; }
+
+.help-step { transition: border-color var(--dur-fast) var(--ease-smooth), transform var(--dur-med) var(--ease-spring) !important; }
+.help-step:hover { transform: translateX(4px) !important; }
+
+.help-faq-q { transition: background var(--dur-fast) var(--ease-smooth) !important; }
+.help-faq-a { transition: all var(--dur-med) var(--ease-glass) !important; }
+.help-toc-item { transition: background var(--dur-fast) var(--ease-smooth), border-color var(--dur-fast) var(--ease-smooth), transform var(--dur-med) var(--ease-spring) !important; }
+.help-toc-item:hover { transform: translateX(3px) !important; }
+
+/* ══════════════════════════════════════════════════════════════
+   N · PROFILE & SETTINGS — smooth section transitions
+   ══════════════════════════════════════════════════════════════ */
+
+.cov { transition: filter var(--dur-med) var(--ease-smooth) !important; }
+.av-wrap { transition: opacity var(--dur-fast) var(--ease-smooth) !important; }
+.av-ov { transition: opacity var(--dur-fast) var(--ease-smooth) !important; }
+
+.stg-toggle { transition: background var(--dur-med) var(--ease-spring) !important; }
+.stg-toggle-knob { transition: left var(--dur-med) var(--ease-spring) !important; }
+.ml-toggle { transition: background var(--dur-med) var(--ease-spring) !important; }
+.ml-toggle-k { transition: left var(--dur-med) var(--ease-spring) !important; }
+
+.stg-color-dot { transition: transform var(--dur-fast) var(--ease-spring), box-shadow var(--dur-fast) var(--ease-spring), border-color var(--dur-fast) var(--ease-smooth) !important; }
+
+/* ══════════════════════════════════════════════════════════════
+   O · NAVBAR — smooth theme/accent transitions
+   ══════════════════════════════════════════════════════════════ */
+
+.navbar, .sidebar { transition: background var(--dur-slow) var(--ease-smooth), border-color var(--dur-slow) var(--ease-smooth) !important; }
+.nb-gem { transition: background var(--dur-med) var(--ease-spring), box-shadow var(--dur-med) var(--ease-spring) !important; }
+.nb-av  { transition: box-shadow var(--dur-med) var(--ease-spring) !important; }
+
+/* ══════════════════════════════════════════════════════════════
+   P · BADGE / CHIP ANIMATIONS
+   ══════════════════════════════════════════════════════════════ */
+
+.ml-badge, .ml-b-pending, .ml-b-sent, .ml-b-failed,
+.vfy-row-badge, .badge-match, .badge-miss, .badge-extra,
+.sk-chip, .wb-master-tag, .sync-room-badge {
+  animation: novaChipPop 0.22s var(--ease-spring) both;
+}
+
+/* Sync live dot pulse */
+.sync-live-dot { animation: dotPulse 1.5s ease-in-out infinite !important; }
+.nb-dot         { animation: dotPulse 2s   ease-in-out infinite !important; }
+
+/* ══════════════════════════════════════════════════════════════
+   Q · GREET HERO — home page
+   ══════════════════════════════════════════════════════════════ */
+
+.greet { animation: novaFadeIn 0.40s var(--ease-glass) 0.02s both; }
+.gr-title { animation: novaSlideRight 0.34s var(--ease-glass) 0.10s both; }
+.gr-sub   { animation: novaSlideRight 0.30s var(--ease-glass) 0.18s both; }
+.gr-r     { animation: novaSlideLeft  0.30s var(--ease-glass) 0.14s both; }
+
+/* Activity panel items */
+.pan { animation: novaFadeIn 0.32s var(--ease-glass) both; }
+.bot .pan:nth-child(1) { animation-delay: 0.10s; }
+.bot .pan:nth-child(2) { animation-delay: 0.18s; }
+
+/* ══════════════════════════════════════════════════════════════
+   R · GLOBAL THEME TRANSITION — smooth dark/light swap
+   ══════════════════════════════════════════════════════════════ */
+
+html, body,
+.navbar, .sidebar, .view, .pan, .sc, .tc, .pdc,
+.stg-card, .proj-card, .ml-panel, .ml-sec,
+.ml-stat-card, .ml-list-card, .sync-sidebar,
+.sync-room-header, .sync-table-wrap, .wb-toolbar,
+.wb-fmt-bar, .wb-tabs-bar, .sync-push-bar,
+.ml-topbar, .ml-cands-toolbar, .vfy-header,
+.vfy-upload-panel, .vfy-stats-bar, .vfy-toolbar,
+[class*="cert-"], #editPanel {
+  transition:
+    background   0.40s var(--ease-smooth),
+    border-color 0.40s var(--ease-smooth),
+    color        0.25s var(--ease-smooth) !important;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   S · SCROLL BEHAVIOUR — smooth scrolling everywhere
+   ══════════════════════════════════════════════════════════════ */
+
+html { scroll-behavior: smooth !important; }
+.view, .ep-body, .sync-sidebar, .vfy-list,
+.ml-tracker, .ml-panel, .wb-grid-wrap,
+.sb-scroll-area { scroll-behavior: smooth !important; }
+
+/* ══════════════════════════════════════════════════════════════
+   T · CERT MAILER — send button pulse when ready
+   ══════════════════════════════════════════════════════════════ */
+
+.vfy-run-btn.ready { animation: novaPulseRing 2s ease-out infinite !important; }
+
+/* ══════════════════════════════════════════════════════════════
+   U · LOGIN SCREEN — entrance animation
+   ══════════════════════════════════════════════════════════════ */
+
+.ll { animation: novaSlideRight 0.48s var(--ease-glass) 0.10s both; }
+.lr { animation: novaSlideLeft  0.44s var(--ease-glass) 0.15s both; }
+.lf { animation: novaZoomIn     0.38s var(--ease-glass) 0.22s both; }
+.ll-gem  { animation: novaPopIn 0.42s var(--ease-spring) 0.08s both; }
+.ll-feat { animation: novaRowIn 0.28s var(--ease-glass) both; }
+.ll-feat:nth-child(1) { animation-delay: 0.30s; }
+.ll-feat:nth-child(2) { animation-delay: 0.38s; }
+.ll-feat:nth-child(3) { animation-delay: 0.46s; }
+.ll-feat:nth-child(4) { animation-delay: 0.54s; }
+
+/* ══════════════════════════════════════════════════════════════
+   V · REDUCED MOTION — respect user preference
+   ══════════════════════════════════════════════════════════════ */
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+body.no-animations *,
+body.no-animations *::before,
+body.no-animations *::after {
+  animation: none !important;
+  transition: none !important;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   EOF — NOVA STUDIO SMOOTH ANIMATIONS PATCH v3
+   ══════════════════════════════════════════════════════════════ */

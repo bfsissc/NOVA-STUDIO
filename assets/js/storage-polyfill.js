@@ -1,0 +1,2 @@
+﻿// localStorage safe wrapper for file:// and tracking-prevention browsers
+(function(){function m(){var s={};return{getItem:function(k){return s.hasOwnProperty(k)?s[k]:null},setItem:function(k,v){s[k]=String(v)},removeItem:function(k){delete s[k]},clear:function(){s={}}}}try{localStorage.setItem('_t','1');localStorage.removeItem('_t')}catch(e){window.localStorage=m();window.sessionStorage=m();}})();
