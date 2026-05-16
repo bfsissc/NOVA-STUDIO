@@ -50,7 +50,7 @@ window.onload = () => {
 };
 
 function boot(anim){
-  updateGreeting(); renderAvatars(); renderProfile(); updateStats(); updateGmailTracker(); startLiveClock(); setTimeout(function(){if(typeof tpInit==='function'){tpInit().then(function(){tpRenderHomeWidget();});}},600);
+  updateGreeting(); renderAvatars(); renderProfile(); updateStats(); updateGmailTracker(); setTimeout(function(){if(typeof tpInit==='function'){tpInit().then(function(){tpRenderHomeWidget();});}},600);
   document.getElementById('loginScreen').classList.add('out');
   document.getElementById('app').classList.add('visible');
   if(anim) showToast('Welcome, '+U.firstName+'! 👋','ok');
@@ -454,30 +454,6 @@ function updateGreeting(){
   const de=document.getElementById('dateDisplay');
   if(de)de.textContent=new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
 }
-
-/* ── Live clock for dashboard ── */
-function startLiveClock(){
-  function tick(){
-    const el=document.getElementById('liveClockDisplay');
-    if(!el)return;
-    const now=new Date();
-    const hh=String(now.getHours()).padStart(2,'0');
-    const mm=String(now.getMinutes()).padStart(2,'0');
-    const ss=String(now.getSeconds()).padStart(2,'0');
-    el.textContent=hh+':'+mm+':'+ss;
-  }
-  tick();
-  setInterval(tick,1000);
-}
-
-/* ── Keyboard shortcut: Cmd/Ctrl+K → focus search ── */
-document.addEventListener('keydown',function(e){
-  if((e.metaKey||e.ctrlKey)&&e.key==='k'){
-    e.preventDefault();
-    const inp=document.getElementById('nbSearchInput');
-    if(inp){inp.focus();inp.select();}
-  }
-});
 
 function ini(){return((U?.firstName||'?')[0]+(U?.lastName||'')[0]||'').toUpperCase();}
 
@@ -2668,7 +2644,6 @@ const STG_KEY = 'nova_settings';
 
 const STG_DEFAULTS = {
   theme: 'light',
-  uiStyle: 'default',
   accent: 'lime',
   sidebar: 'full',
   animations: true,
@@ -2730,39 +2705,16 @@ function stgSetSidebar(v) {
   stgApplyUI(stgGetSettings());
 }
 
-function stgSetUIStyle(style) {
-  stgSaveKey('uiStyle', style);
-  stgApplyUI(stgGetSettings());
-  const labels = { default: 'Default', ios: 'iOS Light', 'ios-dark': 'iOS Dark' };
-  showToast('UI style: ' + (labels[style] || style) + ' ✓', 'ok');
-}
-
 function stgApplyUI(s) {
   // ── Theme buttons UI ──
   ['light','dark','system'].forEach(t => {
     document.getElementById('stgTheme'+t[0].toUpperCase()+t.slice(1))?.classList.toggle('active', s.theme===t);
   });
 
-  // ── UI Style: determine effective theme ──
-  const uiStyle = s.uiStyle || 'default';
-  let effectiveTheme;
-  if (uiStyle === 'ios') {
-    effectiveTheme = 'ios';
-  } else if (uiStyle === 'ios-dark') {
-    effectiveTheme = 'ios-dark';
-  } else {
-    // Default style: use light/dark/system
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    const isDark = s.theme === 'dark' || (s.theme === 'system' && prefersDark);
-    effectiveTheme = isDark ? 'dark' : 'light';
-  }
-  document.documentElement.setAttribute('data-theme', effectiveTheme);
-
-  // ── UI Style cards ──
-  ['default','ios','ios-dark'].forEach(style => {
-    const id = 'uiStyle' + (style === 'default' ? 'Default' : style === 'ios' ? 'Ios' : 'IosDark');
-    document.getElementById(id)?.classList.toggle('active', uiStyle === style);
-  });
+  // ── Apply theme to <html> ──
+  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const isDark = s.theme === 'dark' || (s.theme === 'system' && prefersDark);
+  document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
 
   // ── Accent color — set data-accent on <html>, CSS handles the rest ──
   ['lime','teal','violet','blue','coral'].forEach(a => {
@@ -4403,10 +4355,7 @@ function anSaveToStorage() {
   try {
     const payload = { raw: AN.raw, headers: AN.headers, colTypes: AN.colTypes, fileName: AN.fileName };
     localStorage.setItem('nova_an_data', JSON.stringify(payload));
-  } catch(e) {
-    // localStorage blocked (Edge Tracking Prevention / file://) — data stays in memory, charts still work
-    console.info('Analytics: localStorage unavailable, data kept in memory only.');
-  }
+  } catch(e) { console.warn('Analytics save failed:', e); }
 }
 
 function anRestoreFromStorage() {
@@ -4441,22 +4390,21 @@ function anRestoreFromStorage() {
 }
 
 function anUpdateStgIndicator() {
-  // Support both ID sets (stgStandaloneLoaded = new, stgAnDataLoaded = old)
-  const wrap = document.getElementById('stgStandaloneLoaded') || document.getElementById('stgAnDataLoaded');
-  if (!wrap) { stgUpdateStandaloneIndicator(); return; }
+  const wrap = document.getElementById('stgAnDataLoaded');
+  if (!wrap) return;
   if (AN.raw.length > 0) {
     wrap.style.display = 'flex';
-    const fn = document.getElementById('stgStandaloneFileName') || document.getElementById('stgAnFileName');
-    if(fn) fn.textContent = AN.fileName;
-    const fi = document.getElementById('stgStandaloneFileInfo') || document.getElementById('stgAnFileInfo');
+    const fn = document.getElementById('stgAnFileName'); if(fn) fn.textContent = AN.fileName;
+    const fi = document.getElementById('stgAnFileInfo');
     if(fi) {
       const nc = AN.headers.filter(h=>AN.colTypes[h]==='numeric').length;
       fi.textContent = AN.raw.length.toLocaleString() + ' rows · ' + AN.headers.length + ' columns · ' + nc + ' numeric';
     }
-    const st = document.getElementById('stgDataUploadStatus'); if(st) st.textContent = '✅ Data loaded successfully!';
+    const st = document.getElementById('stgDataUploadStatus'); if(st) st.textContent = '';
   } else {
     wrap.style.display = 'none';
   }
+  // Also refresh the settings.html standalone indicator if present
   stgUpdateStandaloneIndicator();
 }
 
@@ -4535,10 +4483,8 @@ function anHandleDrop(e) {
 function anHandleFile(file) {
   if (!file) return;
   const ext = file.name.split('.').pop().toLowerCase();
-  // Update status in both the dashboard upload zone and the settings upload zone
-  ['anUploadStatus','stgDataUploadStatus'].forEach(id=>{
-    const el = document.getElementById(id); if(el) el.textContent = '⏳ Parsing ' + file.name + '…';
-  });
+  const status = document.getElementById('anUploadStatus');
+  if (status) status.textContent = '⏳ Parsing ' + file.name + '…';
   AN.fileName = file.name;
 
   if (ext === 'csv') {
@@ -4605,7 +4551,7 @@ function anIngestRows(rows) {
   anShowDataBar();
   anShowConfigPanel();
   document.getElementById('anEmptyState').style.display='none';
-  ['anUploadStatus','stgDataUploadStatus'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent='';});
+  const st=document.getElementById('anUploadStatus'); if(st) st.textContent='';
   // Save to localStorage for persistence
   anSaveToStorage();
   // Update settings panel indicator
@@ -5670,7 +5616,7 @@ function anLoadSampleData(type) {
           <span id="iev_${s.key}" style="font-size:.65rem;color:var(--mist);font-weight:700">${s.def}${s.key==='hue'?'°':s.key==='blur'?'px':'%'}</span>
         </div>
         <input type="range" min="${s.min}" max="${s.max}" step="${s.step}" value="${s.def}" id="ies_${s.key}"
-          style="width:100%;accent-color:var(--lime-d);cursor:pointer;height:4px"
+          style="width:100%;accent-color:#ec4899;cursor:pointer"
           oninput="ieSliderChange('${s.key}',this.value)">
       </div>
     `).join('');
@@ -5739,14 +5685,14 @@ function anLoadSampleData(type) {
     // Highlight selected tray card
     document.querySelectorAll('[id^="ietc_"]').forEach(c=>c.style.border='2px solid var(--fog)');
     const card=document.getElementById('ietc_'+id);
-    if(card) card.style.border='2px solid var(--lime-d)';
+    if(card) card.style.border='2px solid #ec4899';
 
     // Reset state
     ieRotDeg=0; ieFlipH=false; ieFlipV=false;
     ieActiveFilter='none';
     SLIDERS.forEach(s=>{ ieAdj[s.key]=s.def; const el=document.getElementById('ies_'+s.key); if(el)el.value=s.def; const ev=document.getElementById('iev_'+s.key); if(ev)ev.textContent=s.def+(s.key==='hue'?'°':s.key==='blur'?'px':'%'); });
     document.querySelectorAll('[id^="iefb_"]').forEach(b=>{ b.style.background='var(--fog)'; b.style.borderColor='var(--fog)'; b.style.color='var(--ink)'; });
-    const noneBtn=document.getElementById('iefb_none'); if(noneBtn){noneBtn.style.background='var(--lime-d)';noneBtn.style.borderColor='var(--lime-d)';noneBtn.style.color='#fff';}
+    const noneBtn=document.getElementById('iefb_none'); if(noneBtn){noneBtn.style.background='#ec4899';noneBtn.style.borderColor='#ec4899';noneBtn.style.color='#fff';}
 
     // Create bitmap
     ieOrigBitmap = await createImageBitmap(f.file);
@@ -5845,7 +5791,7 @@ function anLoadSampleData(type) {
     ieActiveFilter = key;
     document.querySelectorAll('[id^="iefb_"]').forEach(b=>{ b.style.background='var(--fog)'; b.style.borderColor='var(--fog)'; b.style.color='var(--ink)'; });
     const btn=document.getElementById('iefb_'+key);
-    if(btn){btn.style.background='var(--lime-d)';btn.style.borderColor='var(--lime-d)';btn.style.color='#fff';}
+    if(btn){btn.style.background='#ec4899';btn.style.borderColor='#ec4899';btn.style.color='#fff';}
     ieRender();
   };
 

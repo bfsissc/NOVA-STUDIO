@@ -7,7 +7,6 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%23c8f135'/><text x='16' y='22' font-size='18' text-anchor='middle' font-family='serif' font-weight='800'>N</text></svg>">
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,300;12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Instrument+Serif:ital@0;1&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/styles.css">
-<link rel="stylesheet" href="assets/css/liquid-glass.css">
 <!-- ✅ Storage polyfill — MUST be first: patches localStorage before any other script runs -->
 <script>
 (function(){
@@ -187,43 +186,16 @@
 <div id="loginScreen">
   <div class="lw">
     <div class="ll">
-      <!-- Animated canvas background -->
-      <canvas id="llCanvas" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0"></canvas>
-      <!-- Orbs -->
-      <div class="ll-orb ll-orb1"></div>
-      <div class="ll-orb ll-orb2"></div>
-      <div class="ll-orb ll-orb3"></div>
-      <!-- Grid overlay -->
-      <div class="ll-grid"></div>
-      <!-- Content -->
-      <div class="ll-logo" style="position:relative;z-index:2">
-        <div class="ll-gem">N</div>
-        <div class="ll-brand">NOVA <em>Studio</em></div>
+      <div class="ll-logo"><div class="ll-gem">N</div><div class="ll-brand">NOVA <em>Studio</em></div></div>
+      <div class="ll-hero">
+        <div class="ll-h">Design <b>smarter.</b><br>Create faster.</div>
+        <div class="ll-p">All-in-one creative workspace — certificates, presentations, photo editing and more.</div>
       </div>
-      <div class="ll-hero" style="position:relative;z-index:2">
-        <div class="ll-eyebrow">Creative Workspace</div>
-        <div class="ll-h">
-          <span class="ll-flicker-wrap">
-            <span class="ll-static">Design</span>
-            <span class="ll-flicker" id="llFlicker">smarter.</span>
-          </span><br>
-          <span class="ll-h-sub">Create <em>faster.</em></span>
-        </div>
-        <div class="ll-tagline">
-          <span class="ll-tag-word" style="animation-delay:.1s">Your</span>
-          <span class="ll-tag-word" style="animation-delay:.2s">creative</span>
-          <span class="ll-tag-word" style="animation-delay:.3s">workspace,</span>
-          <span class="ll-tag-word" style="animation-delay:.4s">reimagined.</span>
-        </div>
-      </div>
-      <div class="ll-foot" style="position:relative;z-index:2">
-        <div class="ll-badges">
-          <div class="ll-badge">🎓 Certificates</div>
-          <div class="ll-badge">📧 Mailer</div>
-          <div class="ll-badge">🏫 Portals</div>
-          <div class="ll-badge">📊 Analytics</div>
-        </div>
-        <div class="ll-copy">All-in-one. No plugins. No limits.</div>
+      <div class="ll-feats">
+        <div class="ll-feat"><div class="ll-dot"></div>🎓 Bulk certificate generation with CSV</div>
+        <div class="ll-feat"><div class="ll-dot"></div>📊 Presentation builder &amp; PPTX export</div>
+        <div class="ll-feat"><div class="ll-dot"></div>🎨 AI-powered photo editor</div>
+        <div class="ll-feat"><div class="ll-dot"></div>📁 Project dashboard to track everything</div>
       </div>
     </div>
     <div class="lr">
@@ -275,16 +247,10 @@
   <div class="navbar">
     <div class="nb-logo"><div class="nb-gem">N</div><div class="nb-name">NOVA <em>Studio</em></div></div>
     <div class="nb-mid">
-      <div class="nb-search" id="nbSearch" onclick="this.querySelector('input').focus()">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--mist2);flex-shrink:0"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input type="text" id="nbSearchInput" placeholder="Search tools, projects…" autocomplete="off">
-      </div>
+      <div class="nb-search"><span style="font-size:.78rem;color:var(--mist2)">🔍</span><input type="text" placeholder="Search tools, projects…"></div>
     </div>
     <div class="nb-right">
-      <button class="nb-ic" onclick="showToast('No new notifications','info')" title="Notifications" style="position:relative">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-        <div class="nb-dot"></div>
-      </button>
+      <button class="nb-ic" onclick="showToast('No new notifications','info')">🔔<div class="nb-dot"></div></button>
       <div class="nb-av" id="nbAv" onclick="goView('profile')"></div>
     </div>
   </div>
@@ -295,8 +261,8 @@
       <div class="sb-scroll-area">
       <div class="sb-s">
         <div class="sb-l">Main</div>
-        <div class="sb-i on" id="sbHome" onclick="goView('home')" title="Go to Dashboard"><span class="sb-ic">🏠</span>Dashboard</div>
-        <div class="sb-i" id="sbProj" onclick="goView('projects')" title="My saved certificate projects"><span class="sb-ic">📁</span>My Projects</div>
+        <div class="sb-i on" id="sbHome" onclick="goView('home')"><span class="sb-ic">🏠</span>Dashboard</div>
+        <div class="sb-i" id="sbProj" onclick="goView('projects')"><span class="sb-ic">📁</span>My Projects</div>
       </div>
       <div class="sb-s">
         <div class="sb-l">Tools</div>
@@ -317,7 +283,7 @@
         <div class="sb-i" id="sbProfile" onclick="goView('profile')"><span class="sb-ic">👤</span>My Profile</div>
         <div class="sb-i" id="sbSettings" onclick="goView('settings')"><span class="sb-ic">⚙️</span>Settings</div>
         <div class="sb-i" id="sbHelp" onclick="goView('help')"><span class="sb-ic">📖</span>Help &amp; Guide</div>
-        <div class="sb-i" onclick="doLogout()" style="color:var(--mist)" title="Sign out of NOVA Studio"><span class="sb-ic">🚪</span>Logout</div>
+        <div class="sb-i" onclick="doLogout()"><span class="sb-ic">🚪</span>Logout</div>
       </div>
       </div><!-- /sb-scroll-area -->
       <div class="sb-foot" onclick="goView('profile')">
@@ -333,26 +299,87 @@
           <div class="gr-l">
             <div class="gr-title">Good <span id="greetTime">day</span>, <span id="greetName">there</span> 👋</div>
             <div class="gr-sub">Your creative workspace is ready.</div>
-            <div style="display:flex;align-items:center;gap:10px;margin-top:6px">
-              <div class="gr-date" id="dateDisplay"></div>
-              <span style="font-size:.6rem;color:rgba(255,255,255,.3)">·</span>
-              <div id="liveClockDisplay" style="font-size:.65rem;color:rgba(255,255,255,.45);font-family:'DM Mono',monospace;font-weight:600;letter-spacing:.06em"></div>
+            <div class="gr-date" id="dateDisplay"></div>
+          </div>
+          <div class="gr-r">
+            <button class="btn bl btn-sm" onclick="launchTool('cert')">+ New Certificate</button>
+            <button class="btn bo btn-sm" style="color:rgba(255,255,255,.7);border-color:rgba(255,255,255,.25)" onclick="goView('projects')">My Projects</button>
+          </div>
+        </div>
+        <div class="stats fu">
+          <div class="sc"><div class="sc-t"><div class="sc-i" style="background:#f0fdf4">🎓</div><div class="sc-tr up">↑ 12%</div></div><div class="sc-n" id="stCerts">0</div><div class="sc-lb">Certificates</div></div>
+          <div class="sc"><div class="sc-t"><div class="sc-i" style="background:#fefce8">📦</div><div class="sc-tr nt">—</div></div><div class="sc-n" id="stExp">0</div><div class="sc-lb">Exports</div></div>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:11px" class="fu">
+          <div style="font-size:.9rem;font-weight:800;letter-spacing:-.02em">Your Tools <span style="font-size:.72rem;font-weight:500;color:var(--mist);margin-left:4px">— click to open inside the dashboard</span></div>
+        </div>
+        <div class="tc-grid fu">
+          <div class="tc" style="--ac:#8b5cf6" onclick="goView('fileconv')">
+            <div class="tc-i">🔄</div>
+            <div><div class="tc-n">File Converter</div><div class="tc-d">Convert files between formats — images, PDFs, text, JSON, CSV and more. Batch convert &amp; download as ZIP.</div></div>
+            <div class="tc-tags"><span class="tc-tag">PDF→PNG</span><span class="tc-tag">JSON↔CSV</span><span class="tc-tag">Batch</span></div>
+            <div class="tc-go">Open tool <span>→</span></div>
+          </div>
+          <div class="tc" style="--ac:var(--lime)" onclick="launchTool('cert')">
+            <div class="tc-i">🎓</div>
+            <div><div class="tc-n">Certificate Maker</div><div class="tc-d">Design certificates, add text &amp; logos, bulk-generate from CSV and export as ZIP.</div></div>
+            <div class="tc-tags"><span class="tc-tag">Bulk CSV</span><span class="tc-tag">ZIP Export</span><span class="tc-tag">Templates</span></div>
+            <div class="tc-go">Open tool <span>→</span></div>
+          </div>
+          <div class="tc" style="--ac:var(--teal)" onclick="launchTool('mailer')">
+            <div class="tc-i">📧</div>
+            <div><div class="tc-n">Certificate Mailer</div><div class="tc-d">Upload Excel/CSV, design certificate layout and dispatch personalised certificates by email with rate-limit protection.</div></div>
+            <div class="tc-tags"><span class="tc-tag">Excel Upload</span><span class="tc-tag">Bulk Email</span><span class="tc-tag">Auto Cooldown</span></div>
+            <div class="tc-go">Open tool <span>→</span></div>
+          </div>
+          <div class="tc" style="--ac:#6366f1" onclick="goView('portal')">
+            <div class="tc-i">🏫</div>
+            <div><div class="tc-n">College Portal</div><div class="tc-d">Create shareable certificate download portals for colleges. Students self-serve their certificates by name lookup.</div></div>
+            <div class="tc-tags"><span class="tc-tag">Shareable Link</span><span class="tc-tag">Name Lookup</span><span class="tc-tag">Download Limit</span></div>
+            <div class="tc-go">Open tool <span>→</span></div>
+          </div>
+          <div class="tc" style="--ac:#f59e0b" onclick="goView('tp')">
+            <div class="tc-i">🤝</div>
+            <div><div class="tc-n">Training Partners</div><div class="tc-d">Shared community directory of Training Partners — connect, rate, review and rank TPs across all users.</div></div>
+            <div class="tc-tags"><span class="tc-tag">Shared</span><span class="tc-tag">5-Star Ratings</span><span class="tc-tag">Rankings</span></div>
+            <div class="tc-go">Open tool <span>→</span></div>
+          </div>
+          <div class="tc" style="--ac:#ec4899" onclick="goView('imgedit')">
+            <div class="tc-i">🎨</div>
+            <div><div class="tc-n">Image Editor</div><div class="tc-d">Upload multiple images, load them to canvas and edit — crop, brightness, contrast, saturation, blur, rotate and more.</div></div>
+            <div class="tc-tags"><span class="tc-tag">Crop</span><span class="tc-tag">Brightness</span><span class="tc-tag">Filters</span></div>
+            <div class="tc-go">Open tool <span>→</span></div>
+          </div>
+        </div>
+        <div class="bot fu">
+          <div class="pan">
+            <div class="pan-h"><div class="pan-ht">Recent Activity</div></div>
+            <div class="pan-b" id="actList">
+              <div class="ai"><div class="ai-ic" style="background:var(--lime-p)">✦</div><div style="flex:1;min-width:0"><div class="ai-n">Welcome to NOVA Studio!</div><div class="ai-t">Just now</div></div></div>
             </div>
           </div>
-          <div class="gr-r" style="display:flex;flex-direction:column;align-items:flex-end;gap:10px">
-            <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">
-              <button class="btn bl btn-sm" onclick="launchTool('cert')" style="gap:6px">
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                New Certificate
-              </button>
-              <button class="btn bo btn-sm" style="color:rgba(255,255,255,.7);border-color:rgba(255,255,255,.25)" onclick="goView('projects')">My Projects</button>
+          <div class="pan">
+            <div class="pan-h"><div class="pan-ht">Quick Launch</div></div>
+            <div class="qa-g">
+              <button class="qa-b" onclick="launchTool('cert')"><div class="qa-ic">🎓</div>Certificate</button>
+              <button class="qa-b" onclick="goView('portal')"><div class="qa-ic">🏫</div>College Portal</button>
+              <button class="qa-b" onclick="goView('projects')"><div class="qa-ic">📁</div>My Projects</button>
+              <button class="qa-b" onclick="goView('profile')"><div class="qa-ic">👤</div>My Profile</button>
+              <button class="qa-b" onclick="goView('settings')"><div class="qa-ic">⚙️</div>Settings</button>
+              <button class="qa-b" onclick="goView('tp')"><div class="qa-ic">🤝</div>Training Partners</button>
+              <button class="qa-b" onclick="goView('fileconv')"><div class="qa-ic">🔄</div>File Converter</button>
             </div>
-            <div style="display:flex;gap:6px">
-              <div style="display:flex;align-items:center;gap:4px;padding:4px 9px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:20px;font-size:.62rem;font-weight:700;color:rgba(255,255,255,.6)">
-                <span style="width:5px;height:5px;background:#22c55e;border-radius:50%;flex-shrink:0"></span>
-                All systems online
-              </div>
-            </div>
+          </div>
+        </div>
+
+        <!-- Training Partners Home Widget -->
+        <div class="pan fu" style="margin-top:14px" id="tpHomePanel">
+          <div class="pan-h" style="display:flex;align-items:center;justify-content:space-between">
+            <div class="pan-ht">🤝 Top Training Partners</div>
+            <button onclick="goView('tp')" style="font-size:.62rem;color:var(--mist);background:none;border:none;cursor:pointer;padding:2px 6px;border-radius:4px;font-weight:700;transition:background .15s" onmouseover="this.style.background='var(--fog)'" onmouseout="this.style.background='none'">See all →</button>
+          </div>
+          <div class="pan-b" style="padding:8px 16px 14px" id="tpHomeWidget">
+            <div style="text-align:center;color:var(--mist);font-size:.75rem;padding:16px;">Loading…</div>
           </div>
         </div>
 
@@ -433,7 +460,41 @@
           </div>
         </div>
 
-
+        <!-- Gmail Tracker Panel -->
+        <div class="pan fu" style="margin-top:14px" id="gmailTrackerPanel">
+          <div class="pan-h" style="display:flex;align-items:center;justify-content:space-between">
+            <div class="pan-ht">📧 Gmail Send Limit Tracker</div>
+            <button onclick="gmailTrackerReset()" style="font-size:.62rem;color:var(--mist);background:none;border:none;cursor:pointer;padding:2px 6px;border-radius:4px;transition:background .15s" onmouseover="this.style.background='var(--fog)'" onmouseout="this.style.background='none'">Reset Today</button>
+          </div>
+          <div class="pan-b" style="padding:14px 16px">
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px">
+              <div style="text-align:center">
+                <div class="gmail-sent-big" id="gmailSentCount">0</div>
+                <div style="font-size:.6rem;color:var(--mist);font-weight:700;text-transform:uppercase;margin-top:3px">Sent Today</div>
+              </div>
+              <div style="text-align:center">
+                <div class="gmail-sent-big" id="gmailRemainingCount" style="color:#16a34a">500</div>
+                <div style="font-size:.6rem;color:var(--mist);font-weight:700;text-transform:uppercase;margin-top:3px">Remaining</div>
+              </div>
+              <div style="text-align:center">
+                <div class="gmail-sent-big" id="gmailPctCount" style="font-size:1.2rem">0%</div>
+                <div style="font-size:.6rem;color:var(--mist);font-weight:700;text-transform:uppercase;margin-top:3px">Used</div>
+              </div>
+            </div>
+            <div class="gmail-bar-wrap"><div class="gmail-bar-fill" id="gmailBarFill" style="width:0%"></div></div>
+            <div class="gmail-limit-row" style="margin-top:8px">
+              <div style="display:flex;align-items:center;gap:6px">
+                <span style="color:var(--mist)">Daily limit:</span>
+                <input class="gmail-limit-input" type="number" id="gmailLimitInput" value="500" min="1" max="2000" oninput="gmailLimitChanged(this.value)">
+                <span style="color:var(--mist);font-size:.6rem">(500 free · 2000 Workspace)</span>
+              </div>
+              <div id="gmailResetTime" style="color:var(--mist)">Resets midnight</div>
+            </div>
+            <div style="margin-top:10px;padding:8px 10px;background:#f8fafc;border-radius:6px;font-size:.63rem;color:var(--mist);line-height:1.6">
+              <b style="color:var(--ink3)">ℹ Gmail limits:</b> Free Gmail = 500/day · Google Workspace = 2,000/day · Counts reset at midnight (your time). Tracking is local to this browser.
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -1230,7 +1291,7 @@
               <div class="stg-card">
                 <div class="stg-card-h">📁 Data Upload for Analytics</div>
                 <div style="font-size:.72rem;color:var(--mist);line-height:1.6;margin-bottom:14px;padding:10px 12px;background:var(--lime-p);border-radius:8px;border:1px solid rgba(158,192,0,.2)">
-                  Upload your CSV, Excel or JSON file below. Charts and KPIs will appear automatically on your <b>Dashboard</b> once data is loaded. Works best on the live site (GitHub Pages) — not as a local file.
+                  Upload your data file here. Charts and KPIs will automatically appear on your <b>Dashboard</b> once the data is processed. Supports CSV, Excel (.xlsx/.xls), and JSON formats — up to 50,000 rows.
                 </div>
 
                 <!-- Template Download -->
@@ -1345,45 +1406,37 @@
                   </div>
                 </div>
 
-                <!-- ── Data Upload Zone ── -->
-                <input type="file" id="stgDataFileInput" accept=".csv,.xlsx,.xls,.json" style="display:none" onchange="stgOnDataFileChange(this)">
-
-                <!-- Drop zone -->
-                <div id="stgUploadZone"
+                <!-- Upload Zone -->
+                <div id="anUploadZone" style="border:2.5px dashed var(--fog);border-radius:12px;padding:36px 24px;text-align:center;cursor:pointer;transition:all .2s;background:var(--snow);margin-bottom:16px;"
                   ondragover="event.preventDefault();this.style.borderColor='var(--lime-d)';this.style.background='var(--lime-p)'"
                   ondragleave="this.style.borderColor='var(--fog)';this.style.background='var(--snow)'"
-                  ondrop="stgHandleDataDrop(event)"
-                  style="border:2.5px dashed var(--fog);border-radius:12px;padding:28px 20px;text-align:center;background:var(--snow);margin-bottom:12px;transition:all .2s;">
-                  <div style="font-size:2.4rem;margin-bottom:6px;">📂</div>
-                  <div style="font-weight:800;font-size:.88rem;margin-bottom:4px;color:var(--ink)">Drag &amp; drop your file here</div>
-                  <div style="font-size:.72rem;color:var(--mist);margin-bottom:14px;">CSV · Excel (.xlsx / .xls) · JSON — up to 50,000 rows</div>
-                  <div style="font-size:.68rem;color:var(--mist);">— or —</div>
+                  ondrop="anHandleDrop(event)"
+                  onclick="document.getElementById('anFileInput').click()">
+                  <input type="file" id="anFileInput" accept=".csv,.xlsx,.xls,.json" style="display:none" onchange="anHandleFile(this.files[0])">
+                  <div style="font-size:2.2rem;margin-bottom:8px;">📂</div>
+                  <div style="font-weight:800;font-size:.92rem;margin-bottom:4px;">Drop your data file here</div>
+                  <div style="font-size:.73rem;color:var(--mist);margin-bottom:12px;">CSV, Excel (.xlsx/.xls), JSON array — up to 50,000 rows</div>
+                  <div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap;">
+                    <span style="font-size:.63rem;font-weight:700;padding:3px 9px;border-radius:20px;background:var(--card);border:1px solid var(--fog);color:var(--mist)">CSV</span>
+                    <span style="font-size:.63rem;font-weight:700;padding:3px 9px;border-radius:20px;background:var(--card);border:1px solid var(--fog);color:var(--mist)">XLSX</span>
+                    <span style="font-size:.63rem;font-weight:700;padding:3px 9px;border-radius:20px;background:var(--card);border:1px solid var(--fog);color:var(--mist)">XLS</span>
+                    <span style="font-size:.63rem;font-weight:700;padding:3px 9px;border-radius:20px;background:var(--card);border:1px solid var(--fog);color:var(--mist)">JSON</span>
+                  </div>
+                  <div id="anUploadStatus" style="margin-top:10px;font-size:.72rem;font-weight:600;color:var(--mist)"></div>
                 </div>
 
-                <!-- Big visible upload button -->
-                <button class="btn bl" style="width:100%;padding:13px;font-size:.88rem;font-weight:800;border-radius:10px;margin-bottom:8px;letter-spacing:-.01em;"
-                  onclick="document.getElementById('stgDataFileInput').click()">
-                  📁 &nbsp;Choose File to Upload
-                </button>
-
-                <!-- Status message -->
-                <div id="stgDataUploadStatus" style="min-height:22px;text-align:center;font-size:.78rem;font-weight:700;color:var(--lime-d);margin-bottom:10px;"></div>
-
-                <!-- Loaded indicator (shown after successful upload) -->
-                <div id="stgStandaloneLoaded" style="display:none;background:var(--lime-p);border:1.5px solid var(--lime);border-radius:10px;padding:12px 14px;margin-bottom:12px;align-items:center;gap:12px;flex-wrap:wrap;">
-                  <div style="font-size:1.2rem;">✅</div>
+                <!-- Currently loaded data info -->
+                <div id="stgAnDataLoaded" style="display:none;background:var(--lime-p);border:1.5px solid var(--lime);border-radius:10px;padding:12px 14px;margin-bottom:12px;align-items:center;gap:12px;flex-wrap:wrap;">
+                  <div style="font-size:1rem;">✅</div>
                   <div style="flex:1;min-width:0;">
-                    <div style="font-weight:700;font-size:.82rem;" id="stgStandaloneFileName">—</div>
-                    <div style="font-size:.67rem;color:var(--mist);margin-top:2px;" id="stgStandaloneFileInfo">—</div>
+                    <div style="font-weight:700;font-size:.8rem;" id="stgAnFileName">—</div>
+                    <div style="font-size:.67rem;color:var(--mist);" id="stgAnFileInfo">—</div>
                   </div>
-                  <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;">
-                    <button class="btn bl btn-sm" onclick="goView('home')" style="font-size:.7rem;white-space:nowrap;">📊 View Dashboard</button>
-                    <button class="btn bo btn-sm" onclick="anResetAll()" style="font-size:.68rem;color:#dc2626;border-color:#fecaca;white-space:nowrap;">🗑 Clear Data</button>
-                  </div>
+                  <button class="btn bo btn-sm" onclick="anResetAll()" style="font-size:.68rem;color:#dc2626;border-color:#fecaca;">🗑 Clear Data</button>
                 </div>
 
-                <div style="font-size:.71rem;color:var(--mist);line-height:1.65;padding:9px 12px;background:var(--snow);border-radius:8px;border:1.5px solid var(--fog);">
-                  <b style="color:var(--ink3);">ℹ How it works:</b> Upload your file → charts auto-build on the Dashboard. Data stays in your browser memory. If charts don't persist after refresh, use the live site (GitHub Pages) instead of opening the file directly.
+                <div style="font-size:.72rem;color:var(--mist);line-height:1.6;padding:8px 12px;background:var(--snow);border-radius:8px;">
+                  <b style="color:var(--ink3);">ℹ After upload:</b> Go to your <b>Dashboard</b> to see charts. Data is stored in your browser and persists between sessions. Use <b>Clear Data</b> above to remove it.
                 </div>
               </div>
             </div>
@@ -2085,7 +2138,7 @@ function doGet(){return out({ok:true,status:'Nova Drive Relay running'});}</pre>
 <div class="vp">
 <div class="help-content">
   <!-- Back -->
-  <div class="help-back-btn" onclick="goView('home')">← Dashboard</div>
+  <div class="help-back-btn" onclick="goView('home')">← Back to Dashboard</div>
 
   <!-- Hero -->
   <div class="help-hero">
@@ -2887,12 +2940,11 @@ function doGet(){return out({ok:true,status:'Nova Drive Relay running'});}</pre>
     <div class="view" id="viewImgedit" style="flex-direction:column;overflow:hidden;padding:0">
       <!-- Top bar -->
       <div style="display:flex;align-items:center;gap:10px;padding:10px 18px;border-bottom:1.5px solid var(--fog);background:var(--card);flex-shrink:0;flex-wrap:wrap">
-        <button class="nova-back-btn" onclick="goView('home')">← Dashboard</button>
-        <div style="width:1.5px;height:22px;background:var(--fog);border-radius:2px;margin:0 2px"></div>
+        <button onclick="goView('home')" style="background:none;border:none;font-size:.78rem;font-weight:700;color:var(--mist);cursor:pointer;padding:4px 8px;border-radius:6px" onmouseover="this.style.background='var(--fog)'" onmouseout="this.style.background='none'">← Dashboard</button>
         <div style="font-size:.95rem;font-weight:800;letter-spacing:-.02em;color:var(--ink)">🎨 Image Editor</div>
         <div style="flex:1"></div>
-        <button onclick="ieDownload()" id="ieDownloadBtn" class="btn bl btn-sm" style="display:none;font-size:.78rem;font-weight:800;">⬇ Download</button>
-        <button onclick="ieReset()" id="ieResetBtn" class="btn bo btn-sm" style="display:none;font-size:.78rem;font-weight:700;">↺ Reset</button>
+        <button onclick="ieDownload()" id="ieDownloadBtn" style="display:none;background:#ec4899;color:#fff;border:none;border-radius:8px;padding:7px 16px;font-size:.78rem;font-weight:800;cursor:pointer">⬇ Download</button>
+        <button onclick="ieReset()" id="ieResetBtn" style="display:none;background:var(--fog);color:var(--ink);border:none;border-radius:8px;padding:7px 12px;font-size:.78rem;font-weight:700;cursor:pointer">↺ Reset</button>
       </div>
       <!-- Body -->
       <div style="display:flex;flex:1;overflow:hidden;min-height:0">
@@ -2914,8 +2966,8 @@ function doGet(){return out({ok:true,status:'Nova Drive Relay running'});}</pre>
         </div>
 
         <!-- CENTER: canvas -->
-        <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--snow);overflow:hidden;position:relative;border-left:1.5px solid var(--fog)" id="ieCanvasWrap">
-          <div id="ieCanvasEmpty" style="color:var(--mist);font-size:.82rem;text-align:center;line-height:2;pointer-events:none">
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#1a1a2e;overflow:hidden;position:relative" id="ieCanvasWrap">
+          <div id="ieCanvasEmpty" style="color:#555;font-size:.82rem;text-align:center;line-height:2;pointer-events:none">
             <div style="font-size:2.5rem;margin-bottom:8px">🖼️</div>
             Select an image from the tray<br>to load it onto the canvas
           </div>
@@ -2928,68 +2980,38 @@ function doGet(){return out({ok:true,status:'Nova Drive Relay running'});}</pre>
           <canvas id="ieCanvas" style="max-width:100%;max-height:100%;display:none;box-shadow:0 8px 40px rgba(0,0,0,.5)"></canvas>
         </div>
 
-        <!-- RIGHT: controls — NOVA theme -->
-        <div style="width:250px;flex-shrink:0;border-left:1.5px solid var(--fog);background:var(--card);overflow-y:auto;padding:16px 14px 24px">
+        <!-- RIGHT: controls -->
+        <div style="width:240px;flex-shrink:0;border-left:1.5px solid var(--fog);background:var(--card);overflow-y:auto;padding:14px 14px 20px">
+          <div id="ieControlsEmpty" style="color:var(--mist2);font-size:.72rem;text-align:center;padding:40px 10px;line-height:2">Load an image<br>to see editing controls.</div>
+          <div id="ieControls" style="display:none;display:flex;flex-direction:column;gap:14px">
 
-          <!-- Empty state -->
-          <div id="ieControlsEmpty" style="color:var(--mist);font-size:.73rem;text-align:center;padding:40px 10px;line-height:2">
-            <div style="font-size:2rem;margin-bottom:8px;opacity:.3">🎨</div>
-            Load an image<br>to see editing controls.
-          </div>
-
-          <div id="ieControls" style="display:none;flex-direction:column;gap:18px">
-
-            <!-- Section label helper style: small uppercase lime accent -->
-
-            <!-- Crop -->
+            <!-- Crop tool -->
             <div>
-              <div style="font-size:.63rem;font-weight:800;text-transform:uppercase;letter-spacing:.09em;color:var(--lime-d);margin-bottom:7px;display:flex;align-items:center;gap:5px">
-                <span>✂️</span> Crop
-              </div>
-              <button id="ieCropBtn" onclick="ieStartCrop()"
-                style="width:100%;background:var(--lime-p);border:1.5px solid var(--lime);border-radius:8px;padding:8px;font-size:.75rem;font-weight:800;color:var(--lime-d);cursor:pointer;transition:all .15s;letter-spacing:-.01em"
-                onmouseover="this.style.background='var(--lime)';this.style.color='#fff'"
-                onmouseout="this.style.background='var(--lime-p)';this.style.color='var(--lime-d)'">
-                ✂️ Start Crop
-              </button>
+              <div style="font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--mist);margin-bottom:6px">✂️ Crop</div>
+              <button id="ieCropBtn" onclick="ieStartCrop()" style="width:100%;background:var(--fog);border:1.5px solid var(--fog);border-radius:8px;padding:7px;font-size:.75rem;font-weight:700;color:var(--ink);cursor:pointer;transition:all .15s">Start Crop</button>
             </div>
 
-            <!-- Divider -->
-            <div style="height:1px;background:var(--fog);border-radius:1px"></div>
-
-            <!-- Transform -->
+            <!-- Rotate / Flip -->
             <div>
-              <div style="font-size:.63rem;font-weight:800;text-transform:uppercase;letter-spacing:.09em;color:var(--lime-d);margin-bottom:7px;display:flex;align-items:center;gap:5px">
-                <span>🔄</span> Transform
-              </div>
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
-                <button onclick="ieRotate(-90)" class="ie-ctrl-btn" title="Rotate Left">↺ Left</button>
-                <button onclick="ieRotate(90)"  class="ie-ctrl-btn" title="Rotate Right">↻ Right</button>
-                <button onclick="ieFlip('h')"   class="ie-ctrl-btn" title="Flip Horizontal">⇔ Flip H</button>
-                <button onclick="ieFlip('v')"   class="ie-ctrl-btn" title="Flip Vertical">⇕ Flip V</button>
+              <div style="font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--mist);margin-bottom:6px">🔄 Transform</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px">
+                <button onclick="ieRotate(-90)" style="background:var(--fog);border:none;border-radius:7px;padding:6px;font-size:.72rem;font-weight:700;color:var(--ink);cursor:pointer" title="Rotate Left">↺ Left</button>
+                <button onclick="ieRotate(90)" style="background:var(--fog);border:none;border-radius:7px;padding:6px;font-size:.72rem;font-weight:700;color:var(--ink);cursor:pointer" title="Rotate Right">↻ Right</button>
+                <button onclick="ieFlip('h')" style="background:var(--fog);border:none;border-radius:7px;padding:6px;font-size:.72rem;font-weight:700;color:var(--ink);cursor:pointer" title="Flip Horizontal">⇔ Flip H</button>
+                <button onclick="ieFlip('v')" style="background:var(--fog);border:none;border-radius:7px;padding:6px;font-size:.72rem;font-weight:700;color:var(--ink);cursor:pointer" title="Flip Vertical">⇕ Flip V</button>
               </div>
             </div>
-
-            <!-- Divider -->
-            <div style="height:1px;background:var(--fog);border-radius:1px"></div>
 
             <!-- Adjustments -->
             <div>
-              <div style="font-size:.63rem;font-weight:800;text-transform:uppercase;letter-spacing:.09em;color:var(--lime-d);margin-bottom:10px;display:flex;align-items:center;gap:5px">
-                <span>🎚️</span> Adjustments
-              </div>
-              <div style="display:flex;flex-direction:column;gap:12px" id="ieSliders"></div>
+              <div style="font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--mist);margin-bottom:8px">🎚 Adjustments</div>
+              <div style="display:flex;flex-direction:column;gap:10px" id="ieSliders"></div>
             </div>
-
-            <!-- Divider -->
-            <div style="height:1px;background:var(--fog);border-radius:1px"></div>
 
             <!-- Filters -->
             <div>
-              <div style="font-size:.63rem;font-weight:800;text-transform:uppercase;letter-spacing:.09em;color:var(--lime-d);margin-bottom:8px;display:flex;align-items:center;gap:5px">
-                <span>✨</span> Filters
-              </div>
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px" id="ieFilterBtns"></div>
+              <div style="font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--mist);margin-bottom:7px">✨ Filters</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px" id="ieFilterBtns"></div>
             </div>
 
           </div>
@@ -3460,141 +3482,5 @@ function doGet(){return out({ok:true,status:'Nova Drive Relay running'});}</pre>
 <script src="assets/js/college-portal-admin.js"></script>
 <script src="assets/js/workbook.js"></script>
 <script src="assets/js/page-init.js"></script>
-<script>
-// ── Badge Auto-Hide ─────────────────────────────────────────────
-// Badges (New / Live / TP) disappear after user clicks that nav item
-// and stay hidden permanently via localStorage
-(function(){
-  const STORE_KEY = 'nova_badge_dismissed';
-  function dismissed(){
-    try{ return JSON.parse(localStorage.getItem(STORE_KEY)||'{}'); }catch(e){return {};}
-  }
-  function dismiss(id){
-    const d = dismissed(); d[id] = 1;
-    try{ localStorage.setItem(STORE_KEY, JSON.stringify(d)); }catch(e){}
-  }
-  function hideBadge(item){
-    const badge = item.querySelector('.sb-bx');
-    if(badge) badge.style.display = 'none';
-  }
-  function applyDismissed(){
-    const d = dismissed();
-    document.querySelectorAll('.sb-i[id]').forEach(function(item){
-      if(d[item.id]) hideBadge(item);
-    });
-  }
-  // Hide on click
-  document.querySelectorAll('.sb-i[id]').forEach(function(item){
-    item.addEventListener('click', function(){
-      if(item.querySelector('.sb-bx')){
-        dismiss(item.id);
-        hideBadge(item);
-      }
-    });
-  });
-  // Apply on load
-  applyDismissed();
-})();
-</script>
-
-<script>
-/* NOVA Login Panel Animations */
-(function() {
-  var flickerWords = ['smarter.','faster.','bolder.','sharper.','better.'];
-  var flickerEl = document.getElementById('llFlicker');
-  if (flickerEl) {
-    var wi = 0;
-    function doFlicker() {
-      var flickers = 0;
-      var total = 6 + Math.floor(Math.random() * 5);
-      var iv = setInterval(function() {
-        flickerEl.classList.toggle('flicker-on');
-        flickers++;
-        if (flickers >= total) {
-          clearInterval(iv);
-          wi = (wi + 1) % flickerWords.length;
-          flickerEl.textContent = flickerWords[wi];
-          flickerEl.classList.add('flicker-on');
-        }
-      }, 60);
-    }
-    setTimeout(function(){ flickerEl.classList.add('flicker-on'); }, 600);
-    setInterval(doFlicker, 3200);
-  }
-
-  var canvas = document.getElementById('llCanvas');
-  if (!canvas) return;
-  var ctx = canvas.getContext('2d');
-  var W, H, particles = [], animId;
-
-  function resize() {
-    var rect = canvas.parentElement.getBoundingClientRect();
-    W = canvas.width  = rect.width;
-    H = canvas.height = rect.height;
-  }
-
-  function makeParticle() {
-    return {
-      x: Math.random() * W, y: Math.random() * H,
-      vx: (Math.random() - .5) * .35, vy: (Math.random() - .5) * .35,
-      r: Math.random() * 1.5 + .3, alpha: Math.random() * .4 + .1
-    };
-  }
-
-  function initParticles() {
-    particles = [];
-    var count = Math.floor((W * H) / 7000);
-    for (var i = 0; i < count; i++) particles.push(makeParticle());
-  }
-
-  function draw() {
-    ctx.clearRect(0, 0, W, H);
-    for (var i = 0; i < particles.length; i++) {
-      for (var j = i + 1; j < particles.length; j++) {
-        var dx = particles[i].x - particles[j].x;
-        var dy = particles[i].y - particles[j].y;
-        var dist = Math.sqrt(dx*dx + dy*dy);
-        if (dist < 110) {
-          ctx.beginPath();
-          ctx.moveTo(particles[i].x, particles[i].y);
-          ctx.lineTo(particles[j].x, particles[j].y);
-          ctx.strokeStyle = 'rgba(200,241,53,' + ((1 - dist/110) * .13) + ')';
-          ctx.lineWidth = .7;
-          ctx.stroke();
-        }
-      }
-    }
-    particles.forEach(function(p) {
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(200,241,53,' + p.alpha + ')';
-      ctx.fill();
-      p.x += p.vx; p.y += p.vy;
-      if (p.x < 0 || p.x > W) p.vx *= -1;
-      if (p.y < 0 || p.y > H) p.vy *= -1;
-    });
-    animId = requestAnimationFrame(draw);
-  }
-
-  function start() {
-    resize();
-    initParticles();
-    if (animId) cancelAnimationFrame(animId);
-    draw();
-  }
-
-  var loginScreen = document.getElementById('loginScreen');
-  if (loginScreen) {
-    var obs = new MutationObserver(function() {
-      if (loginScreen.classList.contains('out')) {
-        if (animId) { cancelAnimationFrame(animId); animId = null; }
-      } else { start(); }
-    });
-    obs.observe(loginScreen, { attributes: true, attributeFilter: ['class'] });
-    window.addEventListener('resize', function(){ resize(); initParticles(); });
-    start();
-  }
-})();
-</script>
 </body>
 </html>

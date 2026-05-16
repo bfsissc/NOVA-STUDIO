@@ -7,7 +7,6 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%23c8f135'/><text x='16' y='22' font-size='18' text-anchor='middle' font-family='serif' font-weight='800'>N</text></svg>">
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,300;12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Instrument+Serif:ital@0;1&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/styles.css">
-<link rel="stylesheet" href="assets/css/liquid-glass.css">
 <script src="https://accounts.google.com/gsi/client" async defer id="gsiScript"></script>
 <!-- ✅ Storage polyfill — MUST be first: patches localStorage before any other script runs -->
 <script>
@@ -41,38 +40,16 @@
 <div id="loginScreen">
   <div class="lw">
     <div class="ll">
-      <canvas id="llCanvas" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0"></canvas>
-      <div class="ll-orb ll-orb1"></div>
-      <div class="ll-orb ll-orb2"></div>
-      <div class="ll-orb ll-orb3"></div>
-      <div class="ll-grid"></div>
-      <div class="ll-logo" style="position:relative;z-index:2">
-        <div class="ll-gem">N</div>
-        <div class="ll-brand">NOVA <em>Studio</em></div>
+      <div class="ll-logo"><div class="ll-gem">N</div><div class="ll-brand">NOVA <em>Studio</em></div></div>
+      <div class="ll-hero">
+        <div class="ll-h">Design <b>smarter.</b><br>Create faster.</div>
+        <div class="ll-p">All-in-one creative workspace — certificates, presentations, photo editing and more.</div>
       </div>
-      <div class="ll-hero" style="position:relative;z-index:2">
-        <div class="ll-eyebrow">Creative Workspace</div>
-        <div class="ll-h">
-          <span class="ll-flicker-wrap">
-            <span class="ll-static">Design </span><span class="ll-flicker" id="llFlicker">smarter.</span>
-          </span><br>
-          <span class="ll-h-sub">Create <em>faster.</em></span>
-        </div>
-        <div class="ll-tagline">
-          <span class="ll-tag-word" style="animation-delay:.1s">Your</span>
-          <span class="ll-tag-word" style="animation-delay:.2s">creative</span>
-          <span class="ll-tag-word" style="animation-delay:.3s">workspace,</span>
-          <span class="ll-tag-word" style="animation-delay:.4s">reimagined.</span>
-        </div>
-      </div>
-      <div class="ll-foot" style="position:relative;z-index:2">
-        <div class="ll-badges">
-          <div class="ll-badge">🎓 Certificates</div>
-          <div class="ll-badge">📧 Mailer</div>
-          <div class="ll-badge">🏫 Portals</div>
-          <div class="ll-badge">📊 Analytics</div>
-        </div>
-        <div class="ll-copy">All-in-one. No plugins. No limits.</div>
+      <div class="ll-feats">
+        <div class="ll-feat"><div class="ll-dot"></div>🎓 Bulk certificate generation with CSV</div>
+        <div class="ll-feat"><div class="ll-dot"></div>📊 Presentation builder &amp; PPTX export</div>
+        <div class="ll-feat"><div class="ll-dot"></div>🎨 AI-powered photo editor</div>
+        <div class="ll-feat"><div class="ll-dot"></div>📁 Project dashboard to track everything</div>
       </div>
     </div>
     <div class="lr">
@@ -2849,48 +2826,5 @@ select.cp-input { cursor:pointer; }
 .help-back-btn{display:inline-flex;align-items:center;gap:6px;font-size:.78rem;font-weight:600;color:var(--mist);cursor:pointer;margin-bottom:20px;transition:color .13s}
 .help-back-btn:hover{color:var(--ink)}
 </style>
-
-<script>
-(function() {
-  var flickerWords = ['smarter.','faster.','bolder.','sharper.','better.'];
-  var flickerEl = document.getElementById('llFlicker');
-  if (flickerEl) {
-    var wi = 0;
-    function doFlicker() {
-      var flickers = 0, total = 6 + Math.floor(Math.random() * 5);
-      var iv = setInterval(function() {
-        flickerEl.classList.toggle('flicker-on');
-        flickers++;
-        if (flickers >= total) {
-          clearInterval(iv);
-          wi = (wi + 1) % flickerWords.length;
-          flickerEl.textContent = flickerWords[wi];
-          flickerEl.classList.add('flicker-on');
-        }
-      }, 60);
-    }
-    setTimeout(function(){ flickerEl.classList.add('flicker-on'); }, 600);
-    setInterval(doFlicker, 3200);
-  }
-  var canvas = document.getElementById('llCanvas');
-  if (!canvas) return;
-  var ctx = canvas.getContext('2d'), W, H, particles = [], animId;
-  function resize() { var r=canvas.parentElement.getBoundingClientRect(); W=canvas.width=r.width; H=canvas.height=r.height; }
-  function mp() { return {x:Math.random()*W,y:Math.random()*H,vx:(Math.random()-.5)*.35,vy:(Math.random()-.5)*.35,r:Math.random()*1.5+.3,a:Math.random()*.4+.1}; }
-  function initP() { particles=[]; var c=Math.floor(W*H/7000); for(var i=0;i<c;i++) particles.push(mp()); }
-  function draw() {
-    ctx.clearRect(0,0,W,H);
-    for(var i=0;i<particles.length;i++) for(var j=i+1;j<particles.length;j++) {
-      var dx=particles[i].x-particles[j].x, dy=particles[i].y-particles[j].y, d=Math.sqrt(dx*dx+dy*dy);
-      if(d<110){ ctx.beginPath(); ctx.moveTo(particles[i].x,particles[i].y); ctx.lineTo(particles[j].x,particles[j].y); ctx.strokeStyle='rgba(200,241,53,'+((1-d/110)*.13)+')'; ctx.lineWidth=.7; ctx.stroke(); }
-    }
-    particles.forEach(function(p){ ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fillStyle='rgba(200,241,53,'+p.a+')'; ctx.fill(); p.x+=p.vx; p.y+=p.vy; if(p.x<0||p.x>W)p.vx*=-1; if(p.y<0||p.y>H)p.vy*=-1; });
-    animId=requestAnimationFrame(draw);
-  }
-  function start(){ resize(); initP(); if(animId)cancelAnimationFrame(animId); draw(); }
-  var ls=document.getElementById('loginScreen');
-  if(ls){ new MutationObserver(function(){ if(ls.classList.contains('out')){ if(animId){cancelAnimationFrame(animId);animId=null;} } else start(); }).observe(ls,{attributes:true,attributeFilter:['class']}); window.addEventListener('resize',function(){resize();initP();}); start(); }
-})();
-</script>
 </body>
 </html>
