@@ -464,7 +464,7 @@ var FU = (function () {
     wrap.innerHTML =
       '<div class="fu-bulk-bar" style="background:#f9fafb;border:1.5px solid #e5e7eb;border-radius:12px;padding:12px 14px;margin-bottom:14px;display:flex;flex-direction:column;gap:10px;">' +
         '<div class="fu-bulk-search-row">' +
-          '<input id="fuBulkSearch" class="fu-bulk-search" type="text" placeholder="🔍 Type college name to filter…" oninput="FU._onBulkSearch(this.value)" autocomplete="off" style="flex:1;padding:8px 12px;border:2px solid #9ec000;border-radius:8px;font-size:.85rem;background:#ffffff !important;color:#000000 !important;outline:none;-webkit-text-fill-color:#000000 !important;font-weight:600;">' +
+          '<input id="fuBulkSearch" class="fu-bulk-search" type="text" placeholder="🔍 Type college name to filter…" oninput="FU._onBulkSearch(this.value)" autocomplete="off" style="flex:1;padding:8px 12px;border:1.5px solid #d1d5db;border-radius:8px;font-size:.82rem;background:#ffffff;color:#111111;outline:none;-webkit-text-fill-color:#111111;">' +
           '<button class="fu-bulk-selall" onclick="FU._bulkSelectAll()">' + (selectedCount === total && total > 0 ? '☑ Deselect All' : '☐ Select All') + '</button>' +
         '</div>' +
         (selectedCount > 0
