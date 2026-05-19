@@ -1,0 +1,29 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // ── Team shared files ─────────────────────────────────────────────
+    // Any signed-in user can read (download/preview).
+    // Any signed-in user can upload (write).
+    // Only the uploader can delete — enforced in app logic; Storage allows
+    // any authenticated user to delete (teams manage permissions via Firestore).
+    match /team_files/{teamId}/{allPaths=**} {
+      allow read:   if request.auth != null;
+      allow write:  if request.auth != null;
+      allow delete: if request.auth != null;
+    }
+
+    // ── User avatars / covers ─────────────────────────────────────────
+    match /user_assets/{userId}/{allPaths=**} {
+      allow read:   if request.auth != null;
+      allow write:  if request.auth != null && request.auth.uid == userId;
+      allow delete: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // ── Fallback: any signed-in user ──────────────────────────────────
+    match /{allPaths=**} {
+      allow read, write: if request.auth != null;
+    }
+
+  }
+}
