@@ -354,13 +354,7 @@ function cpValidateStep(n) {
   }
   if (n === 2) {
     if (!CP.templateImg) { cpToast('Please load a certificate template first.', 'err'); return false; }
-    var isOpenAccess = document.getElementById('cpOpenAccess') && document.getElementById('cpOpenAccess').checked;
-    if (CP.students.length === 0 && !isOpenAccess) {
-      // Allow proceeding with a warning — students can be added later via manual entry
-      // Only hard-block if explicitly not open-access AND no students at all
-      cpToast('⚠️ No students loaded yet. You can add them manually in the next step, or enable Open Access.', 'info');
-      // Don't block — let admin proceed; Publish step will still work even with 0 students
-    }
+    if (CP.students.length === 0) { cpToast('Please load student CSV data first.', 'err'); return false; }
     return true;
   }
   return true;
@@ -425,13 +419,18 @@ async function cpHandleTemplateFileInput(input) {
     CP.templateUrl = base64DataUrl;
 
     if (typeof fbStorage === 'undefined') throw new Error('Firebase Storage not initialized');
-    var ext      = file.name.split('.').pop() || 'png';
-    var uid      = (typeof U !== 'undefined' && U) ? U.uid : 'anon';
-    var path     = 'portal-templates/' + uid + '/' + Date.now() + '.' + ext;
+
+    // Compress to ~800 KB before uploading — avoids Firebase Storage quota/size issues
+    badge.textContent = 'Compressing…';
+    var compressedDataUrl = await cpCompressForFirestore(base64DataUrl, 800000);
+    var uploadBlob = cpDataUrlToBlob(compressedDataUrl);
+
+    var uid  = (typeof U !== 'undefined' && U) ? U.uid : 'anon';
+    var path = 'portal-templates/' + uid + '/' + Date.now() + '.jpg';
     var storageRef = fbStorage.ref(path);
 
     badge.textContent = 'Uploading… 0%';
-    var uploadTask = storageRef.put(file);
+    var uploadTask = storageRef.put(uploadBlob, { contentType: 'image/jpeg' });
     uploadTask.on('state_changed', function(snapshot) {
       var pct = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
       badge.textContent = 'Uploading… ' + pct + '%';
@@ -766,6 +765,17 @@ function cpUpdateNameStyle() {
 }
 
 // Compress a base64 image so it fits within Firestore's 1MB field limit
+// Convert a base64 data-URL to a Blob without using fetch()
+// This avoids CORS/CSP issues and works even for large data-URLs
+function cpDataUrlToBlob(dataUrl) {
+  var parts  = dataUrl.split(',');
+  var mime   = (parts[0].match(/:(.*?);/) || ['','image/jpeg'])[1];
+  var binary = atob(parts[1]);
+  var arr    = new Uint8Array(binary.length);
+  for (var i = 0; i < binary.length; i++) arr[i] = binary.charCodeAt(i);
+  return new Blob([arr], { type: mime });
+}
+
 function cpCompressForFirestore(dataUrl, maxBytes) {
   return new Promise(function(resolve) {
     var img = new Image();
@@ -820,24 +830,30 @@ async function cpPublishPortal() {
       templateUrlToStore = CP.storageUrl;
 
     } else if (CP.templateUrl && CP.templateUrl.startsWith('data:')) {
-      // Template came from a Drive URL (base64 only) — upload to Storage now
-      btn.textContent = 'Uploading template to storage...';
+      // Template came from a Drive URL (base64 only) — compress then upload to Storage
       try {
+        // Step 1: Always compress first to keep Storage upload small and fast
+        btn.textContent = 'Compressing template…';
+        var compressedDataUrl = await cpCompressForFirestore(CP.templateUrl, 800000); // ~800 KB target
+
+        // Step 2: Convert base64 data-URL → Blob without using fetch() (works even offline / CORS)
+        btn.textContent = 'Uploading template to storage…';
+        var imgBlob = cpDataUrlToBlob(compressedDataUrl);
         var uid  = (typeof U !== 'undefined' && U && U.uid) ? U.uid : 'anon';
         var path = 'portal-templates/' + uid + '/' + CP.currentSlug + '_' + Date.now() + '.jpg';
         var sRef = fbStorage.ref(path);
-        // Convert base64 data-URL to Blob
-        var fetchResp = await fetch(CP.templateUrl);
-        var imgBlob   = await fetchResp.blob();
-        await sRef.put(imgBlob, { contentType: imgBlob.type || 'image/jpeg' });
+        await sRef.put(imgBlob, { contentType: 'image/jpeg' });
         CP.storageUrl      = await sRef.getDownloadURL();
         templateUrlToStore = CP.storageUrl;
-        cpToast('Template uploaded to storage', 'ok');
+        cpToast('Template uploaded to storage ✓', 'ok');
       } catch (storageErr) {
-        console.warn('Storage upload failed, using compression fallback:', storageErr);
-        // Last resort: compress heavily to fit Firestore 1MB field limit
-        btn.textContent = 'Compressing image...';
-        templateUrlToStore = await cpCompressForFirestore(CP.templateUrl, 700000);
+        console.warn('Storage upload failed, falling back to compressed Firestore embed:', storageErr);
+        // Last resort: store a heavily-compressed base64 directly in Firestore
+        btn.textContent = 'Compressing (storage unavailable)…';
+        templateUrlToStore = await cpCompressForFirestore(CP.templateUrl, 500000);
+        if (!templateUrlToStore || templateUrlToStore.length * 0.75 > 950000) {
+          throw new Error('Template too large for storage and Firestore. Please upload a smaller image (under 2 MB). Storage error: ' + storageErr.message);
+        }
       }
 
     } else if (CP.templateUrl) {
