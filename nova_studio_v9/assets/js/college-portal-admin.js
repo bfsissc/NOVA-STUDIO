@@ -393,57 +393,64 @@ async function cpHandleTemplateFileInput(input) {
   var badge    = document.getElementById('cpTemplateBadge');
   var badgeWrap= document.getElementById('cpTemplateBadgeWrap');
   var statusEl = document.getElementById('cpTemplateLoadStatus');
-  badge.textContent = 'Uploading…';
+  badge.textContent = 'Uploading to Nova backend…';
   statusEl.textContent = '⏳';
   badgeWrap.style.display = 'flex';
 
+  // ── Show local preview immediately so admin can see template while uploading ──
+  var localUrl = URL.createObjectURL(file);
+  var previewImg = new Image();
+  previewImg.onload = function() {
+    CP.templateImg    = previewImg;
+    CP.templateWidth  = previewImg.naturalWidth;
+    CP.templateHeight = previewImg.naturalHeight;
+    var thumb = document.getElementById('cpTemplateThumb');
+    if (thumb) { thumb.src = localUrl; thumb.style.display = 'block'; }
+    if (CP.step === 3) cpDrawNameCanvas();
+  };
+  previewImg.src = localUrl;
+
+  // ── Upload DIRECTLY to Firebase Storage — no base64 fallback ──
+  // The file goes straight to Nova backend storage so the student portal
+  // can load it via a clean HTTPS URL (no canvas taint, no Firestore bloat).
   try {
-    var localUrl = URL.createObjectURL(file);
-    var previewImg = new Image();
-    previewImg.onload = function() {
-      CP.templateImg    = previewImg;
-      CP.templateWidth  = previewImg.naturalWidth;
-      CP.templateHeight = previewImg.naturalHeight;
-      var thumb = document.getElementById('cpTemplateThumb');
-      if (thumb) { thumb.src = localUrl; thumb.style.display = 'block'; }
-      if (CP.step === 3) cpDrawNameCanvas();
-    };
-    previewImg.src = localUrl;
-
-    var base64DataUrl = await new Promise(function(res, rej) {
-      var r = new FileReader();
-      r.onload = function(e) { res(e.target.result); };
-      r.onerror = rej;
-      r.readAsDataURL(file);
-    });
-    CP.templateUrl = base64DataUrl;
-
-    if (typeof fbStorage === 'undefined') throw new Error('Firebase Storage not initialized');
-    var ext      = file.name.split('.').pop() || 'png';
-    var uid      = (typeof U !== 'undefined' && U) ? U.uid : 'anon';
-    var path     = 'portal-templates/' + uid + '/' + Date.now() + '.' + ext;
+    if (typeof fbStorage === 'undefined') throw new Error('Firebase Storage not initialised. Please refresh and try again.');
+    var uid = (typeof U !== 'undefined' && U && U.uid) ? U.uid : 'anon';
+    var ext = (file.name.split('.').pop() || 'png').toLowerCase();
+    // Path: portal-templates/{uid}/{timestamp}.{ext}
+    var path      = 'portal-templates/' + uid + '/' + Date.now() + '.' + ext;
     var storageRef = fbStorage.ref(path);
 
     badge.textContent = 'Uploading… 0%';
-    var uploadTask = storageRef.put(file);
+    var uploadTask = storageRef.put(file, { contentType: file.type });
+
     uploadTask.on('state_changed', function(snapshot) {
       var pct = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
-      badge.textContent = 'Uploading… ' + pct + '%';
-    }, function(err) { throw err; });
+      badge.textContent = 'Uploading to Nova backend… ' + pct + '%';
+    }, function(uploadErr) {
+      throw uploadErr;
+    });
+
     await uploadTask;
     var downloadUrl = await storageRef.getDownloadURL();
-    CP.storageUrl = downloadUrl;
 
-    badge.textContent = file.name + ' (' + (CP.templateWidth || '?') + '×' + (CP.templateHeight || '?') + ') — uploaded ✓';
+    // Store the live Storage URL — this is what gets saved to Firestore
+    // and served to the student portal canvas.
+    CP.storageUrl  = downloadUrl;
+    CP.templateUrl = downloadUrl; // always a real URL now, never base64
+
+    badge.textContent = file.name + ' (' + (CP.templateWidth || '?') + '×' + (CP.templateHeight || '?') + ') — saved to Nova ✓';
     statusEl.textContent = '✅';
     var urlInput = document.getElementById('cpTemplateDriveUrl');
     if (urlInput) urlInput.value = '';
-    cpToast('Template uploaded & ready ✓', 'ok');
+    cpToast('Template saved to Nova backend ✓', 'ok');
     cpSaveDraft();
+
   } catch(err) {
     statusEl.textContent = '❌';
     badge.textContent = 'Upload failed: ' + err.message;
-    cpToast('Upload failed: ' + err.message, 'err');
+    cpToast('Upload failed — ' + err.message, 'err');
+    console.error('[CP] Template storage upload failed:', err);
   }
 }
 
@@ -803,39 +810,59 @@ async function cpPublishPortal() {
     var district     = (document.getElementById('cpDistrict') ? document.getElementById('cpDistrict').value.trim() : '');
 
     if (!CP.currentSlug || !collegeName) { cpToast('Missing college name.', 'err'); btn.disabled = false; btn.textContent = '🚀 Publish Portal'; return; }
-    if (!CP.templateUrl) { cpToast('No template — go back to Step 2 and load a template.', 'err'); btn.disabled = false; btn.textContent = '🚀 Publish Portal'; return; }
+    if (!CP.templateUrl) { cpToast('No template — go back to Step 2 and upload a certificate template.', 'err'); btn.disabled = false; btn.textContent = '🚀 Publish Portal'; return; }
 
-    // Always store a Firebase Storage URL in Firestore — never raw base64.
-    // This keeps the Firestore document tiny and the student portal fast.
+    // ── NOVA BACKEND: Always store a Firebase Storage URL — never base64.
+    // base64 bloats Firestore, hits the 1MB doc limit, and causes CORS
+    // failures on the student canvas. Storage URL = clean, fast, CORS-safe.
     var templateUrlToStore = '';
 
-    if (CP.storageUrl && !CP.storageUrl.startsWith('data:')) {
-      // File was uploaded via the file picker — Storage URL already exists
+    if (CP.storageUrl && CP.storageUrl.startsWith('https://firebasestorage.googleapis.com')) {
+      // ✅ File uploaded to Nova Storage in Step 2 — best case, no work needed
       templateUrlToStore = CP.storageUrl;
 
-    } else if (CP.templateUrl && CP.templateUrl.startsWith('data:')) {
-      // Template came from a Drive URL (base64 only) — upload to Storage now
-      btn.textContent = 'Uploading template to storage...';
+    } else if (CP.templateUrl && !CP.templateUrl.startsWith('data:')) {
+      // External URL (Drive thumbnail etc.) — mirror to Nova Storage for CORS safety
+      btn.textContent = 'Saving template to Nova backend…';
       try {
         var uid  = (typeof U !== 'undefined' && U && U.uid) ? U.uid : 'anon';
         var path = 'portal-templates/' + uid + '/' + CP.currentSlug + '_' + Date.now() + '.jpg';
         var sRef = fbStorage.ref(path);
-        // Convert base64 data-URL to Blob
         var fetchResp = await fetch(CP.templateUrl);
-        var imgBlob   = await fetchResp.blob();
+        if (!fetchResp.ok) throw new Error('HTTP ' + fetchResp.status);
+        var imgBlob = await fetchResp.blob();
         await sRef.put(imgBlob, { contentType: imgBlob.type || 'image/jpeg' });
         CP.storageUrl      = await sRef.getDownloadURL();
         templateUrlToStore = CP.storageUrl;
-        cpToast('Template uploaded to storage', 'ok');
+        cpToast('Template saved to Nova backend ✓', 'ok');
       } catch (storageErr) {
-        console.warn('Storage upload failed, using compression fallback:', storageErr);
-        // Last resort: compress heavily to fit Firestore 1MB field limit
-        btn.textContent = 'Compressing image...';
-        templateUrlToStore = await cpCompressForFirestore(CP.templateUrl, 700000);
+        cpToast('Could not save template — please re-upload the image in Step 2.', 'err');
+        btn.disabled = false; btn.textContent = '🚀 Publish Portal';
+        console.error('[CP] Publish storage mirror failed:', storageErr);
+        return;
+      }
+
+    } else if (CP.templateUrl && CP.templateUrl.startsWith('data:')) {
+      // base64 fallback — convert to blob and upload to Storage; block if fails
+      btn.textContent = 'Saving template to Nova backend…';
+      try {
+        var uid2  = (typeof U !== 'undefined' && U && U.uid) ? U.uid : 'anon';
+        var path2 = 'portal-templates/' + uid2 + '/' + CP.currentSlug + '_' + Date.now() + '.jpg';
+        var sRef2 = fbStorage.ref(path2);
+        var fetchResp2 = await fetch(CP.templateUrl);
+        var imgBlob2   = await fetchResp2.blob();
+        await sRef2.put(imgBlob2, { contentType: imgBlob2.type || 'image/jpeg' });
+        CP.storageUrl      = await sRef2.getDownloadURL();
+        templateUrlToStore = CP.storageUrl;
+        cpToast('Template saved to Nova backend ✓', 'ok');
+      } catch (storageErr2) {
+        cpToast('Template upload required — please re-upload your certificate image in Step 2.', 'err');
+        btn.disabled = false; btn.textContent = '🚀 Publish Portal';
+        console.error('[CP] base64 → Storage upload failed:', storageErr2);
+        return;
       }
 
     } else if (CP.templateUrl) {
-      // Already a plain URL (not base64) — use as-is
       templateUrlToStore = CP.templateUrl;
     }
 

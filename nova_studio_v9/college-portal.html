@@ -559,10 +559,15 @@ async function initPortal() {
   }
 }
 
-// ── Load template image from URL ──
+// ── Load template image from Nova Storage ──
+// Template is always a Firebase Storage HTTPS URL (set by admin in Step 2).
+// We fetch it as a blob and convert to base64 so the canvas is never tainted
+// and toDataURL() always works for the PDF download button.
 async function loadTemplateImage(url) {
-  // ── If already base64 data URL, load directly — zero CORS risk ──
-  if (url && url.startsWith('data:')) {
+  if (!url) return;
+
+  // Already base64 — load directly (legacy portals or dev mode)
+  if (url.startsWith('data:')) {
     return new Promise(function(resolve) {
       var img = new Image();
       img.onload = function() { templateImg = img; resolve(); };
@@ -571,13 +576,12 @@ async function loadTemplateImage(url) {
     });
   }
 
-  // ── For Firebase Storage / Drive URLs: fetch as blob → base64 ──
-  // This prevents canvas tainting so toDataURL() always works for download.
+  // ── Primary: fetch from Nova Storage as blob → base64 (no canvas taint) ──
   try {
-    var resp = await fetch(url);
+    var resp = await fetch(url, { mode: 'cors' });
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
     var blob = await resp.blob();
-    if (!blob.type.startsWith('image/')) throw new Error('Not an image blob');
+    if (!blob.type.startsWith('image/')) throw new Error('Not an image');
     var dataUrl = await new Promise(function(res, rej) {
       var r = new FileReader();
       r.onload = function(e) { res(e.target.result); };
@@ -588,11 +592,11 @@ async function loadTemplateImage(url) {
       var img = new Image();
       img.onload = function() { templateImg = img; resolve(); };
       img.onerror = function() { resolve(); };
-      img.src = dataUrl; // base64 — canvas reads freely, no taint
+      img.src = dataUrl;
     });
   } catch(fetchErr) {
-    console.warn('[Portal] Blob fetch failed, trying corsproxy:', fetchErr.message);
-    // ── Fallback: try corsproxy.io ──
+    console.warn('[Portal] Nova Storage fetch failed, trying corsproxy:', fetchErr.message);
+    // ── Fallback: corsproxy (only needed if CORS config not yet applied) ──
     try {
       var proxyResp = await fetch('https://corsproxy.io/?' + encodeURIComponent(url));
       if (!proxyResp.ok) throw new Error('Proxy HTTP ' + proxyResp.status);
@@ -610,10 +614,10 @@ async function loadTemplateImage(url) {
         img.src = proxyDataUrl;
       });
     } catch(proxyErr) {
-      console.warn('[Portal] Proxy also failed, loading direct (canvas may be tainted):', proxyErr.message);
-      // ── Last resort: direct load — preview works, download may fail ──
+      console.warn('[Portal] Proxy also failed, loading direct:', proxyErr.message);
       return new Promise(function(resolve) {
         var img = new Image();
+        img.crossOrigin = 'anonymous';
         img.onload = function() { templateImg = img; resolve(); };
         img.onerror = function() { resolve(); };
         img.src = url;
@@ -643,13 +647,33 @@ function normalizeName(n) {
 }
 
 // ── Autocomplete / name suggestion ──
+// Live typing draws name on canvas instantly as user types — no button needed.
+var _liveTypingRaf = null;
 function handleNameInput(val) {
   acSelectedIdx = -1;
   var q = val.trim();
-  // Also update preview live (existing behaviour)
-  var canvas = document.getElementById('previewCanvas');
-  if (templateImg && q) { drawCertOnCanvas(canvas, q, false); }
-  else if (!q) { drawPreviewPlaceholder(); }
+
+  // ── Live canvas update on every keystroke (smooth, RAF-throttled) ──
+  if (_liveTypingRaf) cancelAnimationFrame(_liveTypingRaf);
+  _liveTypingRaf = requestAnimationFrame(function() {
+    var canvas = document.getElementById('previewCanvas');
+    if (templateImg && q) {
+      document.getElementById('previewEmpty').style.display = 'none';
+      canvas.style.display = 'block';
+      // Ensure canvas sized correctly before drawing
+      if (canvas.width < 10) {
+        var aspect = templateImg.naturalWidth / templateImg.naturalHeight;
+        var box = canvas.parentElement.getBoundingClientRect();
+        canvas.width  = Math.round(box.width || 520);
+        canvas.height = Math.round(canvas.width / aspect);
+        canvas.style.width = '100%';
+      }
+      drawCertOnCanvas(canvas, q, false);
+    } else if (!q) {
+      drawPreviewPlaceholder();
+    }
+    _liveTypingRaf = null;
+  });
 
   var box = document.getElementById('nameSuggestions');
   if (!q || allStudentNames.length === 0) { box.style.display = 'none'; return; }
