@@ -759,6 +759,38 @@ function cpUpdateNameStyle() {
   cpSaveDraft();
 }
 
+// ── Image compression helper ──────────────────────────────────────
+// Resizes + re-encodes a base64 data URL so the result fits within
+// maxBytes (raw byte count of the base64 string × 0.75).
+// Used to guarantee templateUrl stays under Firestore's 1,048,487-byte
+// field limit when no Firebase Storage URL is available.
+function cpCompressTemplateForFirestore(dataUrl, maxBytes) {
+  return new Promise(function(resolve) {
+    var img = new Image();
+    img.onload = function() {
+      var MAX_DIM = 1400; // cap longest side; keeps visual quality for certs
+      var w = img.naturalWidth, h = img.naturalHeight;
+      if (w > MAX_DIM || h > MAX_DIM) {
+        if (w >= h) { h = Math.round(h * MAX_DIM / w); w = MAX_DIM; }
+        else        { w = Math.round(w * MAX_DIM / h); h = MAX_DIM; }
+      }
+      var canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      // Step down JPEG quality until the encoded size fits
+      var quality = 0.88;
+      var result  = canvas.toDataURL('image/jpeg', quality);
+      while (Math.round(result.length * 0.75) > maxBytes && quality > 0.15) {
+        quality = Math.max(0.15, quality - 0.10);
+        result  = canvas.toDataURL('image/jpeg', quality);
+      }
+      resolve(result);
+    };
+    img.onerror = function() { resolve(dataUrl); }; // fallback — let Firestore give the real error
+    img.src = dataUrl;
+  });
+}
+
 // ══════════════════════════════════════════════════════════════════
 // ── Step 5: Publish ──
 // ══════════════════════════════════════════════════════════════════
@@ -782,7 +814,17 @@ async function cpPublishPortal() {
     var templateUrlToStore = CP.templateUrl;
     if (templateUrlToStore && templateUrlToStore.startsWith('data:')) {
       var base64Size = Math.round(templateUrlToStore.length * 0.75);
-      if (base64Size > 900000) { templateUrlToStore = CP.storageUrl || CP.templateUrl; }
+      if (base64Size > 700000) {
+        // Prefer the Firebase Storage URL (set when user uploads via file picker)
+        if (CP.storageUrl) {
+          templateUrlToStore = CP.storageUrl;
+        } else {
+          // No storage URL (e.g. Drive URL path) — compress the base64 in-browser
+          // so it stays below Firestore's 1,048,487-byte field limit
+          btn.textContent = 'Compressing image…';
+          templateUrlToStore = await cpCompressTemplateForFirestore(CP.templateUrl, 700000);
+        }
+      }
     }
 
     var portalData = {
