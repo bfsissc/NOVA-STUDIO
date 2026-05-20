@@ -384,6 +384,19 @@ function cpTemplateUrlChanged() {
   if (wrap) wrap.style.display = 'none';
 }
 
+// ══════════════════════════════════════════════════════════════════
+// ── Step 2: Template upload — TWO PATHS ──
+//
+//   PATH A (file picker) → upload directly to Google Drive via DM.
+//                           Store the Drive file ID + a shareable URL.
+//                           Student portal fetches from Firebase (see publish).
+//
+//   PATH B (Drive link)  → fetch the image from Drive URL, show preview,
+//                          store in Firebase Storage at publish time so
+//                          student portal always reads from Firebase.
+// ══════════════════════════════════════════════════════════════════
+
+// ── PATH A: File picker → straight to Google Drive ──────────────
 async function cpHandleTemplateFileInput(input) {
   var file = input.files && input.files[0];
   if (!file) return;
@@ -393,11 +406,10 @@ async function cpHandleTemplateFileInput(input) {
   var badge    = document.getElementById('cpTemplateBadge');
   var badgeWrap= document.getElementById('cpTemplateBadgeWrap');
   var statusEl = document.getElementById('cpTemplateLoadStatus');
-  badge.textContent = 'Uploading to Nova backend…';
-  statusEl.textContent = '⏳';
   badgeWrap.style.display = 'flex';
+  statusEl.textContent = '⏳';
 
-  // ── Show local preview immediately so admin can see template while uploading ──
+  // Show local preview immediately while upload runs
   var localUrl = URL.createObjectURL(file);
   var previewImg = new Image();
   previewImg.onload = function() {
@@ -410,47 +422,90 @@ async function cpHandleTemplateFileInput(input) {
   };
   previewImg.src = localUrl;
 
-  // ── Upload DIRECTLY to Firebase Storage — no base64 fallback ──
-  // The file goes straight to Nova backend storage so the student portal
-  // can load it via a clean HTTPS URL (no canvas taint, no Firestore bloat).
+  // ── Upload to Google Drive via DM (Nova Drive backend) ──
+  var tok = (typeof NOVA_DRIVE_TOKEN !== 'undefined') ? NOVA_DRIVE_TOKEN : null;
+  if (!tok) {
+    try { tok = sessionStorage.getItem('nova_drive_token'); } catch(e) {}
+  }
+
+  if (tok) {
+    // ✅ Drive token available — upload directly to Drive
+    badge.textContent = 'Uploading to Google Drive… 0%';
+    try {
+      // Use multipart upload so we get the file ID back
+      var meta      = JSON.stringify({ name: 'cert_template_' + Date.now() + '.' + (file.name.split('.').pop() || 'png') });
+      var boundary  = 'nova_cp_' + Date.now();
+      var delimiter = '\r\n--' + boundary + '\r\n';
+      var close     = '\r\n--' + boundary + '--';
+      var metaPart  = delimiter + 'Content-Type: application/json; charset=UTF-8\r\n\r\n' + meta;
+      var dataPart  = '\r\n--' + boundary + '\r\nContent-Type: ' + file.type + '\r\n\r\n';
+      var metaBytes = new TextEncoder().encode(metaPart + dataPart);
+      var closeBytes= new TextEncoder().encode(close);
+      var fileBuf   = await file.arrayBuffer();
+      var body      = new Uint8Array(metaBytes.byteLength + fileBuf.byteLength + closeBytes.byteLength);
+      body.set(metaBytes, 0);
+      body.set(new Uint8Array(fileBuf), metaBytes.byteLength);
+      body.set(closeBytes, metaBytes.byteLength + fileBuf.byteLength);
+
+      badge.textContent = 'Uploading to Google Drive…';
+      var res = await fetch(
+        'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,webContentLink',
+        { method: 'POST', headers: { 'Authorization': 'Bearer ' + tok, 'Content-Type': 'multipart/related; boundary=' + boundary }, body: body }
+      );
+      if (!res.ok) throw new Error('Drive upload HTTP ' + res.status);
+      var driveFile = await res.json();
+
+      // Make it publicly readable so Firebase can fetch it at publish time
+      await fetch('https://www.googleapis.com/drive/v3/files/' + driveFile.id + '/permissions', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + tok, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role: 'reader', type: 'anyone' })
+      });
+
+      var driveUrl = 'https://drive.google.com/uc?export=download&id=' + driveFile.id;
+      CP.driveFileId = driveFile.id;
+      CP.templateUrl = driveUrl;       // Drive URL — will be mirrored to Firebase at publish
+      CP.storageUrl  = '';             // cleared — will be set at publish
+
+      badge.textContent = file.name + ' (' + (CP.templateWidth || '?') + '×' + (CP.templateHeight || '?') + ') — saved to Drive ✓';
+      statusEl.textContent = '✅';
+      cpToast('Template uploaded to Google Drive ✓', 'ok');
+      cpSaveDraft();
+      return;
+    } catch(driveErr) {
+      console.warn('[CP] Drive upload failed, falling back to Firebase Storage:', driveErr.message);
+      badge.textContent = 'Drive upload failed, saving to Nova backend…';
+    }
+  } else {
+    badge.textContent = 'No Drive session — saving to Nova backend…';
+  }
+
+  // ── Fallback: Firebase Storage (if Drive token missing or upload failed) ──
   try {
-    if (typeof fbStorage === 'undefined') throw new Error('Firebase Storage not initialised. Please refresh and try again.');
-    var uid = (typeof U !== 'undefined' && U && U.uid) ? U.uid : 'anon';
-    var ext = (file.name.split('.').pop() || 'png').toLowerCase();
-    // Path: portal-templates/{uid}/{timestamp}.{ext}
-    var path      = 'portal-templates/' + uid + '/' + Date.now() + '.' + ext;
-    var storageRef = fbStorage.ref(path);
-
-    badge.textContent = 'Uploading… 0%';
-    var uploadTask = storageRef.put(file, { contentType: file.type });
-
-    uploadTask.on('state_changed', function(snapshot) {
-      var pct = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
-      badge.textContent = 'Uploading to Nova backend… ' + pct + '%';
-    }, function(uploadErr) {
-      throw uploadErr;
+    if (typeof fbStorage === 'undefined') throw new Error('Firebase Storage not initialised.');
+    var uid  = (typeof U !== 'undefined' && U && U.uid) ? U.uid : 'anon';
+    var ext  = (file.name.split('.').pop() || 'png').toLowerCase();
+    var path = 'portal-templates/' + uid + '/' + Date.now() + '.' + ext;
+    var sRef = fbStorage.ref(path);
+    badge.textContent = 'Saving to Nova backend… 0%';
+    var uploadTask = sRef.put(file, { contentType: file.type });
+    uploadTask.on('state_changed', function(snap) {
+      var pct = Math.round((snap.bytesTransferred / snap.totalBytes) * 100);
+      badge.textContent = 'Saving to Nova backend… ' + pct + '%';
     });
-
     await uploadTask;
-    var downloadUrl = await storageRef.getDownloadURL();
-
-    // Store the live Storage URL — this is what gets saved to Firestore
-    // and served to the student portal canvas.
-    CP.storageUrl  = downloadUrl;
-    CP.templateUrl = downloadUrl; // always a real URL now, never base64
-
-    badge.textContent = file.name + ' (' + (CP.templateWidth || '?') + '×' + (CP.templateHeight || '?') + ') — saved to Nova ✓';
+    var dlUrl = await sRef.getDownloadURL();
+    CP.storageUrl  = dlUrl;
+    CP.templateUrl = dlUrl;
+    badge.textContent = file.name + ' — saved to Nova backend ✓';
     statusEl.textContent = '✅';
-    var urlInput = document.getElementById('cpTemplateDriveUrl');
-    if (urlInput) urlInput.value = '';
     cpToast('Template saved to Nova backend ✓', 'ok');
     cpSaveDraft();
-
-  } catch(err) {
+  } catch(fbErr) {
     statusEl.textContent = '❌';
-    badge.textContent = 'Upload failed: ' + err.message;
-    cpToast('Upload failed — ' + err.message, 'err');
-    console.error('[CP] Template storage upload failed:', err);
+    badge.textContent = 'Upload failed: ' + fbErr.message;
+    cpToast('Upload failed — ' + fbErr.message, 'err');
+    console.error('[CP] Template upload failed (both Drive & Firebase):', fbErr);
   }
 }
 
@@ -459,26 +514,66 @@ function cpTriggerTemplateUpload() {
   if (input) input.click();
 }
 
+// ── PATH B: Drive link pasted → fetch image → store via Firebase at publish ──
 async function cpFetchTemplateFromUrl() {
   var raw = (document.getElementById('cpTemplateDriveUrl').value || '').trim();
   if (!raw) { cpToast('Please paste a Google Drive link or upload a file.', 'err'); return; }
   var badge    = document.getElementById('cpTemplateBadge');
   var badgeWrap= document.getElementById('cpTemplateBadgeWrap');
   var statusEl = document.getElementById('cpTemplateLoadStatus');
-  badge.textContent = 'Loading…';
+  badge.textContent = 'Loading from Drive…';
   statusEl.textContent = '⏳';
   badgeWrap.style.display = 'flex';
-  localStorage.setItem('cp_last_tpl_url', raw);
+
   var fileId = cpExtractDriveFileId(raw);
+
+  // ── Try Drive API first if we have a token (best quality, no proxy needed) ──
+  var tok = (typeof NOVA_DRIVE_TOKEN !== 'undefined') ? NOVA_DRIVE_TOKEN : null;
+  if (!tok) { try { tok = sessionStorage.getItem('nova_drive_token'); } catch(e) {} }
+
+  if (fileId && tok) {
+    badge.textContent = 'Fetching from Drive via API…';
+    try {
+      var apiResp = await fetch(
+        'https://www.googleapis.com/drive/v3/files/' + fileId + '?alt=media',
+        { headers: { 'Authorization': 'Bearer ' + tok } }
+      );
+      if (!apiResp.ok) throw new Error('Drive API HTTP ' + apiResp.status);
+      var blob = await apiResp.blob();
+      if (!blob.type.startsWith('image/')) throw new Error('Not an image');
+      var dataUrl = await new Promise(function(res, rej) {
+        var r = new FileReader(); r.onload = function(e) { res(e.target.result); }; r.onerror = rej; r.readAsDataURL(blob);
+      });
+      var img = new Image();
+      await new Promise(function(resolve, reject) { img.onload = resolve; img.onerror = function() { reject(new Error('Decode failed')); }; img.src = dataUrl; });
+      CP.templateImg = img; CP.templateWidth = img.naturalWidth; CP.templateHeight = img.naturalHeight;
+      // Store the original Drive URL — will be mirrored to Firebase at publish
+      CP.driveFileId = fileId;
+      CP.templateUrl = 'https://www.googleapis.com/drive/v3/files/' + fileId + '?alt=media';
+      CP.storageUrl  = '';
+      badge.textContent = 'Template from Drive (' + img.naturalWidth + '×' + img.naturalHeight + ') ✓';
+      statusEl.textContent = '✅';
+      var thumb = document.getElementById('cpTemplateThumb');
+      if (thumb) { thumb.src = dataUrl; thumb.style.display = 'block'; }
+      cpToast('Drive template loaded ✓ — will save to Firebase on Publish', 'ok');
+      if (CP.step === 3) cpDrawNameCanvas();
+      cpSaveDraft();
+      return;
+    } catch(apiErr) {
+      console.warn('[CP] Drive API fetch failed, trying public URLs:', apiErr.message);
+    }
+  }
+
+  // ── Fallback: public thumbnail / proxy URLs (no token needed) ──
   var driveUrls = fileId ? [
     'https://drive.google.com/thumbnail?id=' + fileId + '&sz=w2000',
     'https://lh3.googleusercontent.com/d/' + fileId + '=w2000',
     'https://drive.google.com/uc?export=download&id=' + fileId,
   ] : [raw];
   var proxies = ['https://corsproxy.io/?', 'https://api.allorigins.win/raw?url='];
-  var urlsToTry = [];
-  driveUrls.forEach(function(u) { urlsToTry.push(u); });
-  proxies.forEach(function(proxy) { driveUrls.forEach(function(u) { urlsToTry.push(proxy + encodeURIComponent(u)); }); });
+  var urlsToTry = [...driveUrls];
+  proxies.forEach(function(p) { driveUrls.forEach(function(u) { urlsToTry.push(p + encodeURIComponent(u)); }); });
+
   var lastErr = '';
   for (var ui = 0; ui < urlsToTry.length; ui++) {
     badge.textContent = 'Trying method ' + (ui + 1) + ' of ' + urlsToTry.length + '…';
@@ -489,28 +584,32 @@ async function cpFetchTemplateFromUrl() {
       clearTimeout(timer);
       if (!resp.ok) throw new Error('HTTP ' + resp.status);
       var ct = resp.headers.get('content-type') || '';
-      if (ct.includes('text/html')) throw new Error('Got HTML');
-      var blob = await resp.blob();
-      if (!blob.type.startsWith('image/') && blob.size < 5000) throw new Error('Wrong type');
-      var dataUrl = await new Promise(function(res, rej) {
-        var r = new FileReader(); r.onload = function(e) { res(e.target.result); }; r.onerror = rej; r.readAsDataURL(blob);
+      if (ct.includes('text/html')) throw new Error('Got HTML page');
+      var blob2 = await resp.blob();
+      if (!blob2.type.startsWith('image/') && blob2.size < 5000) throw new Error('Wrong content type');
+      var dataUrl2 = await new Promise(function(res, rej) {
+        var r = new FileReader(); r.onload = function(e) { res(e.target.result); }; r.onerror = rej; r.readAsDataURL(blob2);
       });
-      var img = new Image();
-      await new Promise(function(resolve, reject) { img.onload = resolve; img.onerror = function() { reject(new Error('Decode failed')); }; img.src = dataUrl; });
-      CP.templateImg = img; CP.templateWidth = img.naturalWidth; CP.templateHeight = img.naturalHeight; CP.templateUrl = dataUrl;
-      badge.textContent = 'Template loaded (' + img.naturalWidth + '×' + img.naturalHeight + ') ✓';
+      var img2 = new Image();
+      await new Promise(function(resolve, reject) { img2.onload = resolve; img2.onerror = function() { reject(new Error('Decode failed')); }; img2.src = dataUrl2; });
+      CP.templateImg = img2; CP.templateWidth = img2.naturalWidth; CP.templateHeight = img2.naturalHeight;
+      // Keep the public URL (or base64 as last resort) — mirrored to Firebase at publish
+      CP.driveFileId = fileId || '';
+      CP.templateUrl = urlsToTry[ui];
+      CP.storageUrl  = '';
+      badge.textContent = 'Drive template loaded (' + img2.naturalWidth + '×' + img2.naturalHeight + ') ✓';
       statusEl.textContent = '✅';
-      var thumb = document.getElementById('cpTemplateThumb');
-      if (thumb) { thumb.src = dataUrl; thumb.style.display = 'block'; }
-      cpToast('Template loaded ✓', 'ok');
+      var thumb2 = document.getElementById('cpTemplateThumb');
+      if (thumb2) { thumb2.src = dataUrl2; thumb2.style.display = 'block'; }
+      cpToast('Drive template loaded ✓ — will save to Firebase on Publish', 'ok');
       if (CP.step === 3) cpDrawNameCanvas();
       cpSaveDraft();
       return;
     } catch(e) { lastErr = e.message; }
   }
   statusEl.textContent = '❌';
-  badge.textContent = 'Could not load (' + lastErr + ')';
-  cpToast('Drive URL failed. Try uploading the file directly.', 'err');
+  badge.textContent = 'Could not load from Drive (' + lastErr + ')';
+  cpToast('Drive URL failed — make sure the file is shared publicly.', 'err');
 }
 
 // ── Step 2: CSV fetch ──
@@ -812,58 +911,62 @@ async function cpPublishPortal() {
     if (!CP.currentSlug || !collegeName) { cpToast('Missing college name.', 'err'); btn.disabled = false; btn.textContent = '🚀 Publish Portal'; return; }
     if (!CP.templateUrl) { cpToast('No template — go back to Step 2 and upload a certificate template.', 'err'); btn.disabled = false; btn.textContent = '🚀 Publish Portal'; return; }
 
-    // ── NOVA BACKEND: Always store a Firebase Storage URL — never base64.
-    // base64 bloats Firestore, hits the 1MB doc limit, and causes CORS
-    // failures on the student canvas. Storage URL = clean, fast, CORS-safe.
+    // ── PUBLISH: Mirror template to Firebase Storage so student portal always
+    // reads from Firebase (fast, CORS-safe, no Drive auth needed by students).
+    //
+    // FLOW:
+    //   Admin uploaded file  → already in Drive (CP.driveFileId set) OR Firebase (CP.storageUrl set)
+    //   Admin pasted Drive link → CP.templateUrl = Drive URL, needs mirroring now
+    //   Either way: result stored in Firestore as a Firebase Storage HTTPS URL.
     var templateUrlToStore = '';
 
     if (CP.storageUrl && CP.storageUrl.startsWith('https://firebasestorage.googleapis.com')) {
-      // ✅ File uploaded to Nova Storage in Step 2 — best case, no work needed
+      // ✅ Already in Firebase Storage (file picker fallback path)
       templateUrlToStore = CP.storageUrl;
 
-    } else if (CP.templateUrl && !CP.templateUrl.startsWith('data:')) {
-      // External URL (Drive thumbnail etc.) — mirror to Nova Storage for CORS safety
-      btn.textContent = 'Saving template to Nova backend…';
+    } else {
+      // ── Mirror to Firebase Storage (Drive URL or any other source) ──
+      btn.textContent = 'Saving template to Firebase…';
       try {
         var uid  = (typeof U !== 'undefined' && U && U.uid) ? U.uid : 'anon';
         var path = 'portal-templates/' + uid + '/' + CP.currentSlug + '_' + Date.now() + '.jpg';
         var sRef = fbStorage.ref(path);
-        var fetchResp = await fetch(CP.templateUrl);
-        if (!fetchResp.ok) throw new Error('HTTP ' + fetchResp.status);
-        var imgBlob = await fetchResp.blob();
+        var imgBlob = null;
+
+        if (CP.templateUrl && !CP.templateUrl.startsWith('data:')) {
+          // Drive URL — fetch with Drive token if available, else public fetch
+          var fetchHeaders = {};
+          var tok = (typeof NOVA_DRIVE_TOKEN !== 'undefined') ? NOVA_DRIVE_TOKEN : null;
+          if (!tok) { try { tok = sessionStorage.getItem('nova_drive_token'); } catch(e) {} }
+          if (tok && CP.templateUrl.includes('googleapis.com/drive')) {
+            fetchHeaders['Authorization'] = 'Bearer ' + tok;
+          }
+          var fetchResp = await fetch(CP.templateUrl, { headers: fetchHeaders });
+          if (!fetchResp.ok) {
+            // Try public thumbnail fallback
+            if (CP.driveFileId) {
+              fetchResp = await fetch('https://drive.google.com/thumbnail?id=' + CP.driveFileId + '&sz=w2000');
+            }
+            if (!fetchResp || !fetchResp.ok) throw new Error('Fetch failed HTTP ' + (fetchResp ? fetchResp.status : '?'));
+          }
+          imgBlob = await fetchResp.blob();
+        } else if (CP.templateUrl && CP.templateUrl.startsWith('data:')) {
+          // base64 → blob
+          var b64Resp = await fetch(CP.templateUrl);
+          imgBlob = await b64Resp.blob();
+        }
+
+        if (!imgBlob) throw new Error('No image data to upload');
         await sRef.put(imgBlob, { contentType: imgBlob.type || 'image/jpeg' });
         CP.storageUrl      = await sRef.getDownloadURL();
         templateUrlToStore = CP.storageUrl;
-        cpToast('Template saved to Nova backend ✓', 'ok');
-      } catch (storageErr) {
-        cpToast('Could not save template — please re-upload the image in Step 2.', 'err');
+        cpToast('Template saved to Firebase ✓', 'ok');
+      } catch (mirrorErr) {
+        cpToast('Could not save template to Firebase — please re-upload the image in Step 2.', 'err');
         btn.disabled = false; btn.textContent = '🚀 Publish Portal';
-        console.error('[CP] Publish storage mirror failed:', storageErr);
+        console.error('[CP] Publish mirror to Firebase failed:', mirrorErr);
         return;
       }
-
-    } else if (CP.templateUrl && CP.templateUrl.startsWith('data:')) {
-      // base64 fallback — convert to blob and upload to Storage; block if fails
-      btn.textContent = 'Saving template to Nova backend…';
-      try {
-        var uid2  = (typeof U !== 'undefined' && U && U.uid) ? U.uid : 'anon';
-        var path2 = 'portal-templates/' + uid2 + '/' + CP.currentSlug + '_' + Date.now() + '.jpg';
-        var sRef2 = fbStorage.ref(path2);
-        var fetchResp2 = await fetch(CP.templateUrl);
-        var imgBlob2   = await fetchResp2.blob();
-        await sRef2.put(imgBlob2, { contentType: imgBlob2.type || 'image/jpeg' });
-        CP.storageUrl      = await sRef2.getDownloadURL();
-        templateUrlToStore = CP.storageUrl;
-        cpToast('Template saved to Nova backend ✓', 'ok');
-      } catch (storageErr2) {
-        cpToast('Template upload required — please re-upload your certificate image in Step 2.', 'err');
-        btn.disabled = false; btn.textContent = '🚀 Publish Portal';
-        console.error('[CP] base64 → Storage upload failed:', storageErr2);
-        return;
-      }
-
-    } else if (CP.templateUrl) {
-      templateUrlToStore = CP.templateUrl;
     }
 
     if (!templateUrlToStore) {
