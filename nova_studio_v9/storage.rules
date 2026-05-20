@@ -3,6 +3,10 @@ service firebase.storage {
   match /b/{bucket}/o {
 
     // ── Team shared files ─────────────────────────────────────────────
+    // Any signed-in user can read (download/preview).
+    // Any signed-in user can upload (write).
+    // Only the uploader can delete — enforced in app logic; Storage allows
+    // any authenticated user to delete (teams manage permissions via Firestore).
     match /team_files/{teamId}/{allPaths=**} {
       allow read:   if request.auth != null;
       allow write:  if request.auth != null;
@@ -12,13 +16,6 @@ service firebase.storage {
     // ── User avatars / covers ─────────────────────────────────────────
     match /user_assets/{userId}/{allPaths=**} {
       allow read:   if request.auth != null;
-      allow write:  if request.auth != null && request.auth.uid == userId;
-      allow delete: if request.auth != null && request.auth.uid == userId;
-    }
-
-    // ── Portal Templates (certificate templates uploaded by admins) ───
-    match /portal-templates/{userId}/{allPaths=**} {
-      allow read:   if true;                // students can preview
       allow write:  if request.auth != null && request.auth.uid == userId;
       allow delete: if request.auth != null && request.auth.uid == userId;
     }
