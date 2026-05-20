@@ -452,6 +452,7 @@ var FU = (function () {
     }).join('');
   }
 
+<<<<<<< HEAD
   // ─── Bulk Report Download ────────────────────────────────────────
   var _bulkSelected = new Set(); // set of college IDs currently checked
 
@@ -587,6 +588,16 @@ var FU = (function () {
       return;
     }
     el.innerHTML = filtered.map(function(c) {
+=======
+  function _renderCollegeList() {
+    var el = document.getElementById('fuCollegeList');
+    if (!el) return;
+    if (_colleges.length === 0) {
+      el.innerHTML = '<div class="fu-empty">No colleges added yet. Use the form above to add colleges and generate Drive folders.</div>';
+      return;
+    }
+    el.innerHTML = _colleges.map(function(c) {
+>>>>>>> 046c32f91252e3f8651df4911ab7ec8a8fd9f176
       var status      = c.status || 'pending';
       var statusLabel = status === 'uploaded' ? '✅ Uploaded' : (status === 'pending' ? '⏳ Pending' : '⚠️ ' + status);
       var statusCls   = status === 'uploaded' ? 'fu-s-up' : (status === 'pending' ? 'fu-s-pend' : 'fu-s-warn');
@@ -628,6 +639,7 @@ var FU = (function () {
       // Live activity pulse
       var wasActive = _liveActivity[c.id] && (Date.now() - _liveActivity[c.id] < 10000);
       var liveDot = '<span class="fu-live-dot' + (wasActive ? ' fu-live-pulse' : '') + '" title="Live tracking active — updates automatically">🟢</span>';
+<<<<<<< HEAD
       var isChecked = _bulkSelected.has(c.id);
 
       return '<div class="fu-college-card' + (isChecked ? ' fu-col-selected' : '') + '" id="fuCol_' + c.id + '">' +
@@ -636,6 +648,11 @@ var FU = (function () {
             '<input type="checkbox" id="fuChk_' + c.id + '" class="fu-bulk-chk"' + (isChecked ? ' checked' : '') + ' onchange="FU._toggleBulkSelect(\'' + c.id + '\')">' +
             '<span class="fu-bulk-chk-box"></span>' +
           '</label>' +
+=======
+
+      return '<div class="fu-college-card" id="fuCol_' + c.id + '">' +
+        '<div class="fu-cc-top">' +
+>>>>>>> 046c32f91252e3f8651df4911ab7ec8a8fd9f176
           '<div class="fu-cc-icon">🏫</div>' +
           '<div class="fu-cc-info">' +
             '<div class="fu-cc-name" style="display:flex;align-items:center;gap:6px;">' + _esc(c.name) + liveDot + '</div>' +
@@ -643,7 +660,10 @@ var FU = (function () {
               '<span class="fu-tag ' + statusCls + '">' + statusLabel + '</span>' +
               (c.fileCount > 0 ? '<span class="fu-tag fu-s-cnt">' + c.fileCount + ' file' + (c.fileCount !== 1 ? 's' : '') + '</span>' : '') +
               (c.lastUpload ? '<span class="fu-tag fu-s-time">Last: ' + _fmt(c.lastUpload) + '</span>' : '') +
+<<<<<<< HEAD
               (c.folderId ? '<a class="fu-tag fu-tag-link" href="https://drive.google.com/drive/folders/' + c.folderId + '" target="_blank" title="Open Drive folder directly">↗ Drive</a>' : '') +
+=======
+>>>>>>> 046c32f91252e3f8651df4911ab7ec8a8fd9f176
             '</div>' +
             sfHtml +
           '</div>' +
@@ -660,10 +680,15 @@ var FU = (function () {
         '</div>' +
       '</div>';
     }).join('');
+<<<<<<< HEAD
     _renderBulkToolbar();
   }
 
 
+=======
+  }
+
+>>>>>>> 046c32f91252e3f8651df4911ab7ec8a8fd9f176
   function _renderStats() {
     var total    = _colleges.length;
     var uploaded = _colleges.filter(function(c){ return c.fileCount > 0; }).length;
@@ -743,8 +768,11 @@ var FU = (function () {
     _colleges = [];
     _liveActivity = {};
     _subfolderState = {};
+<<<<<<< HEAD
     _bulkSelected.clear();
     _bulkSearchQuery = '';
+=======
+>>>>>>> 046c32f91252e3f8651df4911ab7ec8a8fd9f176
     _renderCollegeList();
     _renderStats();
     _subscribeColleges(id);
@@ -1337,6 +1365,7 @@ var FU = (function () {
       /* Delete button */
       '.fu-btn-delete { background:#fff5f5!important;border-color:#fecaca!important;color:#dc2626!important;font-weight:700; }',
       '.fu-btn-delete:hover { background:#dc2626!important;color:#fff!important; }',
+<<<<<<< HEAD
       /* Bulk report toolbar */
       '.fu-bulk-bar { background:var(--fog,#f9fafb);border:1.5px solid var(--fog2,#e5e7eb);border-radius:12px;padding:12px 14px;margin-bottom:14px;display:flex;flex-direction:column;gap:10px; }',
       '.fu-bulk-search-row { display:flex;gap:8px;align-items:center; }',
@@ -1360,6 +1389,11 @@ var FU = (function () {
       /* Drive link tag */
       '.fu-tag-link { text-decoration:none;font-weight:700;color:var(--lime-d,#6d8400)!important;border:1.5px solid var(--lime,#9ec000);background:var(--lime-p,#f0f7d4);padding:2px 7px;border-radius:10px;font-size:.68rem; }',
       '.fu-tag-link:hover { background:var(--lime-d,#6d8400);color:#fff!important; }',
+=======
+      /* File row tweak for preview */
+      '.fu-file-row { display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--fog,#f3f4f6); }',
+      '.fu-file-row:last-child { border-bottom:none; }',
+>>>>>>> 046c32f91252e3f8651df4911ab7ec8a8fd9f176
     ].join('\n');
     document.head.appendChild(style);
   }
@@ -1420,9 +1454,12 @@ var FU = (function () {
     _viewSubfolderFiles: _viewSubfolderFiles,
     _refreshOne:         _refreshOne,
     _previewFile:        _previewFile,
+<<<<<<< HEAD
     _toggleBulkSelect:   _toggleBulkSelect,
     _bulkSelectAll:      _bulkSelectAll,
     _onBulkSearch:       _onBulkSearch,
     _downloadBulkReport: _downloadBulkReport,
+=======
+>>>>>>> 046c32f91252e3f8651df4911ab7ec8a8fd9f176
   };
 })();

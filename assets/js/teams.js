@@ -8,7 +8,10 @@
 //    nova_teams/{teamId}/shares/{shareId}       — shared links
 //    nova_teams/{teamId}/posts/{postId}         — team feed posts
 //    nova_teams/{teamId}/files/{fileId}         — shared file refs
+<<<<<<< HEAD
 //    nova_teams/{teamId}/tasks/{taskId}         — team tasks (assigned by leader/co-leader/manager)
+=======
+>>>>>>> 046c32f91252e3f8651df4911ab7ec8a8fd9f176
 //
 //  Public API:
 //    TM.init()                 — call after auth
@@ -25,6 +28,7 @@ var TM = (function () {
   var _activeTeam  = null; // currently selected team
   var _unsub       = null; // firestore listener
   var _feedUnsub   = null; // feed listener
+<<<<<<< HEAD
   var _tasksUnsub  = null; // tasks listener
   var _membersCache = {};  // teamId → members array
   var _memberRoles = {};   // teamId → { email → designation }
@@ -54,6 +58,9 @@ var TM = (function () {
     var info = _getDesignationInfo(d);
     return !!info[action];
   }
+=======
+  var _membersCache = {};  // teamId → members array
+>>>>>>> 046c32f91252e3f8651df4911ab7ec8a8fd9f176
 
   // ─── Firestore helpers ────────────────────────────────────────────
   function _tCol()  { return fbDb.collection('nova_teams'); }
@@ -242,7 +249,10 @@ var TM = (function () {
       // ── Tab bar ──
       '<div class="tm-tabs">' +
         '<button class="tm-tab active" id="tmTabFeed"    onclick="TM._switchTab(\'feed\')">💬 Team Feed</button>' +
+<<<<<<< HEAD
         '<button class="tm-tab"        id="tmTabTasks"   onclick="TM._switchTab(\'tasks\')">✅ Tasks</button>' +
+=======
+>>>>>>> 046c32f91252e3f8651df4911ab7ec8a8fd9f176
         '<button class="tm-tab"        id="tmTabMembers" onclick="TM._switchTab(\'members\')">👥 Members</button>' +
         '<button class="tm-tab"        id="tmTabShares"  onclick="TM._switchTab(\'shares\')">🔗 Shared Links</button>' +
         '<button class="tm-tab"        id="tmTabFiles"   onclick="TM._switchTab(\'files\')">📁 Files</button>' +
@@ -252,7 +262,10 @@ var TM = (function () {
       // ── Tab panels ──
       '<div class="tm-tab-panels">' +
         '<div id="tmPanelFeed"    class="tm-panel active">'+_feedPanelHTML(team, isOwner)+'</div>' +
+<<<<<<< HEAD
         '<div id="tmPanelTasks"   class="tm-panel">'+_tasksPanelHTML(team, isOwner)+'</div>' +
+=======
+>>>>>>> 046c32f91252e3f8651df4911ab7ec8a8fd9f176
         '<div id="tmPanelMembers" class="tm-panel">'+_membersPanelHTML(team, isOwner)+'</div>' +
         '<div id="tmPanelShares"  class="tm-panel">'+_sharesPanelHTML(team)+'</div>' +
         '<div id="tmPanelFiles"   class="tm-panel">'+_filesPanelHTML(team)+'</div>' +
@@ -265,7 +278,11 @@ var TM = (function () {
       _inlineStyles();
 
     // Load feed posts
+<<<<<<< HEAD
     setTimeout(function(){ _loadFeed(team.id); _loadShares(team.id); _loadMembers(team.id); _loadFiles(team.id); _loadTasks(team.id); }, 100);
+=======
+    setTimeout(function(){ _loadFeed(team.id); _loadShares(team.id); _loadMembers(team.id); _loadFiles(team.id); }, 100);
+>>>>>>> 046c32f91252e3f8651df4911ab7ec8a8fd9f176
   }
 
   // ─── Feed panel ──────────────────────────────────────────────────
@@ -295,6 +312,7 @@ var TM = (function () {
   // ─── Members panel ────────────────────────────────────────────────
   function _membersPanelHTML(team, isOwner) {
     var members = team.memberEmails || [];
+<<<<<<< HEAD
     var meId = _uid();
     var myDesignation = _getDesignation(team, meId);
     var myInfo = _getDesignationInfo(myDesignation);
@@ -302,11 +320,16 @@ var TM = (function () {
 
     // Invite bar for those with canInvite permission
     if (myInfo.canInvite) {
+=======
+    var html = '<div class="tm-members-wrap">';
+    if (isOwner) {
+>>>>>>> 046c32f91252e3f8651df4911ab7ec8a8fd9f176
       html += '<div class="tm-invite-bar">' +
         '<input id="tmInviteEmail" class="tm-input" placeholder="Invite by email address…" type="email">' +
         '<button class="tm-btn-primary" onclick="TM._inviteMember(\''+team.id+'\')">＋ Invite</button>' +
       '</div>';
     }
+<<<<<<< HEAD
 
     // Designation legend
     html += '<div class="tm-role-legend">' +
@@ -315,11 +338,14 @@ var TM = (function () {
       }).join('') +
     '</div>';
 
+=======
+>>>>>>> 046c32f91252e3f8651df4911ab7ec8a8fd9f176
     html += '<div id="tmMembersList" class="tm-members-list">';
     if (members.length === 0) {
       html += '<div class="tm-empty-inline">No members found</div>';
     } else {
       html += members.map(function(em){
+<<<<<<< HEAD
         var isMe = em === meId;
         var designation = _getDesignation(team, em);
         var dInfo = _getDesignationInfo(designation);
@@ -340,17 +366,33 @@ var TM = (function () {
           actions += '<button class="tm-btn-danger-sm" onclick="TM._removeMember(\''+team.id+'\',\''+_esc(em)+'\')">Remove</button>';
         }
 
+=======
+        var isMe = em === _uid();
+        var isOwn = em === team.createdBy;
+        var color = _color(em);
+        var init  = (em||'?').slice(0,2).toUpperCase();
+>>>>>>> 046c32f91252e3f8651df4911ab7ec8a8fd9f176
         return '<div class="tm-member-row">' +
           '<div class="tm-member-av" style="background:'+color+'">'+init+'</div>' +
           '<div class="tm-member-info">' +
             '<div class="tm-member-email">'+_esc(em)+(isMe?' <span class="tm-you-tag">you</span>':'')+'</div>' +
+<<<<<<< HEAD
             '<div class="tm-member-role"><span class="tm-role-badge tm-role-'+designation+'">'+dInfo.label+'</span></div>' +
           '</div>' +
           (actions ? '<div class="tm-member-actions">'+actions+'</div>' : '') +
+=======
+            '<div class="tm-member-role">'+( isOwn ? '👑 Owner' : '👤 Member')+'</div>' +
+          '</div>' +
+          ( isOwner && !isOwn ?
+            '<button class="tm-btn-danger-sm" onclick="TM._removeMember(\''+team.id+'\',\''+_esc(em)+'\')">Remove</button>'
+            : ''
+          ) +
+>>>>>>> 046c32f91252e3f8651df4911ab7ec8a8fd9f176
         '</div>';
       }).join('');
     }
     html += '</div></div>';
+<<<<<<< HEAD
     // Add modals
     html += _roleModalHTML(team) + _assignTaskModalHTML(team);
     return html;
@@ -651,6 +693,11 @@ var TM = (function () {
     } catch(e) { _toast('Error: '+e.message,'err'); }
   }
 
+=======
+    return html;
+  }
+
+>>>>>>> 046c32f91252e3f8651df4911ab7ec8a8fd9f176
   // ─── Shared links panel ───────────────────────────────────────────
   function _sharesPanelHTML(team) {
     return '<div class="tm-shares-wrap">' +
@@ -684,7 +731,11 @@ var TM = (function () {
 
   // ─── Switch tab ───────────────────────────────────────────────────
   function _switchTab(tab) {
+<<<<<<< HEAD
     ['feed','tasks','members','shares','files','settings'].forEach(function(t){
+=======
+    ['feed','members','shares','files','settings'].forEach(function(t){
+>>>>>>> 046c32f91252e3f8651df4911ab7ec8a8fd9f176
       var btn = document.getElementById('tmTab'+t[0].toUpperCase()+t.slice(1));
       var panel = document.getElementById('tmPanel'+t[0].toUpperCase()+t.slice(1));
       if (btn) btn.classList.toggle('active', t===tab);
@@ -880,7 +931,10 @@ var TM = (function () {
 
   function _closeTeam() {
     if (_feedUnsub) { _feedUnsub(); _feedUnsub = null; }
+<<<<<<< HEAD
     if (_tasksUnsub) { _tasksUnsub(); _tasksUnsub = null; }
+=======
+>>>>>>> 046c32f91252e3f8651df4911ab7ec8a8fd9f176
     _activeTeam = null;
     _renderView();
   }
@@ -1718,6 +1772,7 @@ var TM = (function () {
     '</div>';
   }
 
+<<<<<<< HEAD
   // ─── Role change modal HTML ───────────────────────────────────────
   function _roleModalHTML(team) {
     return '<div id="tmRoleModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9900;align-items:center;justify-content:center;" onclick="if(event.target===this)TM._closeRoleModal()">' +
@@ -1791,6 +1846,8 @@ var TM = (function () {
     '</div>';
   }
 
+=======
+>>>>>>> 046c32f91252e3f8651df4911ab7ec8a8fd9f176
   // ─── Toast ────────────────────────────────────────────────────────
   function _toast(msg, type) {
     if (typeof showToast === 'function') { showToast(msg, type==='ok'?'ok':'err'); return; }
@@ -1915,6 +1972,7 @@ var TM = (function () {
         justify-content:center; font-size:.75rem; font-weight:900; color:#fff; flex-shrink:0; }
       .tm-member-info { flex:1; min-width:0; }
       .tm-member-email { font-size:.8rem; font-weight:700; color:var(--ink,#111); display:flex; align-items:center; gap:6px; }
+<<<<<<< HEAD
       .tm-member-role { font-size:.68rem; color:var(--mist,#9ca3af); margin-top:4px; }
       .tm-member-actions { display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
       /* ── Designation badges ── */
@@ -1971,6 +2029,9 @@ var TM = (function () {
       .tm-task-del { background:none; border:none; color:var(--mist,#9ca3af); cursor:pointer;
         font-size:.75rem; padding:2px 6px; border-radius:6px; transition:all .12s; flex-shrink:0; }
       .tm-task-del:hover { background:#fee2e2; color:#dc2626; }
+=======
+      .tm-member-role { font-size:.68rem; color:var(--mist,#9ca3af); margin-top:2px; }
+>>>>>>> 046c32f91252e3f8651df4911ab7ec8a8fd9f176
       /* ── Shares ── */
       .tm-shares-wrap { padding:20px 28px; max-width:700px; }
       .tm-shares-info { font-size:.72rem; color:var(--mist,#9ca3af); background:var(--fog,#f9fafb);
@@ -2112,6 +2173,7 @@ var TM = (function () {
     _downloadFile: _downloadFile,
     _fixFileAccess: _fixFileAccess,
     _openDriveSetup: _openDriveSetup,
+<<<<<<< HEAD
     // ─── Task management ───────────────────────────────
     _openAssignTaskModal: _openAssignTaskModal,
     _closeAssignTaskModal: _closeAssignTaskModal,
@@ -2123,5 +2185,7 @@ var TM = (function () {
     _openRoleModal:  _openRoleModal,
     _closeRoleModal: _closeRoleModal,
     _saveRole:       _saveRole,
+=======
+>>>>>>> 046c32f91252e3f8651df4911ab7ec8a8fd9f176
   };
 })();
