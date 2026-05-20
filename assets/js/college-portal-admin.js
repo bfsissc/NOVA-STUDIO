@@ -759,6 +759,32 @@ function cpUpdateNameStyle() {
   cpSaveDraft();
 }
 
+// Compress a base64 image so it fits within Firestore's 1MB field limit
+function cpCompressForFirestore(dataUrl, maxBytes) {
+  return new Promise(function(resolve) {
+    var img = new Image();
+    img.onload = function() {
+      var MAX = 1400;
+      var w = img.naturalWidth, h = img.naturalHeight;
+      if (w > MAX || h > MAX) {
+        if (w >= h) { h = Math.round(h * MAX / w); w = MAX; }
+        else        { w = Math.round(w * MAX / h); h = MAX; }
+      }
+      var c = document.createElement('canvas');
+      c.width = w; c.height = h;
+      c.getContext('2d').drawImage(img, 0, 0, w, h);
+      var q = 0.85, r = c.toDataURL('image/jpeg', q);
+      while (Math.round(r.length * 0.75) > maxBytes && q > 0.15) {
+        q = Math.max(0.15, q - 0.1);
+        r = c.toDataURL('image/jpeg', q);
+      }
+      resolve(r);
+    };
+    img.onerror = function() { resolve(dataUrl); };
+    img.src = dataUrl;
+  });
+}
+
 // ══════════════════════════════════════════════════════════════════
 // ── Step 5: Publish ──
 // ══════════════════════════════════════════════════════════════════
@@ -779,10 +805,43 @@ async function cpPublishPortal() {
     if (!CP.currentSlug || !collegeName) { cpToast('Missing college name.', 'err'); btn.disabled = false; btn.textContent = '🚀 Publish Portal'; return; }
     if (!CP.templateUrl) { cpToast('No template — go back to Step 2 and load a template.', 'err'); btn.disabled = false; btn.textContent = '🚀 Publish Portal'; return; }
 
-    var templateUrlToStore = CP.templateUrl;
-    if (templateUrlToStore && templateUrlToStore.startsWith('data:')) {
-      var base64Size = Math.round(templateUrlToStore.length * 0.75);
-      if (base64Size > 900000) { templateUrlToStore = CP.storageUrl || CP.templateUrl; }
+    // Always store a Firebase Storage URL in Firestore — never raw base64.
+    // This keeps the Firestore document tiny and the student portal fast.
+    var templateUrlToStore = '';
+
+    if (CP.storageUrl && !CP.storageUrl.startsWith('data:')) {
+      // File was uploaded via the file picker — Storage URL already exists
+      templateUrlToStore = CP.storageUrl;
+
+    } else if (CP.templateUrl && CP.templateUrl.startsWith('data:')) {
+      // Template came from a Drive URL (base64 only) — upload to Storage now
+      btn.textContent = 'Uploading template to storage...';
+      try {
+        var uid  = (typeof U !== 'undefined' && U && U.uid) ? U.uid : 'anon';
+        var path = 'portal-templates/' + uid + '/' + CP.currentSlug + '_' + Date.now() + '.jpg';
+        var sRef = fbStorage.ref(path);
+        // Convert base64 data-URL to Blob
+        var fetchResp = await fetch(CP.templateUrl);
+        var imgBlob   = await fetchResp.blob();
+        await sRef.put(imgBlob, { contentType: imgBlob.type || 'image/jpeg' });
+        CP.storageUrl      = await sRef.getDownloadURL();
+        templateUrlToStore = CP.storageUrl;
+        cpToast('Template uploaded to storage', 'ok');
+      } catch (storageErr) {
+        console.warn('Storage upload failed, using compression fallback:', storageErr);
+        // Last resort: compress heavily to fit Firestore 1MB field limit
+        btn.textContent = 'Compressing image...';
+        templateUrlToStore = await cpCompressForFirestore(CP.templateUrl, 700000);
+      }
+
+    } else if (CP.templateUrl) {
+      // Already a plain URL (not base64) — use as-is
+      templateUrlToStore = CP.templateUrl;
+    }
+
+    if (!templateUrlToStore) {
+      cpToast('Template not ready — please re-upload the certificate image.', 'err');
+      btn.disabled = false; btn.textContent = 'Publish Portal'; return;
     }
 
     var portalData = {

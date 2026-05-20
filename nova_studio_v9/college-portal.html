@@ -10,6 +10,7 @@
 <script src="https://cdn.jsdelivr.net/npm/firebase@10.12.0/firebase-auth-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/firebase@10.12.0/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/firebase@10.12.0/firebase-storage-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="assets/js/config.js"></script>
 <script>
 // ── Firebase readiness guard ──
@@ -823,6 +824,50 @@ async function submitCertRequest() {
   }
 }
 
+// ── Build enhanced certificate PDF ───────────────────────────────
+// Renders at 2x resolution with contrast/saturation boost, exports PDF
+// sized exactly to the certificate aspect ratio.
+async function buildCertPDF(studentName) {
+  if (!templateImg) throw new Error('Template not loaded');
+  var SCALE = 2;
+  var natW = templateImg.naturalWidth, natH = templateImg.naturalHeight;
+  var rc = document.getElementById('renderCanvas');
+  rc.width  = natW * SCALE;
+  rc.height = natH * SCALE;
+  var ctx = rc.getContext('2d');
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  // Enhancement: contrast + saturation + brightness on template
+  if (typeof ctx.filter !== 'undefined') {
+    ctx.filter = 'contrast(1.07) saturate(1.10) brightness(1.015)';
+  }
+  ctx.drawImage(templateImg, 0, 0, rc.width, rc.height);
+  if (typeof ctx.filter !== 'undefined') { ctx.filter = 'none'; }
+  // Draw student name at 2x scale with subtle shadow
+  var np       = portalCfg.namePosition || { xPct: 50, yPct: 62 };
+  var style    = portalCfg.nameStyle    || {};
+  var fontSize = Math.round((style.fontSize || 60) * (rc.width / (portalCfg.templateWidth || 2480)));
+  ctx.shadowColor = 'rgba(0,0,0,0.18)';
+  ctx.shadowBlur  = Math.round(fontSize * 0.04);
+  ctx.font        = (style.italic ? 'italic ' : '') + (style.bold ? 'bold ' : '') + fontSize + 'px ' + (style.fontFamily || 'Georgia');
+  ctx.fillStyle   = style.color || '#1a1a1a';
+  ctx.textAlign   = style.align || 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(studentName, rc.width * (np.xPct / 100), rc.height * (np.yPct / 100));
+  ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;
+  // Build PDF at certificate aspect ratio (A3-width base)
+  var imgData  = rc.toDataURL('image/jpeg', 0.95);
+  var isLand   = natW >= natH;
+  var PDF_W    = isLand ? 420 : 297;
+  var PDF_H    = Math.round(PDF_W * (natH / natW));
+  var { jsPDF } = window.jspdf;
+  var pdf = new jsPDF({ orientation: isLand ? 'landscape' : 'portrait', unit: 'mm', format: [PDF_W, PDF_H], compress: true });
+  pdf.addImage(imgData, 'JPEG', 0, 0, PDF_W, PDF_H, '', 'FAST');
+  pdf.setProperties({ title: (portalCfg.collegeName || '') + ' — ' + studentName, creator: 'NOVA Studio' });
+  var fileName = studentName.replace(/[^a-z0-9\s]/gi, '_').trim() + '_certificate.pdf';
+  return { blob: pdf.output('blob'), fileName };
+}
+
 // ── Download ──
 async function downloadCertificate() {
   var nameRaw = document.getElementById('studentNameInput').value.trim();
@@ -915,57 +960,43 @@ async function downloadCertificate() {
       resetBtn(); return;
     }
 
-    // Render on hidden full-res canvas
-    var rc = document.getElementById('renderCanvas');
-    rc.width = templateImg.naturalWidth;
-    rc.height = templateImg.naturalHeight;
-    drawCertOnCanvas(rc, studentDoc.name || nameRaw, false);
-
-    // Try download — with full mobile compatibility
+    // Enhance and export as PDF
+    btn.textContent = 'Enhancing & building PDF...';
+    var certName = studentDoc.name || nameRaw;
+    var pdfResult;
     try {
-      var dataUrl = rc.toDataURL('image/png');
-      var fileName = (studentDoc.name || nameRaw).replace(/[^a-z0-9\s]/gi, '_').trim() + '_certificate.png';
+      pdfResult = await buildCertPDF(certName);
+    } catch(pdfErr) {
+      console.error('PDF build error:', pdfErr);
+      if (iosPreOpenedTab && !iosPreOpenedTab.closed) { iosPreOpenedTab.close(); }
+      showStatus('⚠️ Could not build PDF: ' + pdfErr.message, 'error');
+      resetBtn(); return;
+    }
 
+    // Deliver PDF across all platforms
+    try {
+      btn.textContent = 'Downloading...';
+      var blobUrl = URL.createObjectURL(pdfResult.blob);
       if (isIOS || isSafari) {
-        // iOS / Safari: use the pre-opened tab (opened synchronously before any await,
-        // so it was never blocked). Write the image directly into that tab.
         if (iosPreOpenedTab && !iosPreOpenedTab.closed) {
-          iosPreOpenedTab.document.open();
-          iosPreOpenedTab.document.write(
-            '<html><head><meta name="viewport" content="width=device-width,initial-scale=1">' +
-            '<title>' + fileName + '</title>' +
-            '<style>body{margin:0;background:#111;display:flex;flex-direction:column;align-items:center;' +
-            'justify-content:flex-start;padding:20px;box-sizing:border-box;min-height:100vh}' +
-            'img{max-width:100%;border-radius:8px;box-shadow:0 4px 24px rgba(0,0,0,.5)}' +
-            '.tip{color:#fff;font-family:sans-serif;font-size:.9rem;margin-top:16px;opacity:.8;text-align:center;line-height:1.5}' +
-            '.tip strong{display:block;font-size:1rem;margin-bottom:4px;opacity:1}</style></head>' +
-            '<body><img src="' + dataUrl + '" alt="Certificate">' +
-            '<p class="tip"><strong>📥 Tap and hold the image above</strong>then choose "Save to Photos" or "Save Image"</p>' +
-            '</body></html>'
-          );
-          iosPreOpenedTab.document.close();
-          showStatus('✅ Certificate opened in new tab — tap & hold the image → Save Image.', 'success');
+          iosPreOpenedTab.location.href = blobUrl;
+          setTimeout(function(){ URL.revokeObjectURL(blobUrl); }, 60000);
+          showStatus('✅ PDF ready — tap Share → Save to Files.', 'success');
         } else {
-          // Tab was blocked — fallback: show image inline with save instructions
-          var canvas2 = document.getElementById('previewCanvas');
-          canvas2.style.cursor = 'pointer';
-          showStatus('📱 Tap and hold the certificate preview → Save Image to download.', 'info');
+          var aIos = document.createElement('a');
+          aIos.href = blobUrl; aIos.download = pdfResult.fileName;
+          document.body.appendChild(aIos); aIos.click(); document.body.removeChild(aIos);
+          setTimeout(function(){ URL.revokeObjectURL(blobUrl); }, 60000);
         }
       } else {
-        // Chrome, Firefox, Edge — standard download
         var a = document.createElement('a');
-        a.href = dataUrl;
-        a.download = fileName;
-        document.body.appendChild(a); // required in Firefox
-        a.click();
-        document.body.removeChild(a);
-        setTimeout(function() { URL.revokeObjectURL(a.href); }, 1000);
+        a.href = blobUrl; a.download = pdfResult.fileName;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        setTimeout(function(){ URL.revokeObjectURL(blobUrl); }, 60000);
       }
-    } catch(e) {
-      console.error('Download error:', e);
-      // Close the pre-opened tab if certificate generation failed
+    } catch(dlErr) {
       if (iosPreOpenedTab && !iosPreOpenedTab.closed) { iosPreOpenedTab.close(); }
-      showStatus('⚠️ Could not export certificate: ' + e.message + '. Please try a different browser.', 'error');
+      showStatus('⚠️ Download failed: ' + dlErr.message, 'error');
       resetBtn(); return;
     }
 
