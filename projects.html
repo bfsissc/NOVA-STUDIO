@@ -7,12 +7,32 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%23c8f135'/><text x='16' y='22' font-size='18' text-anchor='middle' font-family='serif' font-weight='800'>N</text></svg>">
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,300;12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Instrument+Serif:ital@0;1&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/styles.css">
+<link rel="stylesheet" href="assets/css/liquid-glass.css">
 <script src="https://accounts.google.com/gsi/client" async defer id="gsiScript"></script>
+<!-- ✅ Storage polyfill — MUST be first: patches localStorage before any other script runs -->
+<script>
+(function(){
+  var _mem = function(){
+    var s={};
+    return {
+      getItem:    function(k){ return s.hasOwnProperty(k)?s[k]:null; },
+      setItem:    function(k,v){ s[k]=String(v); },
+      removeItem: function(k){ delete s[k]; },
+      clear:      function(){ s={}; },
+      key:        function(i){ return Object.keys(s)[i]||null; },
+      get length(){ return Object.keys(s).length; }
+    };
+  };
+  try { localStorage.setItem('__t','1'); localStorage.removeItem('__t'); }
+  catch(e) { try { Object.defineProperty(window,'localStorage',{value:_mem(),writable:false}); } catch(e2){window.localStorage=_mem();} }
+  try { sessionStorage.setItem('__t','1'); sessionStorage.removeItem('__t'); }
+  catch(e) { try { Object.defineProperty(window,'sessionStorage',{value:_mem(),writable:false}); } catch(e2){window.sessionStorage=_mem();} }
+})();
+</script>
 <script src="https://cdn.jsdelivr.net/npm/firebase@10.12.0/firebase-app-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/firebase@10.12.0/firebase-auth-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/firebase@10.12.0/firebase-firestore-compat.js"></script>
 <script src="assets/js/config.js"></script>
-<script src="assets/js/storage-polyfill.js"></script>
 <script src="assets/js/vendor.sheetjs.js"></script>
 </head>
 <body data-initial-view="projects">
@@ -508,18 +528,28 @@
           </div>
           <div class="pg-a">
             <button class="btn bo btn-sm" id="projBinBtn" onclick="projToggleBin()">🗑️ Bin <span id="projBinCount" style="background:var(--coral);color:#fff;padding:1px 6px;border-radius:10px;font-size:.6rem;margin-left:3px;display:none">0</span></button>
+            <button class="dm-open-btn" onclick="DM.openPanel()">☁ Drive Manager</button>
             <button class="btn bd btn-sm" onclick="projSaveCurrent()">💾 Save Current Design</button>
           </div>
         </div>
-        <!-- Limit bar -->
-        <div id="projLimitBar" style="display:none;background:#fff;border:1.5px solid var(--fog);border-radius:10px;padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;gap:10px">
-          <div style="flex:1">
-            <div style="font-size:.68rem;font-weight:700;color:var(--mist);margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em">Project Slots Used</div>
-            <div style="background:var(--fog);border-radius:4px;height:6px;overflow:hidden">
-              <div id="projLimitFill" style="height:100%;border-radius:4px;background:var(--lime);transition:width .4s"></div>
+        <!-- Usage Limit Bar -->
+        <div id="projLimitBar" style="display:flex;background:#fff;border:1.5px solid var(--fog);border-radius:12px;padding:12px 16px;margin-bottom:14px;align-items:center;gap:14px;flex-wrap:wrap">
+          <!-- Left: icon -->
+          <div style="font-size:1.3rem;line-height:1">📂</div>
+          <!-- Middle: progress -->
+          <div style="flex:1;min-width:120px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+              <span style="font-size:.68rem;font-weight:700;color:var(--mist);text-transform:uppercase;letter-spacing:.06em">Project Slots Used</span>
+              <span id="projLimitTxt" style="font-size:.75rem;font-weight:800;color:var(--ink)">0 / 20 projects</span>
+            </div>
+            <div style="background:var(--fog);border-radius:6px;height:8px;overflow:hidden">
+              <div id="projLimitFill" style="height:100%;border-radius:6px;background:linear-gradient(90deg,var(--lime),var(--teal));transition:width .5s ease"></div>
             </div>
           </div>
-          <div id="projLimitTxt" style="font-size:.78rem;font-weight:800;color:var(--ink);white-space:nowrap">0 / 20</div>
+          <!-- Right: Drive status -->
+          <div id="projDriveStatus" style="white-space:nowrap;font-size:.7rem;font-weight:700;display:flex;align-items:center;gap:4px">
+            <span style="color:var(--mist)">Checking Drive…</span>
+          </div>
         </div>
         <!-- Tab bar for bin -->
         <div id="projBinBar" style="display:none;background:#fff5f5;border:1.5px solid #fecaca;border-radius:10px;padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:10px">
@@ -2421,8 +2451,60 @@
   </div>
 </div>
 <script src="assets/js/app.js"></script>
+  <script src="assets/js/drive-manager.js"></script>
 <script src="assets/js/workbook.js"></script>
 <script src="assets/js/college-portal-admin.js"></script>
 <script src="assets/js/page-init.js"></script>
+
+  <!-- ══ NOVA DRIVE MANAGER PANEL ══ -->
+  <div id="dmPanel">
+    <div id="dmPanelInner">
+      <div class="dm-header">
+        <div style="font-size:1.4rem">☁️</div>
+        <div style="flex:1">
+          <div class="dm-header-title">Drive Manager</div>
+          <div class="dm-header-sub">Browse, upload &amp; manage files across your Google Drives</div>
+        </div>
+        <button class="dm-tool-btn" onclick="DM.refresh()" title="Refresh">🔄</button>
+        <button class="dm-tool-btn" onclick="DM.closePanel()" style="border-color:var(--coral);color:var(--coral)">✕ Close</button>
+      </div>
+      <div class="dm-tabs-row" id="dmDriveTabs"><span style="font-size:.72rem;color:var(--mist)">Loading drives…</span></div>
+      <div class="dm-toolbar">
+        <div id="dmBreadcrumb" class="dm-breadcrumb"></div>
+        <button class="dm-tool-btn" onclick="DM.openNewFolder()">📁 New Folder</button>
+        <label class="dm-tool-btn primary" style="cursor:pointer">⬆ Upload<input type="file" multiple style="display:none" onchange="DM.handleUpload(this)"></label>
+      </div>
+      <div id="dmUploadBar">
+        <span style="font-size:.7rem;font-weight:700;color:var(--mist);white-space:nowrap" id="dmUploadTxt">Uploading…</span>
+        <div id="dmUploadTrack"><div id="dmUploadFill" style="width:0%"></div></div>
+      </div>
+      <div id="dmQuota"><span style="font-size:.72rem;color:var(--mist)">Loading storage info…</span></div>
+      <div id="dmFileArea"><div style="padding:50px;text-align:center"><div class="dm-spinner"></div><div style="margin-top:12px;font-size:.78rem;color:var(--mist)">Loading files…</div></div></div>
+    </div>
+  </div>
+  <div id="dmAddModal" class="dm-modal" onclick="if(event.target===this)DM.closeAddDrive()">
+    <div class="dm-modal-box">
+      <div class="dm-modal-title">☁ Add a Drive Folder</div>
+      <div class="dm-modal-sub">Paste a Google Drive folder link or folder ID.<br><code style="font-size:.68rem;background:var(--fog);padding:1px 5px;border-radius:4px">https://drive.google.com/drive/folders/ABC123…</code></div>
+      <input id="dmLinkInp" class="dm-modal-inp" placeholder="Paste Drive folder link or ID…" onkeydown="if(event.key==='Enter')DM.confirmAddDrive()">
+      <div class="dm-modal-actions">
+        <button class="btn bo btn-sm" onclick="DM.closeAddDrive()">Cancel</button>
+        <button class="btn bd btn-sm" onclick="DM.confirmAddDrive()">☁ Connect</button>
+      </div>
+    </div>
+  </div>
+  <div id="dmFolderModal" class="dm-modal" onclick="if(event.target===this)DM.closeNewFolder()">
+    <div class="dm-modal-box">
+      <div class="dm-modal-title">📁 New Folder</div>
+      <div class="dm-modal-sub">Creates a new folder inside your current location.</div>
+      <input id="dmFolderInp" class="dm-modal-inp" placeholder="Folder name…" onkeydown="if(event.key==='Enter')DM.confirmNewFolder()">
+      <div class="dm-modal-actions">
+        <button class="btn bo btn-sm" onclick="DM.closeNewFolder()">Cancel</button>
+        <button class="btn bd btn-sm" onclick="DM.confirmNewFolder()">Create</button>
+      </div>
+    </div>
+  </div>
+  <div id="dmToast" class="dm-toast"></div>
+
 </body>
 </html>

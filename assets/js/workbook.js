@@ -9,7 +9,7 @@ var WB_FOCUS = null; // {sheetId, rowId, col, td, input}
 
 // ── Sync + Workbook state ──
 var SYNC = {
-  rooms: JSON.parse(localStorage.getItem('nova_sync_rooms') || '[]'),
+  rooms: (function(){ try{ return JSON.parse(localStorage.getItem('nova_sync_rooms') || '[]'); }catch(e){ return []; } })(),
   activeRoom: null,
   presenceInterval: null,
   // legacy compat
