@@ -7,36 +7,14 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%23c8f135'/><text x='16' y='22' font-size='18' text-anchor='middle' font-family='serif' font-weight='800'>N</text></svg>">
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,300;12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Instrument+Serif:ital@0;1&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/styles.css">
-<link rel="stylesheet" href="assets/css/liquid-glass.css">
-<!-- ✅ Storage polyfill — MUST be first: patches localStorage before any other script runs -->
-<script>
-(function(){
-  var _mem = function(){
-    var s={};
-    return {
-      getItem:    function(k){ return s.hasOwnProperty(k)?s[k]:null; },
-      setItem:    function(k,v){ s[k]=String(v); },
-      removeItem: function(k){ delete s[k]; },
-      clear:      function(){ s={}; },
-      key:        function(i){ return Object.keys(s)[i]||null; },
-      get length(){ return Object.keys(s).length; }
-    };
-  };
-  try { localStorage.setItem('__t','1'); localStorage.removeItem('__t'); }
-  catch(e) { try { Object.defineProperty(window,'localStorage',{value:_mem(),writable:false}); } catch(e2){window.localStorage=_mem();} }
-  try { sessionStorage.setItem('__t','1'); sessionStorage.removeItem('__t'); }
-  catch(e) { try { Object.defineProperty(window,'sessionStorage',{value:_mem(),writable:false}); } catch(e2){window.sessionStorage=_mem();} }
-})();
-</script>
 <script src="https://accounts.google.com/gsi/client" async defer id="gsiScript"></script>
 <script src="https://cdn.jsdelivr.net/npm/firebase@10.12.0/firebase-app-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/firebase@10.12.0/firebase-auth-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/firebase@10.12.0/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/firebase@10.12.0/firebase-storage-compat.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <script src="assets/js/config.js"></script>
+<script src="assets/js/storage-polyfill.js"></script>
 <script src="assets/js/vendor.sheetjs.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 
 <style>
 .cp-wrap{display:flex;flex-direction:column;min-height:100%;}
@@ -147,38 +125,6 @@
 /* ── Help View local overrides (full styles live in styles.css) ── */
 .help-content{width:100%}
 .help-toc-grid{grid-template-columns:repeat(auto-fill,minmax(160px,1fr))}
-
-/* ── Training Partners ── */
-.tp-tab{border:none;background:none;font-size:.78rem;font-weight:700;color:var(--mist);cursor:pointer;padding:8px 14px;border-bottom:2.5px solid transparent;transition:all .15s;white-space:nowrap;}
-.tp-tab.active{color:var(--ink);border-bottom-color:var(--lime-d);}
-.tp-tab:hover:not(.active){color:var(--ink3);}
-.tp-inp{width:100%;padding:9px 12px;border:1.5px solid var(--fog);border-radius:8px;font-size:.82rem;font-family:inherit;background:var(--bg);color:var(--ink);outline:none;transition:border-color .15s;box-sizing:border-box;}
-.tp-inp:focus{border-color:var(--lime-d);}
-.tp-card{background:var(--card);border:1.5px solid var(--fog);border-radius:14px;padding:18px 20px;transition:box-shadow .15s,border-color .15s;position:relative;}
-.tp-card:hover{box-shadow:var(--sh2);border-color:var(--ink3);}
-.tp-avatar{width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,var(--lime),var(--teal));display:flex;align-items:center;justify-content:center;font-size:1.1rem;font-weight:800;color:var(--ink);flex-shrink:0;}
-.tp-name{font-size:.92rem;font-weight:800;letter-spacing:-.02em;color:var(--ink);}
-.tp-org{font-size:.72rem;color:var(--mist);margin-top:2px;}
-.tp-skill-tag{font-size:.62rem;font-weight:700;padding:2px 9px;border-radius:20px;background:var(--lime-p);color:var(--lime-d);border:1px solid rgba(158,192,0,.2);}
-.tp-connect-btn{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:8px;font-size:.72rem;font-weight:700;cursor:pointer;transition:all .15s;border:1.5px solid var(--fog);background:var(--card);color:var(--ink);}
-.tp-connect-btn.connected{background:#f0fdf4;border-color:#bbf7d0;color:#15803d;}
-.tp-connect-btn:hover{border-color:var(--lime-d);}
-.tp-action-btn{display:inline-flex;align-items:center;gap:4px;padding:5px 10px;border-radius:7px;font-size:.68rem;font-weight:700;cursor:pointer;transition:all .15s;border:1.5px solid var(--fog);background:var(--card);color:var(--ink);}
-.tp-action-btn:hover{background:var(--snow);border-color:var(--ink3);}
-.tp-action-btn.danger{color:#dc2626;border-color:#fecaca;}
-.tp-action-btn.danger:hover{background:#fef2f2;}
-.tp-star-display{color:#f59e0b;font-size:.9rem;letter-spacing:1px;}
-.tp-rating-count{font-size:.65rem;color:var(--mist);font-weight:600;}
-.tp-badge-owner{font-size:.6rem;font-weight:700;padding:2px 7px;border-radius:20px;background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;}
-.tp-rank-medal{font-size:1.4rem;width:38px;text-align:center;flex-shrink:0;}
-.tp-stat-mini{background:var(--card);border:1.5px solid var(--fog);border-radius:10px;padding:12px 14px;text-align:center;}
-.tp-stat-mini .n{font-size:1.4rem;font-weight:800;letter-spacing:-.03em;}
-.tp-stat-mini .l{font-size:.6rem;font-weight:700;color:var(--mist);text-transform:uppercase;margin-top:2px;}
-.tp-feedback-item{padding:12px 0;border-bottom:1px solid var(--fog);}
-.tp-feedback-item:last-child{border-bottom:none;}
-.tp-role-chip{display:inline-flex;align-items:center;padding:4px 11px;border-radius:20px;font-size:.68rem;font-weight:600;cursor:pointer;border:1.5px solid var(--fog);background:var(--card);color:var(--ink3);transition:all .12s;}
-.tp-role-chip:hover{border-color:var(--lime-d);background:var(--lime-p);color:var(--ink);}
-.tp-role-chip.selected{background:var(--lime-p);border-color:var(--lime-d);color:var(--ink);font-weight:700;}
 </style>
 
 </head>
@@ -251,7 +197,7 @@
       <div class="nb-search"><span style="font-size:.78rem;color:var(--mist2)">🔍</span><input type="text" placeholder="Search tools, projects…"></div>
     </div>
     <div class="nb-right">
-      <button class="nb-ic" id="nvBellBtn" onclick="NV.openPanel()">🔔<div class="nb-dot" style="display:none;"></div></button>
+      <button class="nb-ic" onclick="showToast('No new notifications','info')">🔔<div class="nb-dot"></div></button>
       <div class="nb-av" id="nbAv" onclick="goView('profile')"></div>
     </div>
   </div>
@@ -272,13 +218,6 @@
         <div class="sb-i" id="sbPortal" onclick="goView('portal')"><span class="sb-ic">🏫</span>College Portal</div>
 
         <div class="sb-i" id="sbSync" onclick="goView('sync')"><span class="sb-ic">🔄</span>Data Sync<span class="sb-bx" style="background:var(--teal)" id="syncLiveDot" style="display:none">Live</span></div>
-
-        <div class="sb-i" id="sbTeams" onclick="goView('teams')"><span class="sb-ic">👥</span>My Teams<span class="sb-bx" style="background:#6d8400">New</span></div>
-        <div class="sb-i" id="sbFollowup" onclick="goView('followup')"><span class="sb-ic">📂</span>Followup Tracker<span class="sb-bx" style="background:#0ea5e9">New</span></div>
-        <div class="sb-i" id="sbTp" onclick="goView('tp')"><span class="sb-ic">🤝</span>Training Partners<span class="sb-bx" style="background:#f59e0b">TP</span></div>
-        <div class="sb-i" id="sbImgComp" onclick="goView('imgcomp')"><span class="sb-ic">🖼️</span>Image Resizer</div>
-        <div class="sb-i" id="sbFileConv" onclick="goView('fileconv')"><span class="sb-ic">🔄</span>File Converter<span class="sb-bx" style="background:#8b5cf6">New</span></div>
-        <div class="sb-i" id="sbImgEdit" onclick="goView('imgedit')"><span class="sb-ic">🎨</span>Image Editor<span class="sb-bx" style="background:#ec4899">New</span></div>
       </div>
       <div class="sb-dv"></div>
       <div class="sb-s">
@@ -309,217 +248,86 @@
             <button class="btn bo btn-sm" style="color:rgba(255,255,255,.7);border-color:rgba(255,255,255,.25)" onclick="goView('projects')">My Projects</button>
           </div>
         </div>
-
-        <!-- Analytics Dashboard Panel -->
-        <!-- ===== CUSTOM CANDIDATE ANALYTICS DASHBOARD ===== -->
-        <div style="margin-top:14px;" id="dashAnalyticsSection">
-
-          <!-- Top bar -->
-          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px;">
-            <div>
-              <div style="font-size:1.05rem;font-weight:800;letter-spacing:-.03em;color:var(--ink);">📊 Candidate Analytics</div>
-              <div id="caDsInfo" style="font-size:.67rem;color:var(--mist);margin-top:2px;display:none;"></div>
-            </div>
-            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-              <button class="btn bo btn-sm" onclick="anResetAll()" id="anResetBtn" style="display:none;font-size:.68rem;">↺ Reset Data</button>
-              <button onclick="goView('settings');setTimeout(()=>stgTab('dataupload'),120)" style="font-size:.68rem;font-weight:700;color:var(--lime-d);background:var(--lime-p);border:1.5px solid rgba(158,192,0,.25);border-radius:7px;cursor:pointer;padding:5px 10px;">⬆ Upload Data</button>
+        <div class="stats fu">
+          <div class="sc"><div class="sc-t"><div class="sc-i" style="background:#f0fdf4">🎓</div><div class="sc-tr up">↑ 12%</div></div><div class="sc-n" id="stCerts">0</div><div class="sc-lb">Certificates</div></div>
+          <div class="sc"><div class="sc-t"><div class="sc-i" style="background:#fefce8">📦</div><div class="sc-tr nt">—</div></div><div class="sc-n" id="stExp">0</div><div class="sc-lb">Exports</div></div>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:11px" class="fu">
+          <div style="font-size:.9rem;font-weight:800;letter-spacing:-.02em">Your Tools <span style="font-size:.72rem;font-weight:500;color:var(--mist);margin-left:4px">— click to open inside the dashboard</span></div>
+        </div>
+        <div class="tc-grid fu">
+          <div class="tc" style="--ac:var(--lime)" onclick="launchTool('cert')">
+            <div class="tc-i">🎓</div>
+            <div><div class="tc-n">Certificate Maker</div><div class="tc-d">Design certificates, add text &amp; logos, bulk-generate from CSV and export as ZIP.</div></div>
+            <div class="tc-tags"><span class="tc-tag">Bulk CSV</span><span class="tc-tag">ZIP Export</span><span class="tc-tag">Templates</span></div>
+            <div class="tc-go">Open tool <span>→</span></div>
+          </div>
+          <div class="tc" style="--ac:var(--teal)" onclick="launchTool('mailer')">
+            <div class="tc-i">📧</div>
+            <div><div class="tc-n">Certificate Mailer</div><div class="tc-d">Upload Excel/CSV, design certificate layout and dispatch personalised certificates by email with rate-limit protection.</div></div>
+            <div class="tc-tags"><span class="tc-tag">Excel Upload</span><span class="tc-tag">Bulk Email</span><span class="tc-tag">Auto Cooldown</span></div>
+            <div class="tc-go">Open tool <span>→</span></div>
+          </div>
+          <div class="tc" style="--ac:#6366f1" onclick="goView('portal')">
+            <div class="tc-i">🏫</div>
+            <div><div class="tc-n">College Portal</div><div class="tc-d">Create shareable certificate download portals for colleges. Students self-serve their certificates by name lookup.</div></div>
+            <div class="tc-tags"><span class="tc-tag">Shareable Link</span><span class="tc-tag">Name Lookup</span><span class="tc-tag">Download Limit</span></div>
+            <div class="tc-go">Open tool <span>→</span></div>
+          </div>
+        </div>
+        <div class="bot fu">
+          <div class="pan">
+            <div class="pan-h"><div class="pan-ht">Recent Activity</div></div>
+            <div class="pan-b" id="actList">
+              <div class="ai"><div class="ai-ic" style="background:var(--lime-p)">✦</div><div style="flex:1;min-width:0"><div class="ai-n">Welcome to NOVA Studio!</div><div class="ai-t">Just now</div></div></div>
             </div>
           </div>
-
-          <!-- Hidden legacy IDs kept for JS compat — DO NOT REMOVE -->
-          <div id="anDataBar" style="display:none"><span id="anFileName"></span><span id="anFileInfo"></span></div>
-          <div id="anConfigPanel" style="display:none"><div id="anColConfig" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;"></div></div>
-          <div id="anKpiRow" style="display:none"></div>
-          <div id="anChartsGrid" style="display:none"></div>
-          <div id="anTableWrap" style="display:none"><span id="anTableCount"></span><input id="anTableSearch" style="display:none"><table id="anTable"></table></div>
-          <div id="anExportBtn" style="display:none"></div>
-          <div id="anChartTheme" style="display:none"></div>
-          <div id="anUploadStatus" style="display:none"></div>
-
-          <!-- ── EMPTY STATE ── -->
-          <div id="anEmptyState" style="background:var(--card);border:1.5px solid var(--fog);border-radius:16px;text-align:center;padding:44px 20px;">
-            <div style="font-size:3rem;margin-bottom:14px;opacity:.25;">📊</div>
-            <div style="font-size:.9rem;font-weight:800;color:var(--ink3);margin-bottom:6px;">No candidate data yet</div>
-            <div style="font-size:.73rem;color:var(--mist);margin-bottom:20px;line-height:1.6;">Upload a CSV / Excel file with candidate columns like<br><b>State, Gender, Status, Batch, Qualification, Mobilized, Passed</b></div>
-            <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:14px;">
-              <button class="btn bl btn-sm" onclick="goView('settings');setTimeout(()=>stgTab('dataupload'),120)">⬆ Upload Candidate Data</button>
-            </div>
-            <div style="font-size:.7rem;color:var(--mist);margin-bottom:8px;">Or load sample data to preview:</div>
-            <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
-              <button class="btn bo btn-sm" onclick="caLoadSample()" style="font-size:.68rem;">🎓 Load Sample Candidates</button>
+          <div class="pan">
+            <div class="pan-h"><div class="pan-ht">Quick Launch</div></div>
+            <div class="qa-g">
+              <button class="qa-b" onclick="launchTool('cert')"><div class="qa-ic">🎓</div>Certificate</button>
+              <button class="qa-b" onclick="goView('portal')"><div class="qa-ic">🏫</div>College Portal</button>
+              <button class="qa-b" onclick="goView('projects')"><div class="qa-ic">📁</div>My Projects</button>
+              <button class="qa-b" onclick="goView('profile')"><div class="qa-ic">👤</div>My Profile</button>
+              <button class="qa-b" onclick="goView('settings')"><div class="qa-ic">⚙️</div>Settings</button>
             </div>
           </div>
-
-          <!-- ── LIVE DASHBOARD (hidden until data loaded) ── -->
-          <div id="caDashboard" style="display:none;">
-
-            <!-- ════ PANEL 1 — STATE OVERVIEW ════ -->
-            <div class="pan fu" style="margin-bottom:16px;padding:0;overflow:hidden;">
-              <!-- Panel header -->
-              <div style="padding:14px 18px 0;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
-                <div>
-                  <div style="font-size:.62rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mist);">Panel 1</div>
-                  <div style="font-size:.9rem;font-weight:800;letter-spacing:-.02em;color:var(--ink);margin-top:2px;">🗺️ State-wise Candidate Overview</div>
-                </div>
-                <!-- State column picker (shared) -->
-                <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:.68rem;color:var(--mist);">
-                  State col: <select id="caStateCol" onchange="caRenderPanel1()" style="font-size:.68rem;border:1.5px solid var(--fog);border-radius:6px;padding:3px 7px;background:var(--card);color:var(--ink);outline:none;"></select>
-                  <!-- keep legacy id hidden for JS compat -->
-                  <select id="caSpecialStateCol" style="display:none;"></select>
-                </div>
+        </div>
+        <!-- Gmail Tracker Panel -->
+        <div class="pan fu" style="margin-top:14px" id="gmailTrackerPanel">
+          <div class="pan-h" style="display:flex;align-items:center;justify-content:space-between">
+            <div class="pan-ht">📧 Gmail Send Limit Tracker</div>
+            <button onclick="gmailTrackerReset()" style="font-size:.62rem;color:var(--mist);background:none;border:none;cursor:pointer;padding:2px 6px;border-radius:4px;transition:background .15s" onmouseover="this.style.background='var(--fog)'" onmouseout="this.style.background='none'">Reset Today</button>
+          </div>
+          <div class="pan-b" style="padding:14px 16px">
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px">
+              <div style="text-align:center">
+                <div class="gmail-sent-big" id="gmailSentCount">0</div>
+                <div style="font-size:.6rem;color:var(--mist);font-weight:700;text-transform:uppercase;margin-top:3px">Sent Today</div>
               </div>
-
-              <!-- Tab bar -->
-              <div style="display:flex;gap:0;padding:10px 18px 0;border-bottom:1.5px solid var(--fog);">
-                <button id="caP1Tab1Btn" onclick="caP1SwitchTab('specific')"
-                  style="font-size:.72rem;font-weight:700;padding:7px 16px;border:none;border-bottom:2.5px solid #4f8aff;background:none;color:#4f8aff;cursor:pointer;letter-spacing:.01em;">
-                  📍 Specific State
-                </button>
-                <button id="caP1Tab2Btn" onclick="caP1SwitchTab('combined')"
-                  style="font-size:.72rem;font-weight:700;padding:7px 16px;border:none;border-bottom:2.5px solid transparent;background:none;color:var(--mist);cursor:pointer;letter-spacing:.01em;">
-                  🗺️ Combined Analytics
-                </button>
+              <div style="text-align:center">
+                <div class="gmail-sent-big" id="gmailRemainingCount" style="color:#16a34a">500</div>
+                <div style="font-size:.6rem;color:var(--mist);font-weight:700;text-transform:uppercase;margin-top:3px">Remaining</div>
               </div>
-
-              <!-- ── TAB 1: Specific State ── -->
-              <div id="caP1TabSpecific" class="pan-b" style="padding:14px 18px;">
-                <!-- State selector row -->
-                <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
-                  <span style="font-size:.7rem;font-weight:700;color:var(--mist);">Select State:</span>
-                  <select id="caP1StateFilter" onchange="caRenderPanel1StateSpecific()"
-                    style="font-size:.75rem;font-weight:700;border:1.5px solid var(--fog);border-radius:8px;padding:5px 10px;background:var(--card);color:var(--ink);outline:none;min-width:160px;">
-                    <option value="">— choose a state —</option>
-                  </select>
-                  <span id="caP1StateTotal" style="font-size:.7rem;color:var(--mist);"></span>
-                </div>
-                <!-- KPI strip for this state -->
-                <div id="caP1StateKpi" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;margin-bottom:16px;"></div>
-                <!-- Charts row: gender donut + mobilized/passed bar + batch bar -->
-                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;" id="caP1StateChartsGrid">
-                  <div>
-                    <div style="font-size:.7rem;font-weight:700;color:var(--ink3);margin-bottom:8px;">Gender Split</div>
-                    <div style="position:relative;height:210px;"><canvas id="caStateGenderChart"></canvas></div>
-                  </div>
-                  <div>
-                    <div style="font-size:.7rem;font-weight:700;color:var(--ink3);margin-bottom:8px;">Mobilized vs Passed</div>
-                    <div style="position:relative;height:210px;"><canvas id="caStateMobPassChart"></canvas></div>
-                  </div>
-                  <div>
-                    <div style="font-size:.7rem;font-weight:700;color:var(--ink3);margin-bottom:8px;">Batch Breakdown</div>
-                    <div style="position:relative;height:210px;"><canvas id="caStateBatchChart"></canvas></div>
-                  </div>
-                </div>
-                <!-- Empty hint -->
-                <div id="caP1StateEmpty" style="text-align:center;padding:32px 0;color:var(--mist);font-size:.78rem;display:none;">
-                  👆 Select a state above to see its analytics
-                </div>
-              </div>
-
-              <!-- ── TAB 2: Combined Analytics ── -->
-              <div id="caP1TabCombined" class="pan-b" style="padding:14px 18px;display:none;">
-                <!-- KPI strip -->
-                <div id="caP1KpiStrip" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;margin-bottom:16px;"></div>
-                <!-- 2-col charts -->
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
-                  <div>
-                    <div style="font-size:.7rem;font-weight:700;color:var(--ink3);margin-bottom:8px;">All States — Candidate Count</div>
-                    <div style="position:relative;height:240px;"><canvas id="caAllStatesChart"></canvas></div>
-                  </div>
-                  <div>
-                    <div style="font-size:.7rem;font-weight:700;color:var(--ink3);margin-bottom:8px;" id="caSpecialChartLabel">Top 8 States — Donut</div>
-                    <div style="position:relative;height:240px;"><canvas id="caSpecialStatesChart"></canvas></div>
-                  </div>
-                </div>
+              <div style="text-align:center">
+                <div class="gmail-sent-big" id="gmailPctCount" style="font-size:1.2rem">0%</div>
+                <div style="font-size:.6rem;color:var(--mist);font-weight:700;text-transform:uppercase;margin-top:3px">Used</div>
               </div>
             </div>
-
-            <!-- ════ PANEL 2 — CANDIDATE COUNT + GENDER + MOBILIZED/PASSED ════ -->
-            <div class="pan fu" style="margin-bottom:16px;padding:0;overflow:hidden;">
-              <div style="padding:14px 18px 0;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
-                <div>
-                  <div style="font-size:.62rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mist);">Panel 2</div>
-                  <div style="font-size:.9rem;font-weight:800;letter-spacing:-.02em;color:var(--ink);margin-top:2px;">👥 Candidate Counts · Gender · Mobilized &amp; Passed</div>
-                </div>
-                <div id="caP2ColPicker" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:.68rem;color:var(--mist);">
-                  Gender: <select id="caGenderCol" onchange="caRenderPanel2()" style="font-size:.68rem;border:1.5px solid var(--fog);border-radius:6px;padding:3px 7px;background:var(--card);color:var(--ink);outline:none;"></select>
-                  Mobilized: <select id="caMobilizedCol" onchange="caRenderPanel2()" style="font-size:.68rem;border:1.5px solid var(--fog);border-radius:6px;padding:3px 7px;background:var(--card);color:var(--ink);outline:none;"></select>
-                  Passed: <select id="caPassedCol" onchange="caRenderPanel2()" style="font-size:.68rem;border:1.5px solid var(--fog);border-radius:6px;padding:3px 7px;background:var(--card);color:var(--ink);outline:none;"></select>
-                </div>
+            <div class="gmail-bar-wrap"><div class="gmail-bar-fill" id="gmailBarFill" style="width:0%"></div></div>
+            <div class="gmail-limit-row" style="margin-top:8px">
+              <div style="display:flex;align-items:center;gap:6px">
+                <span style="color:var(--mist)">Daily limit:</span>
+                <input class="gmail-limit-input" type="number" id="gmailLimitInput" value="500" min="1" max="2000" oninput="gmailLimitChanged(this.value)">
+                <span style="color:var(--mist);font-size:.6rem">(500 free · 2000 Workspace)</span>
               </div>
-              <div class="pan-b" style="padding:14px 18px;">
-                <!-- Big stat + gender boxes -->
-                <div id="caP2Stats" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-bottom:16px;"></div>
-                <!-- Gender donut + mobilized/passed bar -->
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
-                  <div>
-                    <div style="font-size:.7rem;font-weight:700;color:var(--ink3);margin-bottom:8px;">Gender Distribution</div>
-                    <div style="position:relative;height:220px;"><canvas id="caGenderChart"></canvas></div>
-                  </div>
-                  <div>
-                    <div style="font-size:.7rem;font-weight:700;color:var(--ink3);margin-bottom:8px;">Mobilized vs Passed</div>
-                    <div style="position:relative;height:220px;"><canvas id="caMobPassChart"></canvas></div>
-                  </div>
-                </div>
-              </div>
+              <div id="gmailResetTime" style="color:var(--mist)">Resets midnight</div>
             </div>
-
-            <!-- ════ PANEL 3 — BATCH COUNT + GENDER ════ -->
-            <div class="pan fu" style="margin-bottom:16px;padding:0;overflow:hidden;">
-              <div style="padding:14px 18px 0;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
-                <div>
-                  <div style="font-size:.62rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mist);">Panel 3</div>
-                  <div style="font-size:.9rem;font-weight:800;letter-spacing:-.02em;color:var(--ink);margin-top:2px;">📦 Batch Count &amp; Gender Breakdown</div>
-                </div>
-                <div id="caP3ColPicker" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:.68rem;color:var(--mist);">
-                  Batch: <select id="caBatchCol" onchange="caRenderPanel3()" style="font-size:.68rem;border:1.5px solid var(--fog);border-radius:6px;padding:3px 7px;background:var(--card);color:var(--ink);outline:none;"></select>
-                </div>
-              </div>
-              <div class="pan-b" style="padding:14px 18px;">
-                <div id="caP3Stats" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-bottom:16px;"></div>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
-                  <div>
-                    <div style="font-size:.7rem;font-weight:700;color:var(--ink3);margin-bottom:8px;">Candidates per Batch</div>
-                    <div style="position:relative;height:220px;"><canvas id="caBatchChart"></canvas></div>
-                  </div>
-                  <div>
-                    <div style="font-size:.7rem;font-weight:700;color:var(--ink3);margin-bottom:8px;">Gender per Batch</div>
-                    <div style="position:relative;height:220px;"><canvas id="caBatchGenderChart"></canvas></div>
-                  </div>
-                </div>
-              </div>
+            <div style="margin-top:10px;padding:8px 10px;background:#f8fafc;border-radius:6px;font-size:.63rem;color:var(--mist);line-height:1.6">
+              <b style="color:var(--ink3)">ℹ Gmail limits:</b> Free Gmail = 500/day · Google Workspace = 2,000/day · Counts reset at midnight (your time). Tracking is local to this browser.
             </div>
-
-            <!-- ════ PANEL 4 — QUALIFICATION / EMPLOYMENT ════ -->
-            <div class="pan fu" style="margin-bottom:16px;padding:0;overflow:hidden;">
-              <div style="padding:14px 18px 0;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
-                <div>
-                  <div style="font-size:.62rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mist);">Panel 4</div>
-                  <div style="font-size:.9rem;font-weight:800;letter-spacing:-.02em;color:var(--ink);margin-top:2px;">🎓 Qualification &amp; Employment Status</div>
-                </div>
-                <div id="caP4ColPicker" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:.68rem;color:var(--mist);">
-                  Qualification: <select id="caQualCol" onchange="caRenderPanel4()" style="font-size:.68rem;border:1.5px solid var(--fog);border-radius:6px;padding:3px 7px;background:var(--card);color:var(--ink);outline:none;"></select>
-                  Employment: <select id="caEmpCol" onchange="caRenderPanel4()" style="font-size:.68rem;border:1.5px solid var(--fog);border-radius:6px;padding:3px 7px;background:var(--card);color:var(--ink);outline:none;"></select>
-                </div>
-              </div>
-              <div class="pan-b" style="padding:14px 18px;">
-                <div id="caP4Stats" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-bottom:16px;"></div>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
-                  <div>
-                    <div style="font-size:.7rem;font-weight:700;color:var(--ink3);margin-bottom:8px;">Qualification Distribution</div>
-                    <div style="position:relative;height:220px;"><canvas id="caQualChart"></canvas></div>
-                  </div>
-                  <div>
-                    <div style="font-size:.7rem;font-weight:700;color:var(--ink3);margin-bottom:8px;">Employed vs Not Employed</div>
-                    <div style="position:relative;height:220px;"><canvas id="caEmpChart"></canvas></div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-          </div><!-- /caDashboard -->
-        </div><!-- /dashAnalyticsSection -->
-
-
+          </div>
+        </div>
       </div>
     </div>
 
@@ -822,26 +630,18 @@
           </div>
           <div class="pg-a">
             <button class="btn bo btn-sm" id="projBinBtn" onclick="projToggleBin()">🗑️ Bin <span id="projBinCount" style="background:var(--coral);color:#fff;padding:1px 6px;border-radius:10px;font-size:.6rem;margin-left:3px;display:none">0</span></button>
-            <button class="dm-open-btn" onclick="DM.openPanel()">☁ Drive Manager</button>
             <button class="btn bd btn-sm" onclick="projSaveCurrent()">💾 Save Current Design</button>
           </div>
         </div>
         <!-- Limit bar -->
-        <!-- Usage Limit Bar -->
-        <div id="projLimitBar" style="display:flex;background:#fff;border:1.5px solid var(--fog);border-radius:12px;padding:12px 16px;margin-bottom:14px;align-items:center;gap:14px;flex-wrap:wrap">
-          <div style="font-size:1.3rem;line-height:1">📂</div>
-          <div style="flex:1;min-width:120px">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
-              <span style="font-size:.68rem;font-weight:700;color:var(--mist);text-transform:uppercase;letter-spacing:.06em">Project Slots Used</span>
-              <span id="projLimitTxt" style="font-size:.75rem;font-weight:800;color:var(--ink)">0 / 20 projects</span>
-            </div>
-            <div style="background:var(--fog);border-radius:6px;height:8px;overflow:hidden">
-              <div id="projLimitFill" style="height:100%;border-radius:6px;background:linear-gradient(90deg,var(--lime),var(--teal));transition:width .5s ease"></div>
+        <div id="projLimitBar" style="display:none;background:#fff;border:1.5px solid var(--fog);border-radius:10px;padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;gap:10px">
+          <div style="flex:1">
+            <div style="font-size:.68rem;font-weight:700;color:var(--mist);margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em">Project Slots Used</div>
+            <div style="background:var(--fog);border-radius:4px;height:6px;overflow:hidden">
+              <div id="projLimitFill" style="height:100%;border-radius:4px;background:var(--lime);transition:width .4s"></div>
             </div>
           </div>
-          <div id="projDriveStatus" style="white-space:nowrap;font-size:.7rem;font-weight:700;display:flex;align-items:center;gap:4px">
-            <span style="color:var(--mist)">Checking Drive…</span>
-          </div>
+          <div id="projLimitTxt" style="font-size:.78rem;font-weight:800;color:var(--ink);white-space:nowrap">0 / 20</div>
         </div>
         <!-- Tab bar for bin -->
         <div id="projBinBar" style="display:none;background:#fff5f5;border:1.5px solid #fecaca;border-radius:10px;padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:10px">
@@ -1188,7 +988,6 @@
             <div class="stg-nav-item" id="stnNotifications" onclick="stgTab('notifications')">🔔 Notifications</div>
             <div class="stg-nav-item" id="stnPrivacy" onclick="stgTab('privacy')">🔒 Privacy</div>
             <div class="stg-nav-item" id="stnData" onclick="stgTab('data')">💾 Data & Storage</div>
-            <div class="stg-nav-item" id="stnDataUpload" onclick="stgTab('dataupload')">📁 Data Upload</div>
             <div class="stg-nav-item" id="stnIntegrations" onclick="stgTab('integrations')">🔗 Integrations</div>
           </div>
           <!-- Settings panels -->
@@ -1319,169 +1118,6 @@
                 </div>
               </div>
             </div>
-            <!-- Data Upload -->
-            <div class="stg-panel" id="stpDataUpload" style="display:none">
-              <div class="stg-card">
-                <div class="stg-card-h">📁 Data Upload for Analytics</div>
-                <div style="font-size:.72rem;color:var(--mist);line-height:1.6;margin-bottom:14px;padding:10px 12px;background:var(--lime-p);border-radius:8px;border:1px solid rgba(158,192,0,.2)">
-                  Upload your CSV, Excel or JSON file below. Charts and KPIs will appear automatically on your <b>Dashboard</b> once data is loaded. Works best on the live site (GitHub Pages) — not as a local file.
-                </div>
-
-                <!-- Template Download -->
-                <div class="stg-card" style="margin-bottom:14px;border:1.5px solid var(--fog);border-radius:12px;padding:16px;">
-                  <div style="font-weight:800;font-size:.85rem;letter-spacing:-.02em;margin-bottom:4px;">📥 Download a Template</div>
-                  <div style="font-size:.71rem;color:var(--mist);line-height:1.5;margin-bottom:14px;">Choose a template that matches your data. Download it, fill in your rows, then upload it above to generate charts instantly.</div>
-
-                  <!-- Template Cards Grid -->
-                  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin-bottom:14px;" id="tmplGrid">
-
-                    <!-- General Analytics -->
-                    <div class="tmpl-card" style="background:var(--snow);border:1.5px solid var(--fog);border-radius:10px;padding:12px 14px;">
-                      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-                        <span style="font-size:1.4rem;">📊</span>
-                        <div>
-                          <div style="font-weight:800;font-size:.8rem;">General Analytics</div>
-                          <div style="font-size:.63rem;color:var(--mist);">Category · Value · Count · Date</div>
-                        </div>
-                      </div>
-                      <div style="font-size:.68rem;color:var(--mist);line-height:1.5;margin-bottom:10px;">Generic template for any data — sales, inventory, events, usage, etc.</div>
-                      <div style="display:flex;gap:6px;">
-                        <button class="btn bo btn-sm" onclick="anDownloadTemplate('general','csv')" style="flex:1;font-size:.65rem;padding:5px 0;">⬇ CSV</button>
-                        <button class="btn bo btn-sm" onclick="anDownloadTemplate('general','xlsx')" style="flex:1;font-size:.65rem;padding:5px 0;">⬇ Excel</button>
-                      </div>
-                    </div>
-
-                    <!-- Certificate Data -->
-                    <div class="tmpl-card" style="background:var(--snow);border:1.5px solid var(--fog);border-radius:10px;padding:12px 14px;">
-                      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-                        <span style="font-size:1.4rem;">🎓</span>
-                        <div>
-                          <div style="font-weight:800;font-size:.8rem;">Certificate Data</div>
-                          <div style="font-size:.63rem;color:var(--mist);">Month · Dept · Issued · Emails</div>
-                        </div>
-                      </div>
-                      <div style="font-size:.68rem;color:var(--mist);line-height:1.5;margin-bottom:10px;">Track certificate issuance, emails sent, and downloads by month and department.</div>
-                      <div style="display:flex;gap:6px;">
-                        <button class="btn bo btn-sm" onclick="anDownloadTemplate('certificates','csv')" style="flex:1;font-size:.65rem;padding:5px 0;">⬇ CSV</button>
-                        <button class="btn bo btn-sm" onclick="anDownloadTemplate('certificates','xlsx')" style="flex:1;font-size:.65rem;padding:5px 0;">⬇ Excel</button>
-                      </div>
-                    </div>
-
-                    <!-- Sales Data -->
-                    <div class="tmpl-card" style="background:var(--snow);border:1.5px solid var(--fog);border-radius:10px;padding:12px 14px;">
-                      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-                        <span style="font-size:1.4rem;">📈</span>
-                        <div>
-                          <div style="font-weight:800;font-size:.8rem;">Sales Data</div>
-                          <div style="font-size:.63rem;color:var(--mist);">Region · Product · Revenue · Units</div>
-                        </div>
-                      </div>
-                      <div style="font-size:.68rem;color:var(--mist);line-height:1.5;margin-bottom:10px;">Track sales performance by region, product, revenue, units sold, and profit.</div>
-                      <div style="display:flex;gap:6px;">
-                        <button class="btn bo btn-sm" onclick="anDownloadTemplate('sales','csv')" style="flex:1;font-size:.65rem;padding:5px 0;">⬇ CSV</button>
-                        <button class="btn bo btn-sm" onclick="anDownloadTemplate('sales','xlsx')" style="flex:1;font-size:.65rem;padding:5px 0;">⬇ Excel</button>
-                      </div>
-                    </div>
-
-                    <!-- Student Data -->
-                    <div class="tmpl-card" style="background:var(--snow);border:1.5px solid var(--fog);border-radius:10px;padding:12px 14px;">
-                      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-                        <span style="font-size:1.4rem;">🏫</span>
-                        <div>
-                          <div style="font-weight:800;font-size:.8rem;">Student Data</div>
-                          <div style="font-size:.63rem;color:var(--mist);">Course · Grade · Marks · Attendance</div>
-                        </div>
-                      </div>
-                      <div style="font-size:.68rem;color:var(--mist);line-height:1.5;margin-bottom:10px;">Analyse student performance by course, grades, marks, and attendance records.</div>
-                      <div style="display:flex;gap:6px;">
-                        <button class="btn bo btn-sm" onclick="anDownloadTemplate('students','csv')" style="flex:1;font-size:.65rem;padding:5px 0;">⬇ CSV</button>
-                        <button class="btn bo btn-sm" onclick="anDownloadTemplate('students','xlsx')" style="flex:1;font-size:.65rem;padding:5px 0;">⬇ Excel</button>
-                      </div>
-                    </div>
-
-                    <!-- Attendance / HR -->
-                    <div class="tmpl-card" style="background:var(--snow);border:1.5px solid var(--fog);border-radius:10px;padding:12px 14px;">
-                      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-                        <span style="font-size:1.4rem;">👥</span>
-                        <div>
-                          <div style="font-weight:800;font-size:.8rem;">HR / Attendance</div>
-                          <div style="font-size:.63rem;color:var(--mist);">Dept · Month · Present · Absent</div>
-                        </div>
-                      </div>
-                      <div style="font-size:.68rem;color:var(--mist);line-height:1.5;margin-bottom:10px;">Monitor department-wise attendance, leave counts, and work hours per month.</div>
-                      <div style="display:flex;gap:6px;">
-                        <button class="btn bo btn-sm" onclick="anDownloadTemplate('hr','csv')" style="flex:1;font-size:.65rem;padding:5px 0;">⬇ CSV</button>
-                        <button class="btn bo btn-sm" onclick="anDownloadTemplate('hr','xlsx')" style="flex:1;font-size:.65rem;padding:5px 0;">⬇ Excel</button>
-                      </div>
-                    </div>
-
-                    <!-- Event / Programme -->
-                    <div class="tmpl-card" style="background:var(--snow);border:1.5px solid var(--fog);border-radius:10px;padding:12px 14px;">
-                      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-                        <span style="font-size:1.4rem;">🎪</span>
-                        <div>
-                          <div style="font-weight:800;font-size:.8rem;">Events / Programmes</div>
-                          <div style="font-size:.63rem;color:var(--mist);">Event · City · Registrations · Revenue</div>
-                        </div>
-                      </div>
-                      <div style="font-size:.68rem;color:var(--mist);line-height:1.5;margin-bottom:10px;">Track events or training programmes — registrations, attendance, revenue, city.</div>
-                      <div style="display:flex;gap:6px;">
-                        <button class="btn bo btn-sm" onclick="anDownloadTemplate('events','csv')" style="flex:1;font-size:.65rem;padding:5px 0;">⬇ CSV</button>
-                        <button class="btn bo btn-sm" onclick="anDownloadTemplate('events','xlsx')" style="flex:1;font-size:.65rem;padding:5px 0;">⬇ Excel</button>
-                      </div>
-                    </div>
-
-                  </div>
-
-                  <!-- Template format tip -->
-                  <div style="font-size:.68rem;color:var(--mist);padding:8px 12px;background:var(--fog);border-radius:8px;line-height:1.6;">
-                    💡 <b style="color:var(--ink3);">Tip:</b> Each template includes a header row + 3 example rows to guide you. Delete the example rows and add your real data, then upload. Column names become your chart labels — keep them clear and short.
-                  </div>
-                </div>
-
-                <!-- ── Data Upload Zone ── -->
-                <input type="file" id="stgDataFileInput" accept=".csv,.xlsx,.xls,.json" style="display:none" onchange="stgOnDataFileChange(this)">
-
-                <!-- Drop zone -->
-                <div id="stgUploadZone"
-                  ondragover="event.preventDefault();this.style.borderColor='var(--lime-d)';this.style.background='var(--lime-p)'"
-                  ondragleave="this.style.borderColor='var(--fog)';this.style.background='var(--snow)'"
-                  ondrop="stgHandleDataDrop(event)"
-                  style="border:2.5px dashed var(--fog);border-radius:12px;padding:28px 20px;text-align:center;background:var(--snow);margin-bottom:12px;transition:all .2s;">
-                  <div style="font-size:2.4rem;margin-bottom:6px;">📂</div>
-                  <div style="font-weight:800;font-size:.88rem;margin-bottom:4px;color:var(--ink)">Drag &amp; drop your file here</div>
-                  <div style="font-size:.72rem;color:var(--mist);margin-bottom:14px;">CSV · Excel (.xlsx / .xls) · JSON — up to 50,000 rows</div>
-                  <div style="font-size:.68rem;color:var(--mist);">— or —</div>
-                </div>
-
-                <!-- Big visible upload button -->
-                <button class="btn bl" style="width:100%;padding:13px;font-size:.88rem;font-weight:800;border-radius:10px;margin-bottom:8px;letter-spacing:-.01em;"
-                  onclick="document.getElementById('stgDataFileInput').click()">
-                  📁 &nbsp;Choose File to Upload
-                </button>
-
-                <!-- Status message -->
-                <div id="stgDataUploadStatus" style="min-height:22px;text-align:center;font-size:.78rem;font-weight:700;color:var(--lime-d);margin-bottom:10px;"></div>
-
-                <!-- Loaded indicator (shown after successful upload) -->
-                <div id="stgStandaloneLoaded" style="display:none;background:var(--lime-p);border:1.5px solid var(--lime);border-radius:10px;padding:12px 14px;margin-bottom:12px;align-items:center;gap:12px;flex-wrap:wrap;">
-                  <div style="font-size:1.2rem;">✅</div>
-                  <div style="flex:1;min-width:0;">
-                    <div style="font-weight:700;font-size:.82rem;" id="stgStandaloneFileName">—</div>
-                    <div style="font-size:.67rem;color:var(--mist);margin-top:2px;" id="stgStandaloneFileInfo">—</div>
-                  </div>
-                  <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;">
-                    <button class="btn bl btn-sm" onclick="goView('home')" style="font-size:.7rem;white-space:nowrap;">📊 View Dashboard</button>
-                    <button class="btn bo btn-sm" onclick="anResetAll()" style="font-size:.68rem;color:#dc2626;border-color:#fecaca;white-space:nowrap;">🗑 Clear Data</button>
-                  </div>
-                </div>
-
-                <div style="font-size:.71rem;color:var(--mist);line-height:1.65;padding:9px 12px;background:var(--snow);border-radius:8px;border:1.5px solid var(--fog);">
-                  <b style="color:var(--ink3);">ℹ How it works:</b> Upload your file → charts auto-build on the Dashboard. Data stays in your browser memory. If charts don't persist after refresh, use the live site (GitHub Pages) instead of opening the file directly.
-                </div>
-              </div>
-            </div>
-
             <!-- Integrations -->
             <div class="stg-panel" id="stpIntegrations" style="display:none">
               <div class="stg-card">
@@ -2126,7 +1762,6 @@ function doGet(){return out({ok:true,status:'Nova Drive Relay running'});}</pre>
                 <input class="cp-fi" id="cpShareLink" readonly style="font-family:'DM Mono',monospace;font-size:.72rem;background:var(--lime-p);border-color:var(--lime)">
                 <button class="btn bl btn-sm" onclick="cpCopyLink()">Copy</button>
                 <button class="btn bo btn-sm" onclick="window.open(document.getElementById('cpShareLink').value,'_blank')">Open →</button>
-                <button class="btn bo btn-sm" style="background:var(--lime-p);border-color:var(--lime);color:var(--lime-d)" onclick="NV.shareLink({title:(window.CP&&window.CP.currentSlug?window.CP.currentSlug+' Portal':'College Portal'),url:document.getElementById('cpShareLink').value,type:'college'})">👥 Share</button>
               </div>
               <div style="font-size:.75rem;font-weight:700;margin-bottom:8px;color:var(--mist)">QR CODE</div>
               <div id="cpQrWrap" style="display:flex;justify-content:center;padding:10px 0"></div>
@@ -2180,7 +1815,7 @@ function doGet(){return out({ok:true,status:'Nova Drive Relay running'});}</pre>
 <div class="vp">
 <div class="help-content">
   <!-- Back -->
-  <div class="help-back-btn" onclick="goView('home')">← Dashboard</div>
+  <div class="help-back-btn" onclick="goView('home')">← Back to Dashboard</div>
 
   <!-- Hero -->
   <div class="help-hero">
@@ -2544,715 +2179,9 @@ function doGet(){return out({ok:true,status:'Nova Drive Relay running'});}</pre>
     </div><!-- viewHelp -->
 
 
-    <!-- ===== TRAINING PARTNERS VIEW ===== -->
-    <div class="view" id="viewTp" style="flex-direction:column;overflow-y:auto;">
-      <div class="vp" style="max-width:1100px;padding:22px 28px 40px;">
-
-        <!-- Header -->
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
-          <div>
-            <div style="font-size:1.3rem;font-weight:800;letter-spacing:-.03em;">🤝 Training Partners</div>
-            <div style="font-size:.75rem;color:var(--mist);margin-top:3px;">Community directory — add TPs, mark connections, rate & rank</div>
-          </div>
-          <div style="display:flex;gap:8px;">
-            <button class="btn bl btn-sm" onclick="tpOpenAddModal()">+ Add Training Partner</button>
-            <select id="tpSortSelect" onchange="tpRenderList()" style="padding:7px 11px;font-size:.75rem;font-weight:600;border:1.5px solid var(--fog);border-radius:8px;background:var(--card);color:var(--ink);outline:none;">
-              <option value="rating">Sort: Top Rated</option>
-              <option value="name">Sort: Name A–Z</option>
-              <option value="newest">Sort: Newest</option>
-              <option value="connections">Sort: Most Connected</option>
-            </select>
-          </div>
-        </div>
-
-        <!-- Tabs -->
-        <div style="display:flex;gap:6px;margin-bottom:18px;border-bottom:2px solid var(--fog);padding-bottom:0;">
-          <button class="tp-tab active" id="tpTabAll" onclick="tpSetTab('all')">All Partners</button>
-          <button class="tp-tab" id="tpTabConnected" onclick="tpSetTab('connected')">My Connections</button>
-          <button class="tp-tab" id="tpTabMine" onclick="tpSetTab('mine')">My Entries</button>
-          <button class="tp-tab" id="tpTabRanking" onclick="tpSetTab('ranking')">🏆 Rankings</button>
-        </div>
-
-        <!-- Search bar -->
-        <div style="margin-bottom:16px;position:relative;">
-          <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--mist);font-size:.85rem;">🔍</span>
-          <input id="tpSearch" type="text" placeholder="Search by name, organisation, skills…" oninput="tpRenderList()"
-            style="width:100%;padding:10px 12px 10px 36px;border:1.5px solid var(--fog);border-radius:10px;font-size:.82rem;font-family:inherit;background:var(--card);color:var(--ink);outline:none;box-sizing:border-box;">
-        </div>
-
-        <!-- Stats strip -->
-        <div id="tpStatsStrip" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;margin-bottom:20px;"></div>
-
-        <!-- List / Rankings -->
-        <div id="tpList" style="display:flex;flex-direction:column;gap:12px;"></div>
-
-        <!-- Empty -->
-        <div id="tpEmpty" style="display:none;text-align:center;padding:60px 24px;color:var(--mist);">
-          <div style="font-size:3rem;margin-bottom:14px;opacity:.35;">🤝</div>
-          <div style="font-size:.9rem;font-weight:700;color:var(--ink3);margin-bottom:6px;">No Training Partners yet</div>
-          <div style="font-size:.73rem;">Be the first — add a Training Partner to the community directory.</div>
-          <button class="btn bl btn-sm" style="margin-top:18px;" onclick="tpOpenAddModal()">+ Add Training Partner</button>
-        </div>
-
-      </div>
-    </div><!-- /viewTp -->
-
-    <!-- ═══════════════════════════════════════════════════════════════════ -->
-    <!-- ═══════════════════════════════════════════════════════════════════ -->
-    <!-- Followup Tracker View                                               -->
-    <!-- ═══════════════════════════════════════════════════════════════════ -->
-    <div class="view" id="viewFollowup" style="flex-direction:column;overflow:hidden">
-
-      <!-- Toolbar -->
-      <div class="cert-toolbar" style="flex-shrink:0;display:flex;align-items:center;gap:10px;padding:0 20px;height:54px;border-bottom:1.5px solid var(--fog);background:var(--card)">
-        <span style="font-size:1.1rem">📂</span>
-        <div style="font-size:.9rem;font-weight:800;letter-spacing:-.02em">Followup Tracker</div>
-        <div style="flex:1"></div>
-        <div id="fuNotifBadge" style="display:none;background:#ef4444;color:#fff;font-size:.65rem;font-weight:800;min-width:20px;height:20px;border-radius:10px;align-items:center;justify-content:center;padding:0 5px"></div>
-        <button onclick="FU._stopPoll();FU.openView();" style="font-size:.72rem;font-weight:700;padding:6px 13px;border:1.5px solid var(--fog);border-radius:8px;background:var(--card);cursor:pointer">↻ Refresh</button>
-      </div>
-
-      <!-- Scrollable body -->
-      <div style="flex:1;overflow-y:auto;background:var(--bg)">
-
-        <!-- ── LIST VIEW ── -->
-        <div id="fuViewList" style="display:flex;flex-direction:column;gap:20px;padding:24px">
-
-          <!-- Create session card -->
-          <div style="background:var(--card);border:1.5px solid var(--fog);border-radius:14px;overflow:hidden">
-            <div style="padding:14px 18px;border-bottom:1.5px solid var(--fog);display:flex;align-items:center;gap:8px">
-              <span style="font-size:1rem">🆕</span>
-              <div style="font-size:.84rem;font-weight:800">New Tracking Session</div>
-            </div>
-            <div style="padding:18px;display:flex;flex-direction:column;gap:12px">
-              <div>
-                <div style="font-size:.72rem;font-weight:700;margin-bottom:5px">Session Name</div>
-                <input id="fuSessionName" class="cp-fi" placeholder="e.g. BFSI Q1 2025 Data Collection" />
-              </div>
-              <div>
-                <div style="font-size:.72rem;font-weight:700;margin-bottom:5px">Master Google Drive Folder Link</div>
-                <input id="fuMasterDriveUrl" class="cp-fi" placeholder="https://drive.google.com/drive/folders/..." />
-                <div style="font-size:.67rem;color:var(--mist);margin-top:4px">Create an empty folder in your Drive, paste its share link here. College subfolders will be auto-created inside it.</div>
-              </div>
-              <button id="fuCreateSessionBtn" onclick="FU._createSession()" style="align-self:flex-start;padding:9px 18px;background:var(--ink);color:#fff;border:none;border-radius:9px;font-size:.78rem;font-weight:700;cursor:pointer;transition:opacity .15s">+ Create Session</button>
-            </div>
-          </div>
-
-          <!-- Sessions list -->
-          <div style="background:var(--card);border:1.5px solid var(--fog);border-radius:14px;overflow:hidden">
-            <div style="padding:13px 18px;border-bottom:1.5px solid var(--fog);display:flex;align-items:center;justify-content:space-between">
-              <div style="font-size:.82rem;font-weight:800">Your Sessions</div>
-            </div>
-            <div id="fuSessionList" style="padding:14px">
-              <div class="fu-empty">Loading sessions…</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- ── DETAIL VIEW ── -->
-        <div id="fuViewDetail" style="display:none;flex-direction:column;gap:20px;padding:24px">
-
-          <!-- Header with back + stats -->
-          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-            <button onclick="FU._backToList()" style="padding:7px 13px;border:1.5px solid var(--fog);border-radius:8px;background:var(--card);font-size:.75rem;font-weight:700;cursor:pointer">← Back</button>
-            <div id="fuDetailTitle" style="font-size:1rem;font-weight:800;letter-spacing:-.02em;flex:1"></div>
-            <a id="fuMasterLink" href="#" target="_blank" style="font-size:.72rem;font-weight:700;color:var(--accent);text-decoration:none;padding:6px 12px;border:1.5px solid #c7d2fe;border-radius:7px;background:#eff6ff">↗ Master Folder</a>
-          </div>
-
-          <!-- Stats bar -->
-          <div id="fuStats" style="display:grid;grid-template-columns:repeat(3,auto) 1fr;gap:12px;align-items:center;background:var(--card);border:1.5px solid var(--fog);border-radius:12px;padding:14px 18px">
-            <div class="fu-stat"><div class="fu-stat-n">—</div><div class="fu-stat-l">Total</div></div>
-            <div class="fu-stat fu-s-up"><div class="fu-stat-n">—</div><div class="fu-stat-l">Uploaded</div></div>
-            <div class="fu-stat fu-s-pend"><div class="fu-stat-n">—</div><div class="fu-stat-l">Pending</div></div>
-            <div class="fu-stat-bar"><div class="fu-stat-prog" style="width:0%"></div><span class="fu-stat-pct">0%</span></div>
-          </div>
-
-          <!-- Add college form -->
-          <div style="background:var(--card);border:1.5px solid var(--fog);border-radius:14px;overflow:hidden">
-            <div style="padding:12px 18px;border-bottom:1.5px solid var(--fog);font-size:.82rem;font-weight:800">➕ Add College</div>
-            <div style="padding:16px 18px;display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
-              <div style="flex:1;min-width:200px">
-                <div style="font-size:.72rem;font-weight:700;margin-bottom:5px">College Name</div>
-                <input id="fuCollegeName" class="cp-fi" placeholder="e.g. Mumbai College of Commerce" onkeydown="if(event.key==='Enter')FU._addCollege()" />
-              </div>
-              <button id="fuAddCollegeBtn" onclick="FU._addCollege()" style="padding:9px 18px;background:var(--lime-d);color:var(--ink);border:none;border-radius:9px;font-size:.78rem;font-weight:700;cursor:pointer;white-space:nowrap">+ Add College</button>
-            </div>
-            <div style="padding:0 18px 14px;font-size:.67rem;color:var(--mist)">A Google Drive subfolder will be auto-created and shared with anyone who has the link (write access).</div>
-          </div>
-
-          <!-- College list -->
-          <div style="background:var(--card);border:1.5px solid var(--fog);border-radius:14px;overflow:hidden">
-            <div style="padding:12px 18px;border-bottom:1.5px solid var(--fog);display:flex;align-items:center;justify-content:space-between">
-              <div style="font-size:.82rem;font-weight:800">Colleges</div>
-              <div style="font-size:.68rem;color:var(--mist)">Updates in real-time · auto-polls Drive every 2 min</div>
-            </div>
-            <div id="fuBulkToolbar" style="padding:12px 14px 0 14px;"></div>
-            <div id="fuCollegeList" style="padding:14px;display:flex;flex-direction:column;gap:10px">
-              <div class="fu-empty">Add your first college above ↑</div>
-            </div>
-
-          </div>
-
-        </div>
-      </div><!-- /scrollable -->
-
-    </div><!-- viewFollowup -->
-
-    <!-- Files Modal -->
-    <div id="fuFilesModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:2000;align-items:center;justify-content:center;padding:20px">
-      <div style="background:var(--card);border-radius:16px;width:100%;max-width:560px;max-height:80vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.25)">
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1.5px solid var(--fog)">
-          <div id="fuFilesModalTitle" style="font-size:.88rem;font-weight:800"></div>
-          <button onclick="FU._closeFilesModal()" style="border:none;background:none;font-size:1.2rem;cursor:pointer;color:var(--mist)">×</button>
-        </div>
-        <div id="fuFilesModalList" style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:8px"></div>
-      </div>
-    </div>
-
-    <!-- Followup styles -->
-    <style>
-    .fu-empty{padding:24px;text-align:center;color:var(--mist);font-size:.78rem}
-    .fu-session-card{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1.5px solid var(--fog);border-radius:10px;cursor:pointer;transition:all .13s;background:var(--bg)}
-    .fu-session-card:hover{border-color:var(--ink);box-shadow:0 4px 14px rgba(0,0,0,.07)}
-    .fu-sc-icon{font-size:1.4rem;width:38px;text-align:center;flex-shrink:0}
-    .fu-sc-info{flex:1;min-width:0}
-    .fu-sc-name{font-size:.85rem;font-weight:700;color:var(--ink)}
-    .fu-sc-sub{font-size:.68rem;color:var(--mist);margin-top:2px}
-    .fu-sc-arrow{font-size:1.3rem;color:var(--mist)}
-    .fu-sc-del-btn{margin-left:auto;flex-shrink:0;font-size:.72rem;padding:5px 10px;}
-    .fu-college-card{background:var(--bg);border:1.5px solid var(--fog);border-radius:12px;padding:14px 16px;transition:border-color .13s}
-    .fu-college-card:hover{border-color:var(--ink3)}
-    .fu-cc-top{display:flex;align-items:flex-start;gap:12px;margin-bottom:12px}
-    .fu-cc-icon{font-size:1.4rem;flex-shrink:0}
-    .fu-cc-info{flex:1;min-width:0}
-    .fu-cc-name{font-size:.88rem;font-weight:700;color:var(--ink)}
-    .fu-cc-meta{display:flex;gap:6px;flex-wrap:wrap;margin-top:5px}
-    .fu-cc-actions{display:flex;gap:6px;flex-wrap:wrap}
-    .fu-tag{font-size:.63rem;font-weight:700;padding:2px 8px;border-radius:20px}
-    .fu-s-up{background:#dcfce7;color:#15803d}
-    .fu-s-pend{background:#fef9c3;color:#a16207}
-    .fu-s-cnt{background:#eff6ff;color:#2563eb}
-    .fu-s-time{background:var(--fog);color:var(--mist)}
-    .fu-s-warn{background:#fee2e2;color:#dc2626}
-    .fu-stat{display:flex;flex-direction:column;align-items:center;padding:0 12px}
-    .fu-stat-n{font-size:1.4rem;font-weight:800;letter-spacing:-.03em;line-height:1}
-    .fu-stat-l{font-size:.62rem;font-weight:700;color:var(--mist);text-transform:uppercase;margin-top:3px}
-    .fu-stat-bar{position:relative;height:8px;background:var(--fog);border-radius:4px;overflow:hidden;align-self:center}
-    .fu-stat-prog{height:100%;background:var(--lime-d);border-radius:4px;transition:width .4s}
-    .fu-stat-pct{position:absolute;right:0;top:-18px;font-size:.62rem;font-weight:700;color:var(--mist)}
-    .fu-btn{display:inline-flex;align-items:center;gap:4px;padding:5px 11px;font-size:.7rem;font-weight:700;border-radius:7px;border:1.5px solid var(--fog);background:var(--card);color:var(--ink);cursor:pointer;transition:all .13s;text-decoration:none;white-space:nowrap}
-    .fu-btn:hover{border-color:var(--ink);background:var(--snow)}
-    .fu-btn-copy{background:#f0fdf4;border-color:#bbf7d0;color:#15803d}
-    .fu-btn-open{background:#eff6ff;border-color:#bfdbfe;color:#2563eb}
-    .fu-btn-share{background:#fdf4ff;border-color:#e9d5ff;color:#7c3aed}
-    .fu-btn-files{background:#fffbeb;border-color:#fde68a;color:#92400e}
-    .fu-file-row{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--fog);border-radius:8px;background:var(--bg)}
-    .fu-file-icon{font-size:1.3rem;flex-shrink:0}
-    .fu-file-info{flex:1;min-width:0}
-    .fu-file-name{font-size:.78rem;font-weight:700;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-    .fu-file-meta{font-size:.65rem;color:var(--mist);margin-top:2px}
-    </style>
-
-    <!-- Teams View                                                          -->
-    <!-- ═══════════════════════════════════════════════════════════════════ -->
-    <div class="view" id="viewTeams" style="flex-direction:column;overflow-y:auto;"></div>
-
-    <!-- ═══════════════════════════════════════════════════════════════════ -->
-    <!-- Image Compressor / Enhancer View                                    -->
-    <!-- ═══════════════════════════════════════════════════════════════════ -->
-    <div class="view" id="viewImgcomp" style="flex-direction:column;overflow:hidden;padding:0">
-
-      <!-- ── Header ── -->
-      <div class="cert-toolbar" style="flex-shrink:0;display:flex;align-items:center;gap:10px;padding:0 18px;height:54px;border-bottom:1.5px solid var(--fog);background:var(--card)">
-        <button class="t-back" onclick="goView('home')">← Dashboard</button>
-        <span style="font-size:.85rem;font-weight:800;flex:1">🖼️ Image Resizer &amp; Compressor</span>
-        <span id="icFileCount" style="font-size:.72rem;color:var(--mist2)"></span>
-      </div>
-
-      <!-- ── Two-column body ── -->
-      <div style="display:flex;flex:1;min-height:0;overflow:hidden">
-
-        <!-- ══ LEFT PANEL: settings + file list ══ -->
-        <div id="icControlPanel" style="width:300px;flex-shrink:0;background:var(--surface);border-right:1.5px solid var(--fog);display:flex;flex-direction:column;overflow:hidden">
-
-          <!-- Scrollable settings area -->
-          <div style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:14px">
-
-            <!-- Drop zone -->
-            <div>
-              <div class="stg-row-t" style="margin-bottom:8px">Upload Images</div>
-              <label id="icDropZone" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;border:2px dashed var(--fog);border-radius:12px;padding:18px 10px;cursor:pointer;background:var(--card);transition:border-color .2s;text-align:center" onmouseover="this.style.borderColor='var(--lime)'" onmouseout="this.style.borderColor='var(--fog)'">
-                <span style="font-size:1.8rem">📤</span>
-                <span style="font-size:.74rem;font-weight:700;color:var(--mist)">Click or drag images here</span>
-                <span style="font-size:.66rem;color:var(--mist2)">JPG · PNG · WEBP · GIF · BMP — multiple OK</span>
-                <input type="file" id="icFileInput" accept="image/*" multiple style="display:none" onchange="icAddFiles(this.files)">
-              </label>
-            </div>
-
-            <!-- ─ Global settings ─ -->
-            <div style="background:var(--card);border:1.5px solid var(--fog);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:12px">
-              <div style="font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--mist2)">Global Settings — fallback for images without a target size</div>
-
-              <!-- Resize mode tabs -->
-              <div>
-                <div class="stg-row-s" style="margin-bottom:6px">Global Resize Mode <span style="font-size:.6rem;color:var(--mist2)">· override per image below</span></div>
-                <div style="display:flex;gap:6px">
-                  <button id="icModePercent" class="btn bl btn-sm" style="flex:1;font-size:.71rem" onclick="icSetMode('percent')">% Scale</button>
-                  <button id="icModePx"      class="btn bo btn-sm" style="flex:1;font-size:.71rem" onclick="icSetMode('px')">Pixels</button>
-                </div>
-              </div>
-
-              <!-- % group -->
-              <div id="icPercentGroup">
-                <div style="display:flex;justify-content:space-between;margin-bottom:4px">
-                  <span class="stg-row-s">Scale</span>
-                  <span id="icPctVal" style="font-size:.72rem;font-weight:800;color:var(--lime-d)">100%</span>
-                </div>
-                <input type="range" id="icPctSlider" min="5" max="400" value="100" style="width:100%;accent-color:var(--lime)" oninput="icUpdatePercent(this.value)">
-                <div style="display:flex;justify-content:space-between;margin-top:2px">
-                  <span style="font-size:.63rem;color:var(--mist2)">5% compress</span>
-                  <span style="font-size:.63rem;color:var(--mist2)">400% upscale</span>
-                </div>
-              </div>
-
-              <!-- px group -->
-              <div id="icPxGroup" style="display:none">
-                <div class="stg-row-s" style="margin-bottom:6px">Max dimension (longest side)</div>
-                <div style="display:flex;align-items:center;gap:8px">
-                  <input type="number" id="icPxMax" min="1" max="16000" value="1920" style="flex:1;padding:6px 9px;border:1.5px solid var(--fog);border-radius:8px;background:var(--surface);color:var(--ink);font-size:.82rem;font-weight:700">
-                  <span style="font-size:.7rem;color:var(--mist2)">px</span>
-                </div>
-                <div style="font-size:.65rem;color:var(--mist2);margin-top:4px">Aspect ratio is always preserved</div>
-              </div>
-
-              <!-- Format -->
-              <div>
-                <div class="stg-row-s" style="margin-bottom:6px">Output Format</div>
-                <select id="icFmt" style="width:100%;padding:7px 9px;border:1.5px solid var(--fog);border-radius:8px;background:var(--surface);color:var(--ink);font-size:.8rem;font-weight:600" onchange="icFmtChanged()">
-                  <option value="keep">Keep original</option>
-                  <option value="jpeg">JPEG</option>
-                  <option value="png">PNG (lossless)</option>
-                  <option value="webp">WebP</option>
-                </select>
-              </div>
-
-              <!-- Quality -->
-              <div id="icQualGroup">
-                <div style="display:flex;justify-content:space-between;margin-bottom:4px">
-                  <span class="stg-row-s">Quality</span>
-                  <span id="icQualVal" style="font-size:.72rem;font-weight:800;color:var(--lime-d)">85%</span>
-                </div>
-                <input type="range" id="icQualSlider" min="1" max="100" value="85" style="width:100%;accent-color:var(--lime)" oninput="document.getElementById('icQualVal').textContent=this.value+'%'">
-              </div>
-            </div>
-
-            <!-- ─ Process all ─ -->
-            <button onclick="icProcessAll()" class="btn bl" style="width:100%;font-weight:800;font-size:.82rem">⚡ Process All Images</button>
-
-            <!-- ─ Download selected ─ -->
-            <button id="icDlBtn" onclick="icDownloadSelected()" class="btn" style="width:100%;background:var(--teal);color:#fff;font-weight:800;font-size:.82rem;display:none">⬇ Download Selected as ZIP</button>
-
-            <!-- ─ Summary bar ─ -->
-            <div id="icSummary" style="display:none;background:var(--card);border:1.5px solid var(--fog);border-radius:10px;padding:12px;font-size:.72rem;display:none">
-              <div style="font-weight:800;color:var(--mist);margin-bottom:6px">Batch Summary</div>
-              <div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="color:var(--mist2)">Total original</span><span id="icSumOrig" style="font-weight:700"></span></div>
-              <div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="color:var(--mist2)">Total output</span><span id="icSumOut" style="font-weight:700;color:var(--lime-d)"></span></div>
-              <div style="height:5px;background:var(--fog);border-radius:3px;overflow:hidden"><div id="icSumBar" style="height:100%;background:var(--lime);border-radius:3px;transition:width .4s"></div></div>
-              <div id="icSumNote" style="margin-top:6px;font-weight:800;text-align:center"></div>
-            </div>
-
-            <!-- ─ Clear all ─ -->
-            <button id="icClearBtn" onclick="icClearAll()" style="display:none;width:100%;background:none;border:1.5px solid var(--fog);border-radius:8px;padding:7px;font-size:.75rem;font-weight:700;color:var(--mist);cursor:pointer">🗑 Clear All</button>
-
-          </div><!-- /scroll area -->
-        </div><!-- /left panel -->
-
-        <!-- ══ RIGHT PANEL: file cards + preview ══ -->
-        <div style="flex:1;display:flex;flex-direction:column;min-width:0;overflow:hidden">
-
-          <!-- Empty state -->
-          <div id="icEmptyState" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:var(--mist2);text-align:center;padding:40px">
-            <span style="font-size:3.5rem;opacity:.3">🖼️</span>
-            <div style="font-size:.9rem;font-weight:800;opacity:.45">No images yet</div>
-            <div style="font-size:.75rem;opacity:.35">Upload one or more images from the panel on the left</div>
-          </div>
-
-          <!-- File grid + preview split -->
-          <div id="icWorkArea" style="display:none;flex:1;flex-direction:row;min-height:0;overflow:hidden">
-
-            <!-- File card list -->
-            <div id="icFileList" style="width:260px;flex-shrink:0;border-right:1.5px solid var(--fog);overflow-y:auto;background:var(--card);padding:10px;display:flex;flex-direction:column;gap:8px">
-              <div style="display:flex;align-items:center;justify-content:space-between;padding:2px 4px;margin-bottom:2px">
-                <span style="font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--mist2)">Files</span>
-                <label style="font-size:.67rem;font-weight:700;color:var(--mist);cursor:pointer;display:flex;align-items:center;gap:4px">
-                  <input type="checkbox" id="icSelectAll" onchange="icToggleAll(this.checked)" style="accent-color:var(--lime)"> All
-                </label>
-              </div>
-              <div id="icCards"></div>
-            </div>
-
-            <!-- Canvas preview -->
-            <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--surface);overflow:auto;padding:16px;gap:10px">
-              <div id="icPreviewEmpty" style="color:var(--mist2);font-size:.78rem;font-weight:700;opacity:.5">← Select a file to preview</div>
-              <div id="icPreviewWrap" style="display:none;flex-direction:column;align-items:center;gap:10px;width:100%">
-                <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;flex-shrink:0">
-                  <div style="background:var(--card);border:1.5px solid var(--fog);border-radius:8px;padding:5px 12px;font-size:.68rem;font-weight:700;color:var(--mist)">Original: <span id="icPvOrigDim" style="color:var(--ink)"></span> · <span id="icPvOrigSz" style="color:var(--ink)"></span></div>
-                  <div id="icPvOutBadge" style="display:none;background:var(--card);border:1.5px solid var(--fog);border-radius:8px;padding:5px 12px;font-size:.68rem;font-weight:700;color:var(--mist)">Output: <span id="icPvOutDim" style="color:var(--lime-d)"></span> · <span id="icPvOutSz" style="color:var(--lime-d)"></span></div>
-                </div>
-                <!-- Per-image target size + action buttons -->
-                <div style="display:flex;flex-direction:column;align-items:center;gap:8px;flex-shrink:0;width:100%;max-width:460px">
-                  <div style="background:var(--card);border:1.5px solid var(--fog);border-radius:10px;padding:10px 14px;width:100%;box-sizing:border-box">
-                    <div style="font-size:.68rem;font-weight:800;color:var(--mist2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">🎯 Target File Size (this image)</div>
-                    <div style="display:flex;align-items:center;gap:8px">
-                      <input type="number" id="icTargetKBInput" min="1" placeholder="e.g. 120" style="flex:1;padding:7px 10px;border:1.5px solid var(--fog);border-radius:8px;background:var(--surface);color:var(--ink);font-size:.85rem;font-weight:700" oninput="icSetTargetKB(this.value)">
-                      <select id="icTargetUnit" style="padding:7px 8px;border:1.5px solid var(--fog);border-radius:8px;background:var(--surface);color:var(--ink);font-size:.82rem;font-weight:700" onchange="icSetTargetKB(document.getElementById('icTargetKBInput').value)">
-                        <option value="kb">KB</option>
-                        <option value="mb">MB</option>
-                      </select>
-                      <button onclick="icClearTargetKB()" title="Clear — use global settings" style="padding:7px 10px;border:1.5px solid var(--fog);border-radius:8px;background:var(--surface);color:var(--mist);font-size:.75rem;font-weight:700;cursor:pointer">✕ Clear</button>
-                    </div>
-                    <div id="icTargetHint" style="font-size:.62rem;color:var(--mist2);margin-top:5px">Leave blank to use global resize settings · supports KB or MB</div>
-                  </div>
-                  <div style="display:flex;gap:8px">
-                    <button onclick="icProcessOne()" class="btn bl btn-sm" style="font-size:.75rem;font-weight:800">⚡ Resize This Image</button>
-                    <button id="icDlOneBtn" onclick="icDownloadOne()" class="btn btn-sm" style="display:none;background:var(--teal);color:#fff;border:none;border-radius:8px;padding:6px 14px;font-size:.75rem;font-weight:800;cursor:pointer">⬇ Download This Image</button>
-                  </div>
-                </div>
-                <canvas id="icCanvas" style="max-width:100%;max-height:calc(100vh - 300px);border-radius:10px;box-shadow:0 4px 24px rgba(0,0,0,.18);background:repeating-conic-gradient(#aaa 0% 25%,transparent 0% 50%) 0 0/16px 16px"></canvas>
-                <div style="font-size:.66rem;color:var(--mist2);flex-shrink:0">Canvas preview — resize this image or use Process All for batch</div>
-              </div>
-            </div>
-
-          </div><!-- /icWorkArea -->
-
-        </div><!-- /right panel -->
-      </div><!-- /body -->
-
-      <!-- ── Filename prompt modal ── -->
-      <div id="icNameModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9000;align-items:center;justify-content:center">
-        <div style="background:var(--card);border-radius:16px;padding:28px;width:min(460px,92vw);box-shadow:0 20px 60px rgba(0,0,0,.3)">
-          <div style="font-size:1rem;font-weight:800;margin-bottom:4px">📦 Download <span id="icDlCount" style="color:var(--lime-d)"></span></div>
-          <div style="font-size:.75rem;color:var(--mist);margin-bottom:16px">Choose how you'd like to download your processed images</div>
-
-          <!-- Direct download option -->
-          <div style="background:var(--surface);border:1.5px solid var(--fog);border-radius:10px;padding:12px 14px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;gap:10px">
-            <div>
-              <div style="font-size:.78rem;font-weight:800;color:var(--ink)">⬇ Download Directly</div>
-              <div style="font-size:.66rem;color:var(--mist2);margin-top:2px">Each image saved separately — no ZIP needed</div>
-            </div>
-            <button onclick="icConfirmDownloadDirect()" class="btn bo btn-sm" style="flex-shrink:0;font-weight:800;white-space:nowrap">Download Files</button>
-          </div>
-
-          <!-- ZIP download option -->
-          <div style="background:var(--surface);border:1.5px solid var(--fog);border-radius:10px;padding:12px 14px;margin-bottom:16px">
-            <div style="font-size:.78rem;font-weight:800;color:var(--ink);margin-bottom:8px">📦 Download as ZIP</div>
-            <input id="icZipName" type="text" placeholder="my-images" style="width:100%;padding:8px 12px;border:1.5px solid var(--fog);border-radius:8px;background:var(--card);color:var(--ink);font-size:.85rem;font-weight:700;box-sizing:border-box;margin-bottom:10px">
-            <button onclick="icConfirmDownload()" class="btn bl btn-sm" style="font-weight:800;width:100%">⬇ Create &amp; Download ZIP</button>
-          </div>
-
-          <div style="display:flex;justify-content:flex-end">
-            <button onclick="icNameModal(false)" class="btn bo btn-sm">Cancel</button>
-          </div>
-        </div>
-      </div>
-
-    </div><!-- /viewImgcomp -->
-
-    <!-- TP Add/Edit Modal -->
-    <div id="tpModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:8000;align-items:center;justify-content:center;">
-      <div style="background:var(--card);border-radius:16px;padding:28px;width:min(540px,96vw);max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.25);">
-        <div style="font-size:1rem;font-weight:800;margin-bottom:18px;" id="tpModalTitle">Add Training Partner</div>
-        <input type="hidden" id="tpEditId">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
-          <div>
-            <div style="font-size:.72rem;font-weight:700;margin-bottom:5px;">Name *</div>
-            <input id="tpFName" class="tp-inp" placeholder="Full name" maxlength="80">
-          </div>
-          <div>
-            <div style="font-size:.72rem;font-weight:700;margin-bottom:5px;">Organisation</div>
-            <input id="tpFOrg" class="tp-inp" placeholder="Company / Institution" maxlength="80">
-          </div>
-        </div>
-        <div style="margin-bottom:12px;">
-          <div style="font-size:.72rem;font-weight:700;margin-bottom:5px;">Skills / Expertise</div>
-          <input id="tpFSkills" class="tp-inp" placeholder="e.g. Data Science, Python, Machine Learning" maxlength="200">
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
-          <div>
-            <div style="font-size:.72rem;font-weight:700;margin-bottom:5px;">Email</div>
-            <input id="tpFEmail" class="tp-inp" placeholder="contact@example.com" maxlength="120" type="email">
-          </div>
-          <div>
-            <div style="font-size:.72rem;font-weight:700;margin-bottom:5px;">Phone Number</div>
-            <input id="tpFPhone" class="tp-inp" placeholder="+91 98765 43210" maxlength="30" type="tel">
-          </div>
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
-          <div>
-            <div style="font-size:.72rem;font-weight:700;margin-bottom:5px;">Location</div>
-            <input id="tpFLocation" class="tp-inp" placeholder="City, State / Country" maxlength="100">
-          </div>
-          <div>
-            <div style="font-size:.72rem;font-weight:700;margin-bottom:5px;">LinkedIn / URL</div>
-            <input id="tpFLink" class="tp-inp" placeholder="https://linkedin.com/in/…" maxlength="200">
-          </div>
-        </div>
-        <div style="margin-bottom:18px;">
-          <div style="font-size:.72rem;font-weight:700;margin-bottom:5px;">Bio / Description</div>
-          <textarea id="tpFBio" class="tp-inp" placeholder="Brief introduction…" maxlength="400" rows="3" style="resize:vertical;"></textarea>
-        </div>
-        <div style="display:flex;gap:8px;justify-content:flex-end;">
-          <button class="btn bo btn-sm" onclick="tpCloseModal()">Cancel</button>
-          <button class="btn bl btn-sm" onclick="tpSaveTP()">Save Partner</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- TP Feedback Modal -->
-    <div id="tpFeedbackModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:8001;align-items:center;justify-content:center;">
-      <div style="background:var(--card);border-radius:16px;padding:28px;width:min(480px,96vw);box-shadow:0 20px 60px rgba(0,0,0,.25);">
-        <div style="font-size:1rem;font-weight:800;margin-bottom:6px;">⭐ Leave Feedback</div>
-        <div style="font-size:.78rem;color:var(--mist);margin-bottom:18px;" id="tpFeedbackForName"></div>
-        <input type="hidden" id="tpFeedbackTpId">
-        <input type="hidden" id="tpFeedbackExistingId">
-        <!-- Star Rating -->
-        <div style="margin-bottom:14px;">
-          <div style="font-size:.72rem;font-weight:700;margin-bottom:8px;">Your Rating</div>
-          <div id="tpStarPicker" style="display:flex;gap:6px;font-size:2rem;cursor:pointer;">
-            <span class="tp-star" data-v="1" onclick="tpPickStar(1)">☆</span>
-            <span class="tp-star" data-v="2" onclick="tpPickStar(2)">☆</span>
-            <span class="tp-star" data-v="3" onclick="tpPickStar(3)">☆</span>
-            <span class="tp-star" data-v="4" onclick="tpPickStar(4)">☆</span>
-            <span class="tp-star" data-v="5" onclick="tpPickStar(5)">☆</span>
-          </div>
-          <div id="tpStarLabel" style="font-size:.7rem;color:var(--mist);margin-top:4px;">Click a star to rate</div>
-        </div>
-        <div style="margin-bottom:18px;">
-          <div style="font-size:.72rem;font-weight:700;margin-bottom:5px;">Comment <span style="font-weight:400;color:var(--mist);">(optional)</span></div>
-          <textarea id="tpFeedbackComment" class="tp-inp" placeholder="Share your experience…" maxlength="300" rows="3" style="resize:vertical;"></textarea>
-        </div>
-        <div style="display:flex;gap:8px;justify-content:flex-end;">
-          <button class="btn bo btn-sm" onclick="tpCloseFeedbackModal()">Cancel</button>
-          <button class="btn bl btn-sm" onclick="tpSubmitFeedback()">Submit Feedback</button>
-        </div>
-      </div>
-    </div>
-
-
-    <!-- FILE CONVERTER VIEW -->
-    <div class="view" id="viewFileconv" style="flex-direction:column;overflow:hidden;padding:0">
-
-      <!-- ── Header ── -->
-      <div style="flex-shrink:0;display:flex;align-items:center;gap:10px;padding:0 18px;height:54px;border-bottom:1.5px solid var(--fog);background:var(--card)">
-        <button class="t-back" onclick="goView('home')">← Dashboard</button>
-        <span style="font-size:.85rem;font-weight:800;flex:1">🔄 File Type Converter</span>
-        <span id="fcFileCount" style="font-size:.72rem;color:var(--mist2)"></span>
-        <button onclick="fcConvertAll()" id="fcConvertAllBtn" class="btn bl btn-sm" style="font-size:.75rem;font-weight:800">⚡ Convert All</button>
-        <button onclick="fcDownloadAll()" class="btn btn-sm" style="background:var(--teal);color:#fff;font-size:.75rem;font-weight:800;border:none;border-radius:8px;padding:6px 12px;cursor:pointer">⬇ Download All</button>
-      </div>
-
-      <!-- ── Two-column body ── -->
-      <div style="display:flex;flex:1;min-height:0;overflow:hidden">
-
-        <!-- LEFT PANEL: always visible -->
-        <div style="width:280px;flex-shrink:0;background:var(--surface);border-right:1.5px solid var(--fog);display:flex;flex-direction:column;overflow:hidden">
-          <div style="flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:12px">
-
-            <!-- Drop zone -->
-            <label id="fcDropzone" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;border:2px dashed var(--fog);border-radius:12px;padding:22px 12px;cursor:pointer;background:var(--card);transition:border-color .2s;text-align:center" onmouseover="this.style.borderColor='var(--lime)'" onmouseout="this.style.borderColor='var(--fog)'">
-              <span style="font-size:2rem">📂</span>
-              <span style="font-size:.74rem;font-weight:700;color:var(--mist)">Click or drag files here</span>
-              <span style="font-size:.63rem;color:var(--mist2)">Images · PDF · JSON · CSV · TXT · MD</span>
-              <input type="file" id="fcFileInput" multiple style="display:none" onchange="fcAddFiles(this.files)">
-            </label>
-
-            <!-- Supported formats -->
-            <div style="background:var(--card);border:1.5px solid var(--fog);border-radius:10px;padding:12px;font-size:.67rem;color:var(--mist2);line-height:1.75">
-              <div style="font-weight:800;color:var(--mist);margin-bottom:7px;font-size:.65rem;text-transform:uppercase;letter-spacing:.07em">Supported Conversions</div>
-              <div>🖼️ <b style="color:var(--ink)">Images</b> → JPG · PNG · WebP · BMP · GIF</div>
-              <div>📄 <b style="color:var(--ink)">PDF</b> → PNG · JPG (page 1)</div>
-              <div>📋 <b style="color:var(--ink)">JSON</b> → CSV · TXT</div>
-              <div>📊 <b style="color:var(--ink)">CSV</b> → JSON · TXT</div>
-              <div>📝 <b style="color:var(--ink)">Text / MD / HTML</b> → TXT · MD · HTML</div>
-            </div>
-
-            <!-- File card list -->
-            <div style="display:flex;align-items:center;justify-content:space-between">
-              <span style="font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--mist2)">Files</span>
-              <button onclick="fcClearAll()" style="font-size:.65rem;font-weight:700;color:var(--mist);background:none;border:none;cursor:pointer;padding:2px 8px;border-radius:5px" onmouseover="this.style.background='var(--fog)'" onmouseout="this.style.background='none'">🗑 Clear all</button>
-            </div>
-            <div id="fcCards" style="display:flex;flex-direction:column;gap:6px"></div>
-
-          </div>
-        </div>
-
-        <!-- RIGHT PANEL -->
-        <div style="flex:1;display:flex;flex-direction:column;min-width:0;overflow:hidden;background:var(--surface)">
-
-          <!-- Empty state (shown when no file selected) -->
-          <div id="fcEmptyState" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:var(--mist2);text-align:center;padding:40px">
-            <span style="font-size:3.5rem;opacity:.25">🔄</span>
-            <div style="font-size:.9rem;font-weight:800;opacity:.38">No files yet</div>
-            <div style="font-size:.74rem;opacity:.3">Upload files from the left panel</div>
-            <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:4px">
-              <span style="background:var(--fog);border-radius:20px;padding:4px 13px;font-size:.69rem;font-weight:700;opacity:.55">📄 PDF</span>
-              <span style="background:var(--fog);border-radius:20px;padding:4px 13px;font-size:.69rem;font-weight:700;opacity:.55">🖼️ Images</span>
-              <span style="background:var(--fog);border-radius:20px;padding:4px 13px;font-size:.69rem;font-weight:700;opacity:.55">📋 JSON</span>
-              <span style="background:var(--fog);border-radius:20px;padding:4px 13px;font-size:.69rem;font-weight:700;opacity:.55">📊 CSV</span>
-              <span style="background:var(--fog);border-radius:20px;padding:4px 13px;font-size:.69rem;font-weight:700;opacity:.55">📝 Text</span>
-            </div>
-          </div>
-
-          <!-- File detail (shown when a file is selected) -->
-          <div id="fcDetail" style="display:none;flex:1;flex-direction:column;overflow:hidden">
-
-            <!-- Controls bar -->
-            <div style="flex-shrink:0;background:var(--card);border-bottom:1.5px solid var(--fog);padding:14px 18px;display:flex;flex-direction:column;gap:11px">
-              <div style="display:flex;align-items:center;gap:10px">
-                <span style="font-size:1.6rem;line-height:1">📄</span>
-                <div style="flex:1;min-width:0">
-                  <div id="fcDetailName" style="font-size:.84rem;font-weight:800;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
-                  <div style="display:flex;gap:12px;margin-top:2px">
-                    <span style="font-size:.66rem;color:var(--mist2)">Size: <b id="fcDetailSize" style="color:var(--mist)"></b></span>
-                    <span style="font-size:.66rem;color:var(--mist2)">Type: <b id="fcDetailType" style="color:var(--mist)"></b></span>
-                  </div>
-                </div>
-              </div>
-              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-                <span style="font-size:.71rem;font-weight:700;color:var(--mist2);white-space:nowrap">Convert to:</span>
-                <select id="fcOutFmt" style="flex:1;min-width:160px;padding:7px 10px;border:1.5px solid var(--fog);border-radius:8px;background:var(--surface);color:var(--ink);font-size:.8rem;font-weight:600"></select>
-                <button id="fcConvertBtn" onclick="fcConvertSelected()" class="btn bl btn-sm" style="font-size:.78rem;font-weight:800;white-space:nowrap">⚡ Convert</button>
-                <button id="fcDownloadBtn" class="btn btn-sm" style="display:none;background:var(--teal);color:#fff;border:none;border-radius:8px;padding:6px 13px;font-size:.78rem;font-weight:800;cursor:pointer;white-space:nowrap">⬇ Download</button>
-              </div>
-            </div>
-
-            <!-- Preview -->
-            <div style="flex:1;overflow:auto;padding:20px;display:flex;flex-direction:column;gap:10px;align-items:center">
-              <div style="font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--mist2);align-self:flex-start">Preview</div>
-              <div id="fcPreviewWrap" style="width:100%;display:flex;flex-direction:column;align-items:center;gap:10px"></div>
-            </div>
-
-          </div>
-        </div>
-
-      </div>
-    </div><!-- /viewFileconv -->
-
-    <!-- IMAGE EDITOR VIEW -->
-    <div class="view" id="viewImgedit" style="flex-direction:column;overflow:hidden;padding:0">
-      <!-- Top bar -->
-      <div style="display:flex;align-items:center;gap:10px;padding:10px 18px;border-bottom:1.5px solid var(--fog);background:var(--card);flex-shrink:0;flex-wrap:wrap">
-        <button class="nova-back-btn" onclick="goView('home')">← Dashboard</button>
-        <div style="width:1.5px;height:22px;background:var(--fog);border-radius:2px;margin:0 2px"></div>
-        <div style="font-size:.95rem;font-weight:800;letter-spacing:-.02em;color:var(--ink)">🎨 Image Editor</div>
-        <div style="flex:1"></div>
-        <button onclick="ieDownload()" id="ieDownloadBtn" class="btn bl btn-sm" style="display:none;font-size:.78rem;font-weight:800;">⬇ Download</button>
-        <button onclick="ieReset()" id="ieResetBtn" class="btn bo btn-sm" style="display:none;font-size:.78rem;font-weight:700;">↺ Reset</button>
-      </div>
-      <!-- Body -->
-      <div style="display:flex;flex:1;overflow:hidden;min-height:0">
-
-        <!-- LEFT: image tray -->
-        <div style="width:200px;flex-shrink:0;border-right:1.5px solid var(--fog);background:var(--surface);display:flex;flex-direction:column;overflow:hidden">
-          <div style="padding:10px 12px;border-bottom:1px solid var(--fog);display:flex;align-items:center;gap:6px">
-            <label style="flex:1;display:flex;align-items:center;justify-content:center;gap:5px;background:var(--lime-p);border:1.5px dashed var(--lime);border-radius:8px;padding:7px 6px;cursor:pointer;font-size:.72rem;font-weight:700;color:var(--lime-d);transition:background .15s" onmouseover="this.style.background='#d9f4a0'" onmouseout="this.style.background='var(--lime-p)'">
-              ＋ Add Images
-              <input type="file" id="ieTrayInput" multiple accept="image/*" style="display:none" onchange="ieAddImages(this.files)">
-            </label>
-          </div>
-          <div id="ieTray" style="flex:1;overflow-y:auto;padding:8px;display:flex;flex-direction:column;gap:6px">
-            <div id="ieTrayEmpty" style="text-align:center;color:var(--mist2);font-size:.7rem;padding:24px 10px;line-height:1.7">No images yet.<br>Click <b>＋ Add Images</b><br>to get started.</div>
-          </div>
-          <div style="padding:8px 10px;border-top:1px solid var(--fog)">
-            <button onclick="ieClearTray()" style="width:100%;background:none;border:1px solid var(--fog);border-radius:6px;padding:5px;font-size:.65rem;color:var(--mist);cursor:pointer;font-weight:700" onmouseover="this.style.background='var(--fog)'" onmouseout="this.style.background='none'">🗑 Clear All</button>
-          </div>
-        </div>
-
-        <!-- CENTER: canvas -->
-        <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--snow);overflow:hidden;position:relative;border-left:1.5px solid var(--fog)" id="ieCanvasWrap">
-          <div id="ieCanvasEmpty" style="color:var(--mist);font-size:.82rem;text-align:center;line-height:2;pointer-events:none">
-            <div style="font-size:2.5rem;margin-bottom:8px">🖼️</div>
-            Select an image from the tray<br>to load it onto the canvas
-          </div>
-          <!-- Crop overlay (hidden initially) -->
-          <div id="ieCropOverlay" style="display:none;position:absolute;inset:0;z-index:10;cursor:crosshair" onmousedown="ieCropStart(event)" onmousemove="ieCropMove(event)" onmouseup="ieCropEnd(event)">
-            <canvas id="ieCropCanvas" style="position:absolute;top:0;left:0;width:100%;height:100%"></canvas>
-            <div id="ieCropRect" style="position:absolute;border:2px solid #ec4899;background:rgba(236,72,153,.08);pointer-events:none;display:none"></div>
-            <div style="position:absolute;top:10px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.7);color:#fff;font-size:.72rem;font-weight:700;padding:5px 14px;border-radius:20px;pointer-events:none">Drag to select crop area · Press <kbd style="background:#fff2;border-radius:3px;padding:1px 5px">Enter</kbd> to apply · <kbd style="background:#fff2;border-radius:3px;padding:1px 5px">Esc</kbd> to cancel</div>
-          </div>
-          <canvas id="ieCanvas" style="max-width:100%;max-height:100%;display:none;box-shadow:0 8px 40px rgba(0,0,0,.5)"></canvas>
-        </div>
-
-        <!-- RIGHT: controls — NOVA theme -->
-        <div style="width:250px;flex-shrink:0;border-left:1.5px solid var(--fog);background:var(--card);overflow-y:auto;padding:16px 14px 24px">
-
-          <!-- Empty state -->
-          <div id="ieControlsEmpty" style="color:var(--mist);font-size:.73rem;text-align:center;padding:40px 10px;line-height:2">
-            <div style="font-size:2rem;margin-bottom:8px;opacity:.3">🎨</div>
-            Load an image<br>to see editing controls.
-          </div>
-
-          <div id="ieControls" style="display:none;flex-direction:column;gap:18px">
-
-            <!-- Section label helper style: small uppercase lime accent -->
-
-            <!-- Crop -->
-            <div>
-              <div style="font-size:.63rem;font-weight:800;text-transform:uppercase;letter-spacing:.09em;color:var(--lime-d);margin-bottom:7px;display:flex;align-items:center;gap:5px">
-                <span>✂️</span> Crop
-              </div>
-              <button id="ieCropBtn" onclick="ieStartCrop()"
-                style="width:100%;background:var(--lime-p);border:1.5px solid var(--lime);border-radius:8px;padding:8px;font-size:.75rem;font-weight:800;color:var(--lime-d);cursor:pointer;transition:all .15s;letter-spacing:-.01em"
-                onmouseover="this.style.background='var(--lime)';this.style.color='#fff'"
-                onmouseout="this.style.background='var(--lime-p)';this.style.color='var(--lime-d)'">
-                ✂️ Start Crop
-              </button>
-            </div>
-
-            <!-- Divider -->
-            <div style="height:1px;background:var(--fog);border-radius:1px"></div>
-
-            <!-- Transform -->
-            <div>
-              <div style="font-size:.63rem;font-weight:800;text-transform:uppercase;letter-spacing:.09em;color:var(--lime-d);margin-bottom:7px;display:flex;align-items:center;gap:5px">
-                <span>🔄</span> Transform
-              </div>
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
-                <button onclick="ieRotate(-90)" class="ie-ctrl-btn" title="Rotate Left">↺ Left</button>
-                <button onclick="ieRotate(90)"  class="ie-ctrl-btn" title="Rotate Right">↻ Right</button>
-                <button onclick="ieFlip('h')"   class="ie-ctrl-btn" title="Flip Horizontal">⇔ Flip H</button>
-                <button onclick="ieFlip('v')"   class="ie-ctrl-btn" title="Flip Vertical">⇕ Flip V</button>
-              </div>
-            </div>
-
-            <!-- Divider -->
-            <div style="height:1px;background:var(--fog);border-radius:1px"></div>
-
-            <!-- Adjustments -->
-            <div>
-              <div style="font-size:.63rem;font-weight:800;text-transform:uppercase;letter-spacing:.09em;color:var(--lime-d);margin-bottom:10px;display:flex;align-items:center;gap:5px">
-                <span>🎚️</span> Adjustments
-              </div>
-              <div style="display:flex;flex-direction:column;gap:12px" id="ieSliders"></div>
-            </div>
-
-            <!-- Divider -->
-            <div style="height:1px;background:var(--fog);border-radius:1px"></div>
-
-            <!-- Filters -->
-            <div>
-              <div style="font-size:.63rem;font-weight:800;text-transform:uppercase;letter-spacing:.09em;color:var(--lime-d);margin-bottom:8px;display:flex;align-items:center;gap:5px">
-                <span>✨</span> Filters
-              </div>
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px" id="ieFilterBtns"></div>
-            </div>
-
-          </div>
-        </div>
-
-      </div>
-    </div><!-- /viewImgedit -->
 </div><!-- /app-body -->
+
+  <!-- Data Sync Modals -->
   <div class="sync-modal-ovl" id="syncCreateModal">
     <div class="sync-modal-box">
       <div class="sync-modal-t">📊 Create a Workbook Room</div>
@@ -3367,7 +2296,7 @@ function doGet(){return out({ok:true,status:'Nova Drive Relay running'});}</pre>
       <div class="ep-g">
         <div class="ep-f"><div class="ep-lb">First Name</div><input class="ep-in" id="epFirst" type="text" placeholder="Alex"></div>
         <div class="ep-f"><div class="ep-lb">Last Name</div><input class="ep-in" id="epLast" type="text" placeholder="Johnson"></div>
-        <div class="ep-f full"><div class="ep-lb">Email <span style="font-size:.6rem;color:var(--mist);font-weight:400;">(cannot be changed)</span></div><input class="ep-in" id="epEmail" type="email" placeholder="you@example.com" readonly style="opacity:.6;cursor:not-allowed;background:var(--snow);"></div>
+        <div class="ep-f full"><div class="ep-lb">Email</div><input class="ep-in" id="epEmail" type="email" placeholder="you@example.com"></div>
         <div class="ep-f"><div class="ep-lb">Phone</div><input class="ep-in" id="epPhone" type="tel" placeholder="+1 234 567"></div>
         <div class="ep-f"><div class="ep-lb">Location</div><input class="ep-in" id="epLoc" type="text" placeholder="City, Country"></div>
         <div class="ep-f full"><div class="ep-lb">Website</div><input class="ep-in" id="epWeb" type="url" placeholder="https://yoursite.com"></div>
@@ -3497,24 +2426,13 @@ function doGet(){return out({ok:true,status:'Nova Drive Relay running'});}</pre>
       <svg width="26" height="26" viewBox="0 0 87.3 78" xmlns="http://www.w3.org/2000/svg"><path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8H0a15.92 15.92 0 0 0 2.1 8z" fill="#0066da"/><path d="M43.65 25 29.9 1.2 0 53h27.5zM73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5H59.8l5.65 10.95z" fill="#ea4335"/><path d="M43.65 25 57.4 1.2C56.05.4 54.5 0 52.9 0H34.4c-1.6 0-3.15.45-4.5 1.2z" fill="#00832d"/><path d="M59.8 53H27.5L13.75 76.8c1.35.8 2.9 1.2 4.5 1.2h50.8c1.6 0 3.15-.45 4.5-1.2z" fill="#2684fc"/><path d="M73.4 26.5c-.8-1.4-1.95-2.5-3.3-3.3L57.4 1.2 43.65 25l16.15 28H87.3c0-1.6-.4-3.15-1.2-4.5z" fill="#ffba00"/></svg>
       <div>
         <div style="font-size:1rem;font-weight:800;letter-spacing:-.02em">Connect Google Drive</div>
-        <div style="font-size:.7rem;color:var(--mist);margin-top:1px">Signed in with Google? Your Drive is already connected automatically ✨</div>
+        <div style="font-size:.7rem;color:var(--mist);margin-top:1px">No API key required — uses a free Apps Script relay</div>
       </div>
       <button onclick="closeGDriveModal()" style="margin-left:auto;width:28px;height:28px;border-radius:7px;border:1.5px solid var(--fog);background:transparent;font-size:.85rem;color:var(--mist);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0">✕</button>
     </div>
 
     <!-- Steps -->
     <div style="padding:16px 24px 0">
-
-      <!-- Auto-connect notice -->
-      <div id="gdriveAutoNotice" style="display:none;background:#e8f5e9;border:1.5px solid #a5d6a7;border-radius:10px;padding:11px 14px;margin-bottom:14px;font-size:.75rem;color:#2e7d32;line-height:1.6">
-        ✅ <b>You're signed in with Google</b> — your Drive is already connected! You can close this and upload directly. The manual setup below is only needed for email/password accounts.
-      </div>
-      <script>
-        (function(){
-          var t = (typeof NOVA_DRIVE_TOKEN !== 'undefined' ? NOVA_DRIVE_TOKEN : null) || (function(){ try{ return sessionStorage.getItem('nova_drive_token'); }catch(e){ return null; } })();
-          if (t) { var n = document.getElementById('gdriveAutoNotice'); if(n) n.style.display='block'; }
-        })();
-      </script>
 
       <!-- Step 1 -->
       <div style="display:flex;gap:11px;align-items:flex-start;margin-bottom:14px">
@@ -3722,136 +2640,8 @@ function doGet(){return out({ok:true,status:'Nova Drive Relay running'});}</pre>
   </div>
 </div>
 <script src="assets/js/app.js"></script>
-<script src="assets/js/tp.js"></script>
 <script src="assets/js/college-portal-admin.js"></script>
 <script src="assets/js/workbook.js"></script>
-<script src="assets/js/notifications.js"></script>
 <script src="assets/js/page-init.js"></script>
-<script>
-// ── Badge Auto-Hide ─────────────────────────────────────────────
-// Badges (New / Live / TP) disappear after user clicks that nav item
-// and stay hidden permanently via localStorage
-(function(){
-  const STORE_KEY = 'nova_badge_dismissed';
-  function dismissed(){
-    try{ return JSON.parse(localStorage.getItem(STORE_KEY)||'{}'); }catch(e){return {};}
-  }
-  function dismiss(id){
-    const d = dismissed(); d[id] = 1;
-    try{ localStorage.setItem(STORE_KEY, JSON.stringify(d)); }catch(e){}
-  }
-  function hideBadge(item){
-    const badge = item.querySelector('.sb-bx');
-    if(badge) badge.style.display = 'none';
-  }
-  function applyDismissed(){
-    const d = dismissed();
-    document.querySelectorAll('.sb-i[id]').forEach(function(item){
-      if(d[item.id]) hideBadge(item);
-    });
-  }
-  // Hide on click
-  document.querySelectorAll('.sb-i[id]').forEach(function(item){
-    item.addEventListener('click', function(){
-      if(item.querySelector('.sb-bx')){
-        dismiss(item.id);
-        hideBadge(item);
-      }
-    });
-  });
-  // Apply on load
-  applyDismissed();
-})();
-</script>
-  <script src="assets/js/nova-folders.js"></script>
-  <script src="assets/js/drive-manager.js"></script>
-  <script src="assets/js/teams.js"></script>
-  <script src="assets/js/followup.js"></script>
-
-  <!-- ══ NOVA DRIVE MANAGER PANEL ══ -->
-  <div id="dmPanel">
-    <div id="dmPanelInner">
-
-      <!-- Header -->
-      <div class="dm-header">
-        <div style="font-size:1.4rem">☁️</div>
-        <div style="flex:1">
-          <div class="dm-header-title">Drive Manager</div>
-          <div class="dm-header-sub">Browse, upload &amp; manage files across your Google Drives</div>
-        </div>
-        <button class="dm-tool-btn" onclick="DM.refresh()" title="Refresh">🔄</button>
-        <button class="dm-tool-btn" onclick="DM.closePanel()" style="border-color:var(--coral);color:var(--coral)">✕ Close</button>
-      </div>
-
-      <!-- Drive tabs -->
-      <div class="dm-tabs-row" id="dmDriveTabs">
-        <span style="font-size:.72rem;color:var(--mist)">Loading drives…</span>
-      </div>
-
-      <!-- Toolbar -->
-      <div class="dm-toolbar">
-        <div id="dmBreadcrumb" class="dm-breadcrumb"></div>
-        <button class="dm-tool-btn" onclick="DM.openNewFolder()">📁 New Folder</button>
-        <label class="dm-tool-btn primary" style="cursor:pointer">
-          ⬆ Upload
-          <input type="file" multiple style="display:none" onchange="DM.handleUpload(this)">
-        </label>
-      </div>
-
-      <!-- Upload progress -->
-      <div id="dmUploadBar">
-        <span style="font-size:.7rem;font-weight:700;color:var(--mist);white-space:nowrap" id="dmUploadTxt">Uploading…</span>
-        <div id="dmUploadTrack"><div id="dmUploadFill" style="width:0%"></div></div>
-      </div>
-
-      <!-- Quota bar -->
-      <div id="dmQuota">
-        <span style="font-size:.72rem;color:var(--mist)">Loading storage info…</span>
-      </div>
-
-      <!-- File area -->
-      <div id="dmFileArea">
-        <div style="padding:50px;text-align:center">
-          <div class="dm-spinner"></div>
-          <div style="margin-top:12px;font-size:.78rem;color:var(--mist)">Loading files…</div>
-        </div>
-      </div>
-
-    </div>
-  </div>
-
-  <!-- Add Drive Modal -->
-  <div id="dmAddModal" class="dm-modal" onclick="if(event.target===this)DM.closeAddDrive()">
-    <div class="dm-modal-box">
-      <div class="dm-modal-title">☁ Add a Drive Folder</div>
-      <div class="dm-modal-sub">Paste a Google Drive folder link or folder ID.<br>
-        Example: <code style="font-size:.68rem;background:var(--fog);padding:1px 5px;border-radius:4px">https://drive.google.com/drive/folders/ABC123…</code>
-      </div>
-      <input id="dmLinkInp" class="dm-modal-inp" placeholder="Paste Drive folder link or ID…"
-        onkeydown="if(event.key==='Enter')DM.confirmAddDrive()">
-      <div class="dm-modal-actions">
-        <button class="btn bo btn-sm" onclick="DM.closeAddDrive()">Cancel</button>
-        <button class="btn bd btn-sm" onclick="DM.confirmAddDrive()">☁ Connect</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- New Folder Modal -->
-  <div id="dmFolderModal" class="dm-modal" onclick="if(event.target===this)DM.closeNewFolder()">
-    <div class="dm-modal-box">
-      <div class="dm-modal-title">📁 New Folder</div>
-      <div class="dm-modal-sub">Creates a new folder inside your current location.</div>
-      <input id="dmFolderInp" class="dm-modal-inp" placeholder="Folder name…"
-        onkeydown="if(event.key==='Enter')DM.confirmNewFolder()">
-      <div class="dm-modal-actions">
-        <button class="btn bo btn-sm" onclick="DM.closeNewFolder()">Cancel</button>
-        <button class="btn bd btn-sm" onclick="DM.confirmNewFolder()">Create</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Drive Manager toast (fallback) -->
-  <div id="dmToast" class="dm-toast"></div>
-
 </body>
 </html>

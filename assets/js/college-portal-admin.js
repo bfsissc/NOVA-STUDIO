@@ -6,6 +6,7 @@ var CP = {
   currentSlug:      '',
   templateImg:      null,
   templateUrl:      '',
+  storageUrl:       '',
   csvDriveUrl:      '',
   templateWidth:    2480,
   templateHeight:   1754,
@@ -67,6 +68,7 @@ function cpRestoreDraft() {
     CP.namePos        = draft.namePos        || { xPct: 50, yPct: 62 };
     CP.nameStyle      = draft.nameStyle      || { fontSize: 60, fontFamily: 'Georgia', color: '#1a1a1a', bold: false, italic: false, align: 'center' };
     CP.templateUrl    = draft.templateUrl    || '';
+    CP.storageUrl     = CP.templateUrl && !CP.templateUrl.startsWith('data:') ? CP.templateUrl : '';
     CP.templateWidth  = draft.templateWidth  || 2480;
     CP.templateHeight = draft.templateHeight || 1754;
     CP.csvDriveUrl    = draft.csvDriveUrl    || '';
@@ -384,11 +386,24 @@ function cpTemplateUrlChanged() {
   if (wrap) wrap.style.display = 'none';
 }
 
+async function cpUploadTemplateBlob(blob, fileName) {
+  if (typeof fbStorage === 'undefined') throw new Error('Firebase Storage not initialized');
+  var uid = (typeof U !== 'undefined' && U)
+    ? (U.uid || U.email || 'anon').replace(/[^a-zA-Z0-9_-]/g, '_')
+    : 'anon';
+  var ext = (fileName || 'template.png').split('.').pop() || 'png';
+  var path = 'portal-templates/' + uid + '/' + Date.now() + '.' + ext;
+  var storageRef = fbStorage.ref(path);
+  await storageRef.put(blob, { contentType: blob.type || 'image/png' });
+  return storageRef.getDownloadURL();
+}
+
 async function cpHandleTemplateFileInput(input) {
   var file = input.files && input.files[0];
   if (!file) return;
   if (!file.type.startsWith('image/')) { cpToast('Please select an image file (PNG, JPG, etc.)', 'err'); return; }
   if (file.size > 10 * 1024 * 1024) { cpToast('Image is too large (max 10 MB).', 'err'); return; }
+  CP.storageUrl = '';
 
   var badge    = document.getElementById('cpTemplateBadge');
   var badgeWrap= document.getElementById('cpTemplateBadgeWrap');
@@ -410,27 +425,13 @@ async function cpHandleTemplateFileInput(input) {
     };
     previewImg.src = localUrl;
 
-    var base64DataUrl = await new Promise(function(res, rej) {
-      var r = new FileReader();
-      r.onload = function(e) { res(e.target.result); };
-      r.onerror = rej;
-      r.readAsDataURL(file);
-    });
-    CP.templateUrl = base64DataUrl;
-
-    if (typeof fbStorage === 'undefined') throw new Error('Firebase Storage not initialized');
-
-    // Compress to ~800 KB before uploading — avoids Firebase Storage quota/size issues
-    badge.textContent = 'Compressing…';
-    var compressedDataUrl = await cpCompressForFirestore(base64DataUrl, 800000);
-    var uploadBlob = cpDataUrlToBlob(compressedDataUrl);
-
-    var uid  = (typeof U !== 'undefined' && U) ? U.uid : 'anon';
-    var path = 'portal-templates/' + uid + '/' + Date.now() + '.jpg';
-    var storageRef = fbStorage.ref(path);
-
     badge.textContent = 'Uploading… 0%';
-    var uploadTask = storageRef.put(uploadBlob, { contentType: 'image/jpeg' });
+    if (typeof fbStorage === 'undefined') throw new Error('Firebase Storage not initialized');
+    var uid      = (typeof U !== 'undefined' && U) ? (U.uid || U.email || 'anon').replace(/[^a-zA-Z0-9_-]/g, '_') : 'anon';
+    var ext      = file.name.split('.').pop() || 'png';
+    var path     = 'portal-templates/' + uid + '/' + Date.now() + '.' + ext;
+    var storageRef = fbStorage.ref(path);
+    var uploadTask = storageRef.put(file, { contentType: file.type || 'image/png' });
     uploadTask.on('state_changed', function(snapshot) {
       var pct = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
       badge.textContent = 'Uploading… ' + pct + '%';
@@ -438,6 +439,7 @@ async function cpHandleTemplateFileInput(input) {
     await uploadTask;
     var downloadUrl = await storageRef.getDownloadURL();
     CP.storageUrl = downloadUrl;
+    CP.templateUrl = downloadUrl;
 
     badge.textContent = file.name + ' (' + (CP.templateWidth || '?') + '×' + (CP.templateHeight || '?') + ') — uploaded ✓';
     statusEl.textContent = '✅';
@@ -460,6 +462,7 @@ function cpTriggerTemplateUpload() {
 async function cpFetchTemplateFromUrl() {
   var raw = (document.getElementById('cpTemplateDriveUrl').value || '').trim();
   if (!raw) { cpToast('Please paste a Google Drive link or upload a file.', 'err'); return; }
+  CP.storageUrl = '';
   var badge    = document.getElementById('cpTemplateBadge');
   var badgeWrap= document.getElementById('cpTemplateBadgeWrap');
   var statusEl = document.getElementById('cpTemplateLoadStatus');
@@ -496,11 +499,20 @@ async function cpFetchTemplateFromUrl() {
       var img = new Image();
       await new Promise(function(resolve, reject) { img.onload = resolve; img.onerror = function() { reject(new Error('Decode failed')); }; img.src = dataUrl; });
       CP.templateImg = img; CP.templateWidth = img.naturalWidth; CP.templateHeight = img.naturalHeight; CP.templateUrl = dataUrl;
-      badge.textContent = 'Template loaded (' + img.naturalWidth + '×' + img.naturalHeight + ') ✓';
+      badge.textContent = 'Uploading template to Firebase…';
+      try {
+        var storageUrl = await cpUploadTemplateBlob(blob, 'drive-template.' + ((blob.type || 'image/png').split('/')[1] || 'png'));
+        CP.storageUrl = storageUrl;
+        CP.templateUrl = storageUrl;
+        badge.textContent = 'Template loaded (' + img.naturalWidth + '×' + img.naturalHeight + ') — uploaded ✓';
+      } catch(uploadErr) {
+        badge.textContent = 'Template loaded locally, but upload failed: ' + uploadErr.message;
+        cpToast('Template loaded, but Firebase upload failed. Check Storage CORS before publishing.', 'err');
+      }
       statusEl.textContent = '✅';
       var thumb = document.getElementById('cpTemplateThumb');
       if (thumb) { thumb.src = dataUrl; thumb.style.display = 'block'; }
-      cpToast('Template loaded ✓', 'ok');
+      if (CP.storageUrl) cpToast('Template loaded & uploaded ✓', 'ok');
       if (CP.step === 3) cpDrawNameCanvas();
       cpSaveDraft();
       return;
@@ -578,7 +590,7 @@ async function cpFetchCsvFromUrl() {
 }
 
 function cpRemoveTemplate() {
-  CP.templateImg = null; CP.templateUrl = '';
+  CP.templateImg = null; CP.templateUrl = ''; CP.storageUrl = '';
   document.getElementById('cpTemplateBadgeWrap').style.display = 'none';
   var urlInput = document.getElementById('cpTemplateDriveUrl');
   if (urlInput) urlInput.value = '';
@@ -764,43 +776,6 @@ function cpUpdateNameStyle() {
   cpSaveDraft();
 }
 
-// Compress a base64 image so it fits within Firestore's 1MB field limit
-// Convert a base64 data-URL to a Blob without using fetch()
-// This avoids CORS/CSP issues and works even for large data-URLs
-function cpDataUrlToBlob(dataUrl) {
-  var parts  = dataUrl.split(',');
-  var mime   = (parts[0].match(/:(.*?);/) || ['','image/jpeg'])[1];
-  var binary = atob(parts[1]);
-  var arr    = new Uint8Array(binary.length);
-  for (var i = 0; i < binary.length; i++) arr[i] = binary.charCodeAt(i);
-  return new Blob([arr], { type: mime });
-}
-
-function cpCompressForFirestore(dataUrl, maxBytes) {
-  return new Promise(function(resolve) {
-    var img = new Image();
-    img.onload = function() {
-      var MAX = 1400;
-      var w = img.naturalWidth, h = img.naturalHeight;
-      if (w > MAX || h > MAX) {
-        if (w >= h) { h = Math.round(h * MAX / w); w = MAX; }
-        else        { w = Math.round(w * MAX / h); h = MAX; }
-      }
-      var c = document.createElement('canvas');
-      c.width = w; c.height = h;
-      c.getContext('2d').drawImage(img, 0, 0, w, h);
-      var q = 0.85, r = c.toDataURL('image/jpeg', q);
-      while (Math.round(r.length * 0.75) > maxBytes && q > 0.15) {
-        q = Math.max(0.15, q - 0.1);
-        r = c.toDataURL('image/jpeg', q);
-      }
-      resolve(r);
-    };
-    img.onerror = function() { resolve(dataUrl); };
-    img.src = dataUrl;
-  });
-}
-
 // ══════════════════════════════════════════════════════════════════
 // ── Step 5: Publish ──
 // ══════════════════════════════════════════════════════════════════
@@ -821,49 +796,12 @@ async function cpPublishPortal() {
     if (!CP.currentSlug || !collegeName) { cpToast('Missing college name.', 'err'); btn.disabled = false; btn.textContent = '🚀 Publish Portal'; return; }
     if (!CP.templateUrl) { cpToast('No template — go back to Step 2 and load a template.', 'err'); btn.disabled = false; btn.textContent = '🚀 Publish Portal'; return; }
 
-    // Always store a Firebase Storage URL in Firestore — never raw base64.
-    // This keeps the Firestore document tiny and the student portal fast.
-    var templateUrlToStore = '';
-
-    if (CP.storageUrl && !CP.storageUrl.startsWith('data:')) {
-      // File was uploaded via the file picker — Storage URL already exists
-      templateUrlToStore = CP.storageUrl;
-
-    } else if (CP.templateUrl && CP.templateUrl.startsWith('data:')) {
-      // Template came from a Drive URL (base64 only) — compress then upload to Storage
-      try {
-        // Step 1: Always compress first to keep Storage upload small and fast
-        btn.textContent = 'Compressing template…';
-        var compressedDataUrl = await cpCompressForFirestore(CP.templateUrl, 800000); // ~800 KB target
-
-        // Step 2: Convert base64 data-URL → Blob without using fetch() (works even offline / CORS)
-        btn.textContent = 'Uploading template to storage…';
-        var imgBlob = cpDataUrlToBlob(compressedDataUrl);
-        var uid  = (typeof U !== 'undefined' && U && U.uid) ? U.uid : 'anon';
-        var path = 'portal-templates/' + uid + '/' + CP.currentSlug + '_' + Date.now() + '.jpg';
-        var sRef = fbStorage.ref(path);
-        await sRef.put(imgBlob, { contentType: 'image/jpeg' });
-        CP.storageUrl      = await sRef.getDownloadURL();
-        templateUrlToStore = CP.storageUrl;
-        cpToast('Template uploaded to storage ✓', 'ok');
-      } catch (storageErr) {
-        console.warn('Storage upload failed, falling back to compressed Firestore embed:', storageErr);
-        // Last resort: store a heavily-compressed base64 directly in Firestore
-        btn.textContent = 'Compressing (storage unavailable)…';
-        templateUrlToStore = await cpCompressForFirestore(CP.templateUrl, 500000);
-        if (!templateUrlToStore || templateUrlToStore.length * 0.75 > 950000) {
-          throw new Error('Template too large for storage and Firestore. Please upload a smaller image (under 2 MB). Storage error: ' + storageErr.message);
-        }
+    var templateUrlToStore = CP.storageUrl || CP.templateUrl;
+    if (templateUrlToStore && templateUrlToStore.startsWith('data:')) {
+      var base64Size = Math.round(templateUrlToStore.length * 0.75);
+      if (base64Size > 900000) {
+        throw new Error('Template image is too large to save directly. Please upload the template again after applying Firebase Storage CORS.');
       }
-
-    } else if (CP.templateUrl) {
-      // Already a plain URL (not base64) — use as-is
-      templateUrlToStore = CP.templateUrl;
-    }
-
-    if (!templateUrlToStore) {
-      cpToast('Template not ready — please re-upload the certificate image.', 'err');
-      btn.disabled = false; btn.textContent = 'Publish Portal'; return;
     }
 
     var portalData = {
@@ -943,10 +881,11 @@ function cpCopyLink() {
 async function cpLoadPortalList() {
   if (typeof U === 'undefined' || !U) return;
   try {
-    var snap = await fbDb.collection('college_portals').where('createdBy', '==', U.email).limit(500).get();
+    var snap = await fbDb.collection('college_portals').where('createdBy', '==', U.email).limit(50).get();
     CP.portals = [];
     snap.forEach(function(doc) { CP.portals.push(Object.assign({ slug: doc.id }, doc.data())); });
     CP.portals.sort(function(a, b) { return (b.createdAt || 0) - (a.createdAt || 0); });
+    if (CP.portals.length > 20) CP.portals = CP.portals.slice(0, 20);
     cpRenderPortalList();
   } catch(e) { /* ignore */ }
 }
@@ -1397,6 +1336,7 @@ async function cpLoadPortal(slug) {
     CP.namePos     = d.namePosition || { xPct: 50, yPct: 62 };
     CP.nameStyle   = d.nameStyle    || { fontSize: 60, fontFamily: 'Georgia', color: '#1a1a1a', bold: false, italic: false, align: 'center' };
     CP.templateUrl = d.templateUrl  || '';
+    CP.storageUrl  = CP.templateUrl && !CP.templateUrl.startsWith('data:') ? CP.templateUrl : '';
     CP.csvDriveUrl = d.csvDriveUrl  || '';
     CP.templateWidth  = d.templateWidth  || 2480;
     CP.templateHeight = d.templateHeight || 1754;
@@ -1475,7 +1415,7 @@ function cpUpdateDistrictOptions() {
 function cpNewPortal() {
   cpSetPortalView('create');
   cpClearDraft();
-  CP.currentSlug = ''; CP.templateImg = null; CP.templateUrl = ''; CP.csvDriveUrl = ''; CP.students = [];
+  CP.currentSlug = ''; CP.templateImg = null; CP.templateUrl = ''; CP.storageUrl = ''; CP.csvDriveUrl = ''; CP.students = [];
   CP.namePos   = { xPct: 50, yPct: 62 };
   CP.nameStyle = { fontSize: 60, fontFamily: 'Georgia', color: '#1a1a1a', bold: false, italic: false, align: 'center' };
   function _set(id, prop, val) { var el = document.getElementById(id); if (el) el[prop] = val; }
@@ -1585,27 +1525,13 @@ async function cpOpenRequests(slug, name) {
         + '</div>';
     }
 
-    // store for bulk download
-    window._cpLastRows = rows;
-    window._cpLastName = name;
-    window._cpLastSlug = slug;
-
-    var dlBar = '<div style="padding:8px 14px;display:flex;gap:8px;background:#f8fafc;border-bottom:1px solid var(--fog);flex-wrap:wrap;align-items:center">'
-      + '<span style="font-size:.72rem;font-weight:700;color:var(--mist);margin-right:4px">&#11015; Bulk Download:</span>'
-      + '<button onclick="cpDownloadRequests(\'all\',\'csv\')" style="padding:4px 11px;font-size:.72rem;font-weight:700;border-radius:6px;cursor:pointer;background:#f0fdf4;color:#166534;border:1.5px solid #bbf7d0">CSV (All)</button>'
-      + '<button onclick="cpDownloadRequests(\'pending\',\'csv\')" style="padding:4px 11px;font-size:.72rem;font-weight:700;border-radius:6px;cursor:pointer;background:#fef2f2;color:#991b1b;border:1.5px solid #fecaca">CSV (Pending)</button>'
-      + '<button onclick="cpDownloadRequests(\'all\',\'xlsx\')" style="padding:4px 11px;font-size:.72rem;font-weight:700;border-radius:6px;cursor:pointer;background:#eff6ff;color:#1d4ed8;border:1.5px solid #bfdbfe">Excel (All)</button>'
-      + '<button onclick="cpDownloadRequests(\'pending\',\'xlsx\')" style="padding:4px 11px;font-size:.72rem;font-weight:700;border-radius:6px;cursor:pointer;background:#fdf4ff;color:#7e22ce;border:1.5px solid #e9d5ff">Excel (Pending)</button>'
-      + '</div>';
-
     var html = '<div style="padding:12px 14px 6px;display:flex;align-items:center;justify-content:space-between;gap:8px">'
       + '<div style="font-size:.82rem;font-weight:800;color:var(--ink)">&#x1F4CB; Certificate Requests: ' + escH(name) + '</div>'
       + '<div style="font-size:.72rem;color:var(--mist)">'
       + '<span style="color:#dc2626;font-weight:700">' + pending.length + ' pending</span>'
       + (resolved.length > 0 ? ' &nbsp;&middot;&nbsp; ' + resolved.length + ' sent' : '')
       + '</div>'
-      + '</div>'
-      + dlBar;
+      + '</div>';
 
     if (pending.length > 0) {
       html += '<div style="background:#fef2f2;border-radius:0;border-top:1px solid #fecaca;border-bottom:1px solid #fecaca">'
@@ -1620,55 +1546,6 @@ async function cpOpenRequests(slug, name) {
     panel.innerHTML = html;
   } catch(err) {
     panel.innerHTML = '<div style="padding:14px;font-size:.8rem;color:#dc2626">Error loading requests: ' + escH(err.message) + '</div>';
-  }
-}
-
-
-// ── Bulk Download Requests ──────────────────────────────────────────
-function cpDownloadRequests(filter, fmt) {
-  var rows = window._cpLastRows || [];
-  var name = window._cpLastName || 'college';
-  var slug = window._cpLastSlug || 'requests';
-
-  var data = filter === 'pending'
-    ? rows.filter(function(r){ return r.status === 'pending'; })
-    : rows;
-
-  if (data.length === 0) { cpToast('No ' + filter + ' requests to download.', 'err'); return; }
-
-  var safe = name.replace(/[^a-z0-9]/gi, '_');
-  var ts   = new Date().toISOString().slice(0,10);
-  var fname = safe + '_' + filter + '_requests_' + ts;
-
-  var sheetData = [['Name','Email','Status','Submitted At']].concat(
-    data.map(function(r){
-      var dt = r.submittedAt ? new Date(r.submittedAt).toLocaleString('en-IN') : '—';
-      return [r.name || '—', r.email || '—', r.status || '—', dt];
-    })
-  );
-
-  if (fmt === 'csv') {
-    var csv = sheetData.map(function(row){
-      return row.map(function(c){ return '"' + String(c).replace(/"/g,'""') + '"'; }).join(',');
-    }).join('\r\n');
-    var blob = new Blob([csv], { type: 'text/csv' });
-    var a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = fname + '.csv';
-    a.click();
-    cpToast('Downloaded ' + data.length + ' rows as CSV ✓', 'ok');
-  } else {
-    // XLSX via SheetJS
-    try {
-      var wb = XLSX.utils.book_new();
-      var ws = XLSX.utils.aoa_to_sheet(sheetData);
-      ws['!cols'] = [{wch:25},{wch:35},{wch:12},{wch:25}];
-      XLSX.utils.book_append_sheet(wb, ws, 'Requests');
-      XLSX.writeFile(wb, fname + '.xlsx');
-      cpToast('Downloaded ' + data.length + ' rows as Excel ✓', 'ok');
-    } catch(e) {
-      cpToast('Excel error: ' + e.message, 'err');
-    }
   }
 }
 

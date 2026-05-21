@@ -1,68 +1,50 @@
-# NOVA Studio — Setup & Fix Notes
+# NOVA Studio - College Portal Fix Notes
 
-===========================================
-  STEP 1 — RUN A LOCAL SERVER (REQUIRED)
-===========================================
+## What changed
 
-DO NOT open index.html directly by double-clicking it.
-Firebase, Google Login, and Drive API do NOT work from file:// URLs.
+### Firebase Storage upload CORS
 
-How to run the server:
-  - Double-click START_SERVER.bat
-  - Then open http://localhost:8080 in your browser
+The previous `cors.json` allowed only `GET`. Firebase browser uploads need upload
+methods too, otherwise the browser preflight fails and the portal template upload
+shows a CORS error from `firebasestorage.googleapis.com`.
 
-If START_SERVER.bat doesn't work, open Command Prompt in this folder and run:
-  python -m http.server 8080
+The included `cors.json` now allows:
 
+- `GET`
+- `HEAD`
+- `POST`
+- `PUT`
+- `DELETE`
 
-===========================================
-  STEP 2 — FIREBASE CONSOLE (one-time)
-===========================================
+Apply it once to the Firebase Storage bucket before testing portal deployment.
+The console error you shared uses the appspot bucket, so run this for that bucket:
 
-A) Add localhost to Authorized Domains:
-   Firebase Console -> Authentication -> Settings -> Authorized domains
-   Click "Add domain" -> type: localhost
-   (This allows Google login to work on your local server)
+```powershell
+gsutil cors set cors.json gs://nova-studio-494013.appspot.com
+```
 
-B) Update Firestore Rules:
-   Firebase Console -> Firestore Database -> Rules
-   Replace ALL content with the text inside firestore.rules
-   Click Publish
+If your Firebase console shows the newer bucket name too, apply it there as well:
 
-C) Set Storage Rules:
-   Firebase Console -> Storage -> Rules
-   Replace ALL content with the text inside storage.rules
-   Click Publish
+```powershell
+gsutil cors set cors.json gs://nova-studio-494013.firebasestorage.app
+```
 
+### Firestore Listen 400 errors
 
-===========================================
-  STEP 3 — GOOGLE CLOUD CONSOLE (one-time)
-===========================================
+`assets/js/config.js` now enables Firestore long-polling auto detection. This is
+more reliable on hosted domains and networks that break WebChannel streaming.
 
-Enable Google Drive API:
-  1. Go to console.cloud.google.com
-  2. Select the same project as your Firebase app (nova-studio-494013)
-  3. APIs & Services -> Enable APIs & Services
-  4. Search "Google Drive API" -> Click it -> Click Enable
+### Drive template URLs
 
-That's it. No API key needed — Firebase handles auth automatically.
+Google Drive thumbnail URLs are not reliable as certificate template URLs because
+browsers block them with CORS. The admin flow now copies a loaded Drive template
+into Firebase Storage and stores the Firebase download URL in Firestore.
 
+That means newly published portals no longer depend on Drive thumbnails for the
+student download page.
 
-===========================================
-  WHAT CHANGED IN THIS BUILD
-===========================================
+## Important
 
-1. SYNTAX ERROR FIXED — teams.js line 968 (corrupted string)
-
-2. AUTO GOOGLE DRIVE SETUP:
-   - User clicks "Continue with Google"
-   - App silently creates "NOVA Backend" folder in their Drive
-   - All uploads go there automatically — no Apps Script, no manual setup
-
-3. TEAM FILES — all members can preview & download directly
-   - No need to open Google Drive separately
-
-4. "Could not save profile" error — FIXED
-   - Updated Firestore rules (firestore.rules included)
-
-5. START_SERVER.bat — now works with Python or Node.js automatically
+Existing portals that already have a Drive thumbnail URL saved in Firestore may
+still fail. Open the portal in admin, reload or upload the template, then publish
+again so the saved `templateUrl` becomes a Firebase Storage URL.
