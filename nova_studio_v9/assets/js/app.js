@@ -67,9 +67,14 @@ window.onload = () => {
         }
       }
     } else {
-      // Not signed in — try localStorage cache for email/pass users
-      const s = localStorage.getItem(SS);
-      if (s) { try { U = JSON.parse(s); if (U && U.email) { boot(false); return; } } catch(e){} }
+      // Not signed in. Do not boot from localStorage only: Firestore rules
+      // require request.auth, so cached profiles would cause permission-denied.
+      U = null;
+      try { localStorage.removeItem(SS); } catch(e) {}
+      var login = document.getElementById('loginScreen');
+      var app = document.getElementById('app');
+      if (login) login.classList.remove('out');
+      if (app) app.classList.remove('visible');
       updateGreeting();
     }
   });
