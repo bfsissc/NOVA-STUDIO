@@ -1669,7 +1669,7 @@ function doGet(){return out({ok:true,status:'Nova Drive Relay running'});}</pre>
                   <div style="width:24px;height:24px;background:var(--lime);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:800;color:#1a1f27;flex-shrink:0">1</div>
                   <div>
                     <div class="stg-card-h" style="margin:0;padding:0;border:none">Generate API Key</div>
-                    <div style="font-size:.7rem;color:var(--mist);margin-top:1px">Enter your access password to generate a personal key</div>
+                    <div style="font-size:.7rem;color:var(--mist);margin-top:1px">Verify your access password to unlock the API key field</div>
                   </div>
                 </div>
 
@@ -1690,12 +1690,12 @@ function doGet(){return out({ok:true,status:'Nova Drive Relay running'});}</pre>
                 </div>
 
                 <div id="novaAiGenResult" style="display:none;margin-top:12px">
-                  <div style="font-size:.7rem;color:var(--lime-d);font-weight:700;margin-bottom:6px;display:flex;align-items:center;gap:5px">
-                    <span>✅</span> Key generated — copy it, then paste into Card 2 below
-                  </div>
-                  <div style="display:flex;gap:6px;align-items:center;background:var(--snow);border:1.5px solid rgba(200,241,53,.3);border-radius:8px;padding:10px 12px">
-                    <input class="fi" id="novaAiGenKeyDisplay" type="text" readonly style="flex:1;font-family:'DM Mono',monospace;font-size:.73rem;background:transparent;border:none;box-shadow:none;padding:0;outline:none;color:var(--ink)">
-                    <button class="btn bo btn-sm" onclick="novaAiCopyGenKey()" title="Copy key" style="flex-shrink:0">📋 Copy</button>
+                  <div style="background:rgba(34,197,94,.08);border:1.5px solid rgba(34,197,94,.25);border-radius:10px;padding:12px 14px;display:flex;align-items:flex-start;gap:10px">
+                    <span style="font-size:1.1rem;flex-shrink:0">✅</span>
+                    <div>
+                      <div style="font-size:.76rem;font-weight:800;color:#15803d;margin-bottom:3px">Nova key generated &amp; auto-filled below!</div>
+                      <div style="font-size:.7rem;color:var(--mist);line-height:1.5">Your personal Nova API key has been generated and pasted into Card 2 automatically. Just click <b>Save &amp; Activate</b> to turn on Nova AI.</div>
+                    </div>
                   </div>
                 </div>
 
@@ -1734,7 +1734,7 @@ function doGet(){return out({ok:true,status:'Nova Drive Relay running'});}</pre>
                   <div style="width:24px;height:24px;background:var(--teal);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:800;color:#1a1f27;flex-shrink:0">2</div>
                   <div>
                     <div class="stg-card-h" style="margin:0;padding:0;border:none">Activate Nova AI</div>
-                    <div style="font-size:.7rem;color:var(--mist);margin-top:1px">Paste your generated key to unlock the assistant</div>
+                    <div style="font-size:.7rem;color:var(--mist);margin-top:1px">Your Nova key will be auto-filled after Step 1 — just activate</div>
                   </div>
                 </div>
 
@@ -1745,7 +1745,7 @@ function doGet(){return out({ok:true,status:'Nova Drive Relay running'});}</pre>
                 <div id="novaAiPasteCard" style="background:var(--snow);border:2px dashed var(--fog-d);border-radius:12px;padding:20px 16px;margin-bottom:12px;text-align:center;cursor:pointer;transition:all .2s" onclick="document.getElementById('novaAiApiKey').focus()" title="Click to paste your key">
                   <div style="font-size:1.6rem;margin-bottom:6px;opacity:.6">🔐</div>
                   <div style="font-size:.72rem;font-weight:700;color:var(--mist);margin-bottom:10px">Paste your API key here</div>
-                  <input class="fi" id="novaAiApiKey" type="text" placeholder="sk-ant-…  (paste your generated key)" autocomplete="off" spellcheck="false"
+                  <input class="fi" id="novaAiApiKey" type="text" placeholder="nova-…  (paste your generated key)" autocomplete="off" spellcheck="false"
                     style="font-family:'DM Mono',monospace;font-size:.74rem;text-align:center;background:var(--card);border:1.5px solid var(--fog-d);border-radius:8px;padding:10px 12px;width:100%;outline:none;box-sizing:border-box;transition:border-color .2s"
                     onkeydown="if(event.key==='Enter')novaAiSaveKey()"
                     oninput="this.type='text'"
@@ -1758,7 +1758,7 @@ function doGet(){return out({ok:true,status:'Nova Drive Relay running'});}</pre>
                 </button>
 
                 <div id="novaAiKeyError" style="display:none;margin-top:8px;font-size:.71rem;color:#dc2626;padding:8px 12px;background:rgba(220,38,38,.08);border-radius:8px;border:1px solid rgba(220,38,38,.18)">
-                  ❌ Invalid key — must start with <code style="font-size:.7rem">sk-ant</code>
+                  ❌ Invalid key — must start with <code style="font-size:.7rem">nova-</code>
                 </div>
 
                 <div id="novaAiClearRow" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--fog)">

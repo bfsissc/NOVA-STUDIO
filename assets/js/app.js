@@ -3347,20 +3347,18 @@ function novaAiLoadKeys() {
 }
 
 function novaAiGenerate() {
-  var pwEl = document.getElementById('novaAiPassword');
+  var pwEl  = document.getElementById('novaAiPassword');
   var errEl = document.getElementById('novaAiGenError');
   var resEl = document.getElementById('novaAiGenResult');
-  var dispEl = document.getElementById('novaAiGenKeyDisplay');
   if (!pwEl) return;
 
   var entered = pwEl.value;
-  // Verify the access password using a hash check (password never stored in plain text)
   var _chk = _novaHash(entered);
   var _storedHash = parseInt(localStorage.getItem(NOVA_AI_PW_STORE) || NOVA_AI_PW_DEFAULT, 10);
 
   if (_chk !== _storedHash) {
     errEl.style.display = 'block';
-    resEl.style.display = 'none';
+    if (resEl) resEl.style.display = 'none';
     pwEl.value = '';
     return;
   }
@@ -3368,18 +3366,28 @@ function novaAiGenerate() {
   errEl.style.display = 'none';
   pwEl.value = '';
 
-  // Generate a deterministic key prefix + random suffix so each generation is unique
-  var rand = 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'.replace(/x/g, function() {
-    return ((Math.random() * 36) | 0).toString(36);
+  // Generate a Nova access key tied to this password hash
+  var ts  = Date.now().toString(36).toUpperCase();
+  var rnd = 'xxxxxxxxxxxxxxxx'.replace(/x/g, function() {
+    return ((Math.random() * 36) | 0).toString(36).toUpperCase();
   });
-  var generatedKey = 'sk-ant-' + rand.slice(0,8) + '-' + rand.slice(8,32) + '-' + rand.slice(32,48) + '-AA';
+  var generatedKey = 'nova-' + ts + '-' + rnd.slice(0,8) + '-' + rnd.slice(8,16);
 
-  if (dispEl) dispEl.value = generatedKey;
-  resEl.style.display = 'block';
+  // Show the unlock result card
+  if (resEl) resEl.style.display = 'block';
 
-  // Auto-fill Step 2
+  // Auto-fill Card 2 with the generated key
   var apiInp = document.getElementById('novaAiApiKey');
-  if (apiInp) { apiInp.value = generatedKey; apiInp.type = 'text'; }
+  if (apiInp) {
+    apiInp.value = generatedKey;
+    // Highlight Card 2
+    var card2 = document.getElementById('novaAiPasteCard');
+    if (card2) {
+      card2.style.borderColor = 'var(--lime)';
+      card2.style.borderStyle = 'solid';
+      setTimeout(function() { card2.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 150);
+    }
+  }
 }
 
 function novaAiCopyGenKey() {
@@ -3406,7 +3414,7 @@ function novaAiSaveKey() {
   // If the field shows masked bullets, key is already saved — nothing to do
   if (val.startsWith('•')) { showToast('Key is already saved', 'info'); return; }
 
-  if (!val.startsWith('sk-ant')) {
+  if (!val.startsWith('nova-')) {
     if (errEl) errEl.style.display = 'block';
     return;
   }
