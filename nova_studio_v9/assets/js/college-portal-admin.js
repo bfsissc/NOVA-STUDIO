@@ -7,6 +7,7 @@ var CP = {
   templateImg:      null,
   templateUrl:      '',
   storageUrl:       '',
+  templateQuality:  null,
   csvDriveUrl:      '',
   templateWidth:    2480,
   templateHeight:   1754,
@@ -421,9 +422,22 @@ async function cpHandleTemplateFileInput(input) {
     });
     CP.templateUrl = base64DataUrl;
 
-    // Compress first so we always have a deployable fallback if Storage CORS is blocked.
-    badge.textContent = 'Compressing…';
-    var compressedDataUrl = await cpCompressForFirestore(base64DataUrl, 800000);
+    // Adaptive quality mode: make a best-quality copy that fits portal limits.
+    badge.textContent = 'Adaptive quality…';
+    var adaptive = await cpAdaptiveCompressTemplate(base64DataUrl, 760000);
+    var compressedDataUrl = adaptive.dataUrl;
+    CP.templateQuality = adaptive;
+    var adaptiveImg = new Image();
+    await new Promise(function(resolve, reject) {
+      adaptiveImg.onload = resolve;
+      adaptiveImg.onerror = function() { reject(new Error('Compressed image decode failed')); };
+      adaptiveImg.src = compressedDataUrl;
+    });
+    CP.templateImg = adaptiveImg;
+    CP.templateWidth = adaptiveImg.naturalWidth;
+    CP.templateHeight = adaptiveImg.naturalHeight;
+    var adaptiveThumb = document.getElementById('cpTemplateThumb');
+    if (adaptiveThumb) { adaptiveThumb.src = compressedDataUrl; adaptiveThumb.style.display = 'block'; }
     var uploadBlob = cpDataUrlToBlob(compressedDataUrl);
     CP.templateUrl = compressedDataUrl;
 
@@ -444,16 +458,16 @@ async function cpHandleTemplateFileInput(input) {
         var downloadUrl = await storageRef.getDownloadURL();
         CP.storageUrl = downloadUrl;
         CP.templateUrl = downloadUrl;
-        badge.textContent = file.name + ' (' + (CP.templateWidth || '?') + '×' + (CP.templateHeight || '?') + ') — uploaded ✓';
+        badge.textContent = file.name + ' (' + adaptive.width + '×' + adaptive.height + ', ' + cpFormatBytes(adaptive.bytes) + ') — uploaded ✓';
       } catch(storageErr) {
         console.warn('Template Storage upload failed, using compressed Firestore fallback:', storageErr);
         CP.storageUrl = '';
         CP.templateUrl = compressedDataUrl;
-        badge.textContent = file.name + ' (' + (CP.templateWidth || '?') + '×' + (CP.templateHeight || '?') + ') — ready ✓';
+        badge.textContent = file.name + ' (' + adaptive.width + '×' + adaptive.height + ', ' + cpFormatBytes(adaptive.bytes) + ') — ready ✓';
       }
     } else {
       CP.storageUrl = '';
-      badge.textContent = file.name + ' (' + (CP.templateWidth || '?') + '×' + (CP.templateHeight || '?') + ') — ready ✓';
+      badge.textContent = file.name + ' (' + adaptive.width + '×' + adaptive.height + ', ' + cpFormatBytes(adaptive.bytes) + ') — ready ✓';
     }
 
     statusEl.textContent = '✅';
@@ -512,11 +526,16 @@ async function cpFetchTemplateFromUrl() {
       });
       var img = new Image();
       await new Promise(function(resolve, reject) { img.onload = resolve; img.onerror = function() { reject(new Error('Decode failed')); }; img.src = dataUrl; });
-      CP.templateImg = img; CP.templateWidth = img.naturalWidth; CP.templateHeight = img.naturalHeight; CP.templateUrl = dataUrl;
-      badge.textContent = 'Template loaded (' + img.naturalWidth + '×' + img.naturalHeight + ') ✓';
+      badge.textContent = 'Adaptive quality…';
+      var adaptive = await cpAdaptiveCompressTemplate(dataUrl, 760000);
+      CP.templateQuality = adaptive;
+      var finalImg = new Image();
+      await new Promise(function(resolve, reject) { finalImg.onload = resolve; finalImg.onerror = function() { reject(new Error('Compressed image decode failed')); }; finalImg.src = adaptive.dataUrl; });
+      CP.templateImg = finalImg; CP.templateWidth = finalImg.naturalWidth; CP.templateHeight = finalImg.naturalHeight; CP.templateUrl = adaptive.dataUrl;
+      badge.textContent = 'Template loaded (' + adaptive.width + '×' + adaptive.height + ', ' + cpFormatBytes(adaptive.bytes) + ') ✓';
       statusEl.textContent = '✅';
       var thumb = document.getElementById('cpTemplateThumb');
-      if (thumb) { thumb.src = dataUrl; thumb.style.display = 'block'; }
+      if (thumb) { thumb.src = adaptive.dataUrl; thumb.style.display = 'block'; }
       cpToast('Template loaded ✓', 'ok');
       if (CP.step === 3) cpDrawNameCanvas();
       cpSaveDraft();
@@ -793,28 +812,98 @@ function cpDataUrlToBlob(dataUrl) {
   return new Blob([arr], { type: mime });
 }
 
-function cpCompressForFirestore(dataUrl, maxBytes) {
+function cpDataUrlBytes(dataUrl) {
+  var b64 = String(dataUrl || '').split(',')[1] || '';
+  var padding = (b64.endsWith('==') ? 2 : (b64.endsWith('=') ? 1 : 0));
+  return Math.max(0, Math.floor((b64.length * 3) / 4) - padding);
+}
+
+function cpFormatBytes(bytes) {
+  bytes = Math.max(0, Math.round(bytes || 0));
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return Math.round(bytes / 1024) + ' KB';
+  return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+}
+
+function cpAdaptiveCompressTemplate(dataUrl, targetBytes) {
+  targetBytes = targetBytes || 760000;
   return new Promise(function(resolve) {
+    var originalBytes = cpDataUrlBytes(dataUrl);
     var img = new Image();
     img.onload = function() {
-      var MAX = 1400;
-      var w = img.naturalWidth, h = img.naturalHeight;
-      if (w > MAX || h > MAX) {
-        if (w >= h) { h = Math.round(h * MAX / w); w = MAX; }
-        else        { w = Math.round(w * MAX / h); h = MAX; }
+      var naturalW = img.naturalWidth || 1;
+      var naturalH = img.naturalHeight || 1;
+      var maxEdge = Math.min(2200, Math.max(naturalW, naturalH));
+      var minEdge = 900;
+      var best = null;
+
+      function renderAt(edge, quality) {
+        var w = naturalW, h = naturalH;
+        if (Math.max(w, h) > edge) {
+          if (w >= h) { h = Math.round(h * edge / w); w = edge; }
+          else        { w = Math.round(w * edge / h); h = edge; }
+        }
+        var c = document.createElement('canvas');
+        c.width = Math.max(1, w);
+        c.height = Math.max(1, h);
+        var ctx = c.getContext('2d');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, c.width, c.height);
+        ctx.drawImage(img, 0, 0, c.width, c.height);
+        var out = c.toDataURL('image/jpeg', quality);
+        return {
+          dataUrl: out,
+          bytes: cpDataUrlBytes(out),
+          quality: quality,
+          width: c.width,
+          height: c.height,
+          targetBytes: targetBytes,
+          originalBytes: originalBytes
+        };
       }
-      var c = document.createElement('canvas');
-      c.width = w; c.height = h;
-      c.getContext('2d').drawImage(img, 0, 0, w, h);
-      var q = 0.85, r = c.toDataURL('image/jpeg', q);
-      while (Math.round(r.length * 0.75) > maxBytes && q > 0.15) {
-        q = Math.max(0.15, q - 0.1);
-        r = c.toDataURL('image/jpeg', q);
+
+      while (maxEdge >= minEdge) {
+        var low = 0.42, high = 0.94, localBest = null;
+        for (var i = 0; i < 8; i++) {
+          var q = (low + high) / 2;
+          var candidate = renderAt(maxEdge, q);
+          if (candidate.bytes <= targetBytes) {
+            localBest = candidate;
+            low = q;
+          } else {
+            high = q;
+          }
+        }
+        if (localBest) {
+          best = localBest;
+          break;
+        }
+        maxEdge = Math.floor(maxEdge * 0.88);
       }
-      resolve(r);
+
+      if (!best) best = renderAt(Math.max(720, maxEdge), 0.38);
+      best.changed = best.bytes < originalBytes || best.width !== naturalW || best.height !== naturalH;
+      resolve(best);
     };
-    img.onerror = function() { resolve(dataUrl); };
+    img.onerror = function() {
+      resolve({
+        dataUrl: dataUrl,
+        bytes: originalBytes,
+        quality: 1,
+        width: 0,
+        height: 0,
+        targetBytes: targetBytes,
+        originalBytes: originalBytes,
+        changed: false
+      });
+    };
     img.src = dataUrl;
+  });
+}
+
+function cpCompressForFirestore(dataUrl, maxBytes) {
+  return cpAdaptiveCompressTemplate(dataUrl, maxBytes).then(function(result) {
+    return result.dataUrl;
   });
 }
 
@@ -851,7 +940,7 @@ async function cpPublishPortal() {
       try {
         // Step 1: Always compress first to keep Storage upload small and fast
         btn.textContent = 'Compressing template…';
-        var compressedDataUrl = await cpCompressForFirestore(CP.templateUrl, 800000); // ~800 KB target
+        var compressedDataUrl = await cpCompressForFirestore(CP.templateUrl, 760000);
 
         // Step 2: Convert base64 data-URL → Blob without using fetch() (works even offline / CORS)
         btn.textContent = 'Uploading template to storage…';
@@ -867,7 +956,7 @@ async function cpPublishPortal() {
         console.warn('Storage upload failed, falling back to compressed Firestore embed:', storageErr);
         // Last resort: store a heavily-compressed base64 directly in Firestore
         btn.textContent = 'Compressing (storage unavailable)…';
-        templateUrlToStore = await cpCompressForFirestore(CP.templateUrl, 500000);
+        templateUrlToStore = await cpCompressForFirestore(CP.templateUrl, 760000);
         if (!templateUrlToStore || templateUrlToStore.length * 0.75 > 950000) {
           throw new Error('Template too large for storage and Firestore. Please upload a smaller image (under 2 MB). Storage error: ' + storageErr.message);
         }
