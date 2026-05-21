@@ -78,6 +78,6 @@ console.cloud.google.com -> APIs & Services -> Enable APIs & Services -> Google 
 - Added Firestore long-polling auto detection for hosted-domain stability.
 - Portal templates uploaded from device now save a Firebase Storage URL.
 - If Firebase Storage CORS is still blocked, portal publish falls back to a compressed Firestore-safe template so deployment can continue.
-- College Portal now has adaptive quality compression: device uploads and Drive image links are resized/encoded to the best quality under a safe portal size target before publish.
+- College Portal now stages the template locally first: it shows the loaded image size, prompts for Auto Compress before positioning if the file is too large, and publishes without any Firebase Storage upload attempt.
 - Existing portals that saved a Google Drive thumbnail URL should be opened in admin, template re-uploaded or reloaded, and published again.
 - Kept the full app files: profile, settings, teams, drive manager, notifications, folders, certificate, mailer, projects, data sync, and portal.

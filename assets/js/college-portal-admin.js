@@ -8,6 +8,9 @@ var CP = {
   templateUrl:      '',
   storageUrl:       '',
   templateQuality:  null,
+  templateBytes:    0,
+  templateTargetBytes: 760000,
+  templateNeedsCompression: false,
   csvDriveUrl:      '',
   templateWidth:    2480,
   templateHeight:   1754,
@@ -31,6 +34,7 @@ function cpSaveDraft() {
       namePos:       CP.namePos,
       nameStyle:     CP.nameStyle,
       templateUrl:   CP.templateUrl,
+      templateBytes: CP.templateBytes || cpDataUrlBytes(CP.templateUrl),
       templateWidth: CP.templateWidth,
       templateHeight:CP.templateHeight,
       csvDriveUrl:   CP.csvDriveUrl,
@@ -70,6 +74,8 @@ function cpRestoreDraft() {
     CP.nameStyle      = draft.nameStyle      || { fontSize: 60, fontFamily: 'Georgia', color: '#1a1a1a', bold: false, italic: false, align: 'center' };
     CP.templateUrl    = draft.templateUrl    || '';
     CP.storageUrl     = CP.templateUrl && !CP.templateUrl.startsWith('data:') ? CP.templateUrl : '';
+    CP.templateBytes   = draft.templateBytes || cpDataUrlBytes(CP.templateUrl);
+    CP.templateNeedsCompression = CP.templateUrl && CP.templateUrl.startsWith('data:') && CP.templateBytes > CP.templateTargetBytes;
     CP.templateWidth  = draft.templateWidth  || 2480;
     CP.templateHeight = draft.templateHeight || 1754;
     CP.csvDriveUrl    = draft.csvDriveUrl    || '';
@@ -343,7 +349,13 @@ function cpRenderStep(n) {
   if (n === 5) cpRenderPortalLink();
 }
 
-function cpNextStep() { if (cpValidateStep(CP.step)) { cpSaveDraft(); cpRenderStep(CP.step + 1); } }
+async function cpNextStep() {
+  if (CP.step === 2 && CP.templateNeedsCompression) {
+    cpShowCompressionPrompt();
+    return;
+  }
+  if (cpValidateStep(CP.step)) { cpSaveDraft(); cpRenderStep(CP.step + 1); }
+}
 function cpPrevStep() { cpSaveDraft(); cpRenderStep(Math.max(1, CP.step - 1)); }
 
 function cpValidateStep(n) {
@@ -545,6 +557,178 @@ async function cpFetchTemplateFromUrl() {
   statusEl.textContent = '❌';
   badge.textContent = 'Could not load (' + lastErr + ')';
   cpToast('Drive URL failed. Try uploading the file directly.', 'err');
+}
+
+// Override: simplified template flow. No Firebase Storage upload here.
+// The template is fetched/read, measured, and compressed before Step 3 if needed.
+async function cpSetLoadedTemplateDataUrl(dataUrl, label) {
+  CP.storageUrl = '';
+  CP.templateUrl = dataUrl;
+  CP.templateQuality = null;
+  CP.templateBytes = cpDataUrlBytes(dataUrl);
+  CP.templateNeedsCompression = CP.templateBytes > CP.templateTargetBytes;
+
+  var img = new Image();
+  await new Promise(function(resolve, reject) {
+    img.onload = resolve;
+    img.onerror = function() { reject(new Error('Image decode failed')); };
+    img.src = dataUrl;
+  });
+
+  CP.templateImg = img;
+  CP.templateWidth = img.naturalWidth;
+  CP.templateHeight = img.naturalHeight;
+
+  var badge = document.getElementById('cpTemplateBadge');
+  var wrap = document.getElementById('cpTemplateBadgeWrap');
+  var statusEl = document.getElementById('cpTemplateLoadStatus');
+  var thumb = document.getElementById('cpTemplateThumb');
+  if (wrap) wrap.style.display = 'block';
+  if (statusEl) statusEl.textContent = 'OK';
+  if (thumb) { thumb.src = dataUrl; thumb.style.display = 'block'; }
+  if (badge) {
+    badge.textContent = (label || 'Template') + ' (' + img.naturalWidth + 'x' + img.naturalHeight + ', ' + cpFormatBytes(CP.templateBytes) + ')' +
+      (CP.templateNeedsCompression ? ' - compression needed before next' : ' - ready');
+  }
+  cpSaveDraft();
+}
+
+async function cpHandleTemplateFileInput(input) {
+  var file = input.files && input.files[0];
+  if (!file) return;
+  if (!file.type.startsWith('image/')) { cpToast('Please select an image file (PNG, JPG, etc.)', 'err'); return; }
+  if (file.size > 10 * 1024 * 1024) { cpToast('Image is too large (max 10 MB).', 'err'); return; }
+
+  var badge = document.getElementById('cpTemplateBadge');
+  var wrap = document.getElementById('cpTemplateBadgeWrap');
+  var statusEl = document.getElementById('cpTemplateLoadStatus');
+  if (wrap) wrap.style.display = 'block';
+  if (statusEl) statusEl.textContent = '...';
+  if (badge) badge.textContent = 'Reading file...';
+
+  try {
+    var dataUrl = await new Promise(function(res, rej) {
+      var r = new FileReader();
+      r.onload = function(e) { res(e.target.result); };
+      r.onerror = rej;
+      r.readAsDataURL(file);
+    });
+    await cpSetLoadedTemplateDataUrl(dataUrl, file.name || 'Template');
+    cpToast(CP.templateNeedsCompression ? 'Template loaded. Click Next to auto-compress.' : 'Template ready.', CP.templateNeedsCompression ? 'info' : 'ok');
+    var urlInput = document.getElementById('cpTemplateDriveUrl');
+    if (urlInput) urlInput.value = '';
+  } catch(err) {
+    if (statusEl) statusEl.textContent = 'X';
+    if (badge) badge.textContent = 'Load failed: ' + err.message;
+    cpToast('Template load failed: ' + err.message, 'err');
+  }
+}
+
+async function cpFetchTemplateFromUrl() {
+  var raw = (document.getElementById('cpTemplateDriveUrl').value || '').trim();
+  if (!raw) { cpToast('Please paste a Google Drive link or upload a file.', 'err'); return; }
+
+  var badge = document.getElementById('cpTemplateBadge');
+  var wrap = document.getElementById('cpTemplateBadgeWrap');
+  var statusEl = document.getElementById('cpTemplateLoadStatus');
+  if (wrap) wrap.style.display = 'block';
+  if (statusEl) statusEl.textContent = '...';
+  if (badge) badge.textContent = 'Fetching image link...';
+  localStorage.setItem('cp_last_tpl_url', raw);
+
+  var fileId = cpExtractDriveFileId(raw);
+  var driveUrls = fileId ? [
+    'https://drive.google.com/thumbnail?id=' + fileId + '&sz=w2400',
+    'https://lh3.googleusercontent.com/d/' + fileId + '=w2400',
+    'https://drive.google.com/uc?export=download&id=' + fileId
+  ] : [raw];
+  var proxies = ['https://corsproxy.io/?', 'https://api.allorigins.win/raw?url='];
+  var urlsToTry = [];
+  driveUrls.forEach(function(u) { urlsToTry.push(u); });
+  proxies.forEach(function(proxy) { driveUrls.forEach(function(u) { urlsToTry.push(proxy + encodeURIComponent(u)); }); });
+
+  var lastErr = '';
+  for (var ui = 0; ui < urlsToTry.length; ui++) {
+    try {
+      if (badge) badge.textContent = 'Trying image method ' + (ui + 1) + ' of ' + urlsToTry.length + '...';
+      var ctrl = new AbortController();
+      var timer = setTimeout(function() { ctrl.abort(); }, 10000);
+      var resp = await fetch(urlsToTry[ui], { signal: ctrl.signal });
+      clearTimeout(timer);
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      var ct = resp.headers.get('content-type') || '';
+      if (ct.includes('text/html')) throw new Error('Got HTML instead of image');
+      var blob = await resp.blob();
+      if (!blob.type.startsWith('image/') && blob.size < 5000) throw new Error('Not an image');
+      var dataUrl = await new Promise(function(res, rej) {
+        var r = new FileReader();
+        r.onload = function(e) { res(e.target.result); };
+        r.onerror = rej;
+        r.readAsDataURL(blob);
+      });
+      await cpSetLoadedTemplateDataUrl(dataUrl, 'Template from link');
+      cpToast(CP.templateNeedsCompression ? 'Template loaded. Click Next to auto-compress.' : 'Template ready.', CP.templateNeedsCompression ? 'info' : 'ok');
+      return;
+    } catch(e) {
+      lastErr = e.message;
+    }
+  }
+  if (statusEl) statusEl.textContent = 'X';
+  if (badge) badge.textContent = 'Could not load image link (' + lastErr + ')';
+  cpToast('Image link failed. Try uploading the file directly.', 'err');
+}
+
+function cpShowCompressionPrompt() {
+  var old = document.getElementById('cpCompressionModal');
+  if (old) old.remove();
+  var modal = document.createElement('div');
+  modal.id = 'cpCompressionModal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:99999;display:flex;align-items:center;justify-content:center;padding:18px';
+  modal.innerHTML =
+    '<div style="width:min(420px,94vw);background:#fff;border-radius:14px;padding:20px;box-shadow:0 20px 60px rgba(0,0,0,.25);font-family:Inter,sans-serif">' +
+    '<div style="font-size:1rem;font-weight:800;margin-bottom:8px;color:#111827">Template size is too large</div>' +
+    '<div style="font-size:.82rem;color:#6b7280;line-height:1.55;margin-bottom:14px">Current size: <b>' + cpFormatBytes(CP.templateBytes) + '</b><br>Required size: <b>' + cpFormatBytes(CP.templateTargetBytes) + '</b> or less.<br><br>Auto Compress will keep the best possible quality and then continue to name positioning.</div>' +
+    '<div style="display:flex;gap:10px;justify-content:flex-end">' +
+    "<button onclick=\"document.getElementById('cpCompressionModal').remove()\" style=\"padding:9px 14px;border:1px solid #e5e7eb;background:#fff;border-radius:8px;font-weight:700;cursor:pointer\">Cancel</button>" +
+    '<button id="cpAutoCompressBtn" onclick="cpAutoCompressTemplateAndContinue()" style="padding:9px 16px;border:0;background:#4f46e5;color:#fff;border-radius:8px;font-weight:800;cursor:pointer">Auto Compress</button>' +
+    '</div></div>';
+  document.body.appendChild(modal);
+}
+
+async function cpAutoCompressTemplateAndContinue() {
+  var btn = document.getElementById('cpAutoCompressBtn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Compressing...'; }
+  try {
+    var adaptive = await cpAdaptiveCompressTemplate(CP.templateUrl, CP.templateTargetBytes);
+    CP.templateUrl = adaptive.dataUrl;
+    CP.templateBytes = adaptive.bytes;
+    CP.templateQuality = adaptive;
+    CP.templateNeedsCompression = adaptive.bytes > CP.templateTargetBytes;
+
+    var img = new Image();
+    await new Promise(function(resolve, reject) {
+      img.onload = resolve;
+      img.onerror = function() { reject(new Error('Compressed image decode failed')); };
+      img.src = adaptive.dataUrl;
+    });
+    CP.templateImg = img;
+    CP.templateWidth = img.naturalWidth;
+    CP.templateHeight = img.naturalHeight;
+    var thumb = document.getElementById('cpTemplateThumb');
+    if (thumb) thumb.src = adaptive.dataUrl;
+    var badge = document.getElementById('cpTemplateBadge');
+    if (badge) badge.textContent = 'Compressed (' + adaptive.width + 'x' + adaptive.height + ', ' + cpFormatBytes(adaptive.bytes) + ') - ready';
+
+    var modal = document.getElementById('cpCompressionModal');
+    if (modal) modal.remove();
+    cpToast('Template compressed and ready.', 'ok');
+    cpSaveDraft();
+    cpRenderStep(3);
+    if (CP.templateImg) cpDrawNameCanvas();
+  } catch(e) {
+    cpToast('Compression failed: ' + e.message, 'err');
+    if (btn) { btn.disabled = false; btn.textContent = 'Auto Compress'; }
+  }
 }
 
 // ── Step 2: CSV fetch ──
@@ -1024,6 +1208,81 @@ async function cpPublishPortal() {
     cpToast('Error: ' + err.message, 'err');
   }
   btn.disabled = false; btn.textContent = '🚀 Publish Portal';
+}
+
+// Override: publish only already-prepared portal data.
+// No Firebase Storage upload happens during publish, so CORS cannot block deployment.
+async function cpPublishPortal() {
+  var btn = document.getElementById('cpPublishBtn');
+  btn.disabled = true; btn.textContent = 'Publishing...';
+  try {
+    var collegeName  = document.getElementById('cpCollegeName').value.trim();
+    var cardMessage  = document.getElementById('cpCardMessage').value.trim();
+    var defaultLimit = parseInt(document.getElementById('cpDefaultLimit').value) || 1;
+    var openAccess   = document.getElementById('cpOpenAccess').checked;
+    var headerColor  = document.getElementById('cpHeaderColor').value;
+    var accentColor  = document.getElementById('cpAccentColor').value;
+    var googleFormUrl= (document.getElementById('cpGoogleFormUrl') ? document.getElementById('cpGoogleFormUrl').value.trim() : '');
+    var state        = (document.getElementById('cpState') ? document.getElementById('cpState').value.trim() : '');
+    var district     = (document.getElementById('cpDistrict') ? document.getElementById('cpDistrict').value.trim() : '');
+
+    if (!CP.currentSlug || !collegeName) throw new Error('Missing college name.');
+    if (!CP.templateUrl) throw new Error('No template loaded.');
+
+    var templateUrlToStore = CP.templateUrl;
+    if (templateUrlToStore.startsWith('data:') && cpDataUrlBytes(templateUrlToStore) > 950000) {
+      throw new Error('Template is still too large. Go back and click Auto Compress.');
+    }
+
+    var portalData = {
+      collegeName:    collegeName,
+      cardMessage:    cardMessage || 'Enter your full name exactly as registered to download your certificate.',
+      defaultLimit:   defaultLimit,
+      openAccess:     openAccess,
+      headerColor:    headerColor,
+      accentColor:    accentColor,
+      templateUrl:    templateUrlToStore,
+      csvDriveUrl:    CP.csvDriveUrl || '',
+      templateWidth:  CP.templateWidth,
+      templateHeight: CP.templateHeight,
+      namePosition:   { xPct: CP.namePos.xPct, yPct: CP.namePos.yPct },
+      nameStyle:      Object.assign({}, CP.nameStyle),
+      googleFormUrl:  googleFormUrl,
+      state:          state,
+      district:       district,
+      active:         true,
+      createdAt:      firebase.firestore.FieldValue.serverTimestamp(),
+      createdBy:      (typeof U !== 'undefined' && U) ? U.email : 'unknown',
+    };
+
+    await fbDb.collection('college_portals').doc(CP.currentSlug).set(portalData, { merge: true });
+
+    if (CP.students.length > 0) {
+      btn.textContent = 'Saving students...';
+      var batch = fbDb.batch(), batchCount = 0;
+      for (var i = 0; i < CP.students.length; i++) {
+        var s = CP.students[i];
+        if (!s.name || !s.name.trim()) continue;
+        var nameLower = s.name.trim().toLowerCase().replace(/\s+/g, ' ').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        var key = nameLower.replace(/\s+/g, '_');
+        var ref = fbDb.collection('college_portals').doc(CP.currentSlug).collection('students').doc(key);
+        batch.set(ref, { name: s.name.trim(), nameLower: nameLower, limit: s.limit || 1 }, { merge: true });
+        batchCount++;
+        if (batchCount === 490) { await batch.commit(); batch = fbDb.batch(); batchCount = 0; }
+      }
+      if (batchCount > 0) await batch.commit();
+    }
+
+    cpToast('Portal published!', 'ok');
+    cpRenderPortalLink();
+    cpLoadPortalList();
+    cpClearDraft();
+    document.getElementById('cpPublishedSuccess').style.display = 'block';
+  } catch(err) {
+    console.error(err);
+    cpToast('Publish failed: ' + err.message, 'err');
+  }
+  btn.disabled = false; btn.textContent = 'Publish Portal';
 }
 
 // ── Share link ──
