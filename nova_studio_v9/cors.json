@@ -1,8 +1,14 @@
 [
   {
     "origin": ["*"],
-    "method": ["GET"],
+    "method": ["GET", "HEAD", "POST", "PUT", "DELETE"],
     "maxAgeSeconds": 3600,
-    "responseHeader": ["Content-Type", "Access-Control-Allow-Origin"]
+    "responseHeader": [
+      "Content-Type",
+      "Authorization",
+      "x-goog-resumable",
+      "x-goog-upload-protocol",
+      "x-firebase-storage-version"
+    ]
   }
 ]
