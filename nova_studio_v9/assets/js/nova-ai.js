@@ -281,329 +281,402 @@ When a user asks you to perform an action (navigate, click, fill a field, etc.),
   function injectStyles() {
     const style = document.createElement('style');
     style.textContent = `
-      /* NOVA AI Bot */
+      /* ── NOVA AI Bot — full isolation reset ── */
+
+      /* FAB button */
       #nova-ai-fab {
-        position: fixed;
-        bottom: 28px;
-        right: 28px;
-        z-index: 99999;
-        width: 54px;
-        height: 54px;
-        border-radius: 18px;
-        background: linear-gradient(135deg, var(--lime, #c8f135), var(--teal, #0fd9b4));
-        border: none;
-        cursor: pointer;
-        box-shadow: 0 6px 24px rgba(0,0,0,.18), 0 2px 8px rgba(200,241,53,.3);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.35rem;
+        all: unset;
+        position: fixed !important;
+        bottom: 28px !important;
+        right: 28px !important;
+        z-index: 99999 !important;
+        width: 54px !important;
+        height: 54px !important;
+        border-radius: 18px !important;
+        background: linear-gradient(135deg, var(--lime, #c8f135), var(--teal, #0fd9b4)) !important;
+        cursor: pointer !important;
+        box-shadow: 0 6px 24px rgba(0,0,0,.18), 0 2px 8px rgba(200,241,53,.3) !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        font-size: 1.35rem !important;
+        writing-mode: horizontal-tb !important;
+        direction: ltr !important;
         transition: transform .2s, box-shadow .2s;
         outline: none;
       }
       #nova-ai-fab:hover {
-        transform: scale(1.08) translateY(-2px);
-        box-shadow: 0 10px 32px rgba(0,0,0,.22), 0 3px 12px rgba(200,241,53,.4);
+        transform: scale(1.08) translateY(-2px) !important;
+        box-shadow: 0 10px 32px rgba(0,0,0,.22), 0 3px 12px rgba(200,241,53,.4) !important;
       }
       #nova-ai-fab .fab-pulse {
-        position: absolute;
-        inset: -4px;
-        border-radius: 22px;
-        background: linear-gradient(135deg, var(--lime, #c8f135), var(--teal, #0fd9b4));
-        opacity: 0;
-        animation: naiPulse 2.4s ease-in-out infinite;
-        z-index: -1;
+        position: absolute !important;
+        inset: -4px !important;
+        border-radius: 22px !important;
+        background: linear-gradient(135deg, var(--lime, #c8f135), var(--teal, #0fd9b4)) !important;
+        opacity: 0 !important;
+        animation: naiPulse 2.4s ease-in-out infinite !important;
+        z-index: -1 !important;
       }
       @keyframes naiPulse {
         0%,100% { opacity: 0; transform: scale(1); }
         50% { opacity: .18; transform: scale(1.15); }
       }
+
+      /* Panel — hard reset ALL inherited properties */
+      #nova-ai-panel,
+      #nova-ai-panel * {
+        writing-mode: horizontal-tb !important;
+        direction: ltr !important;
+        text-orientation: mixed !important;
+        unicode-bidi: normal !important;
+        letter-spacing: normal !important;
+        word-spacing: normal !important;
+        text-transform: none !important;
+        font-variant: normal !important;
+      }
+
       #nova-ai-panel {
-        position: fixed;
-        bottom: 94px;
-        right: 28px;
-        z-index: 99998;
-        width: 370px;
-        max-width: calc(100vw - 40px);
-        height: 520px;
-        max-height: calc(100vh - 120px);
-        background: var(--card, #fff);
-        border: 1.5px solid rgba(0,0,0,.07);
-        border-radius: 20px;
-        box-shadow: 0 20px 60px rgba(0,0,0,.16), 0 4px 16px rgba(0,0,0,.08);
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
-        transform-origin: bottom right;
-        animation: naiSlideIn .25s cubic-bezier(.34,1.56,.64,1) both;
-        writing-mode: horizontal-tb;
-        direction: ltr;
-        text-orientation: mixed;
+        position: fixed !important;
+        bottom: 94px !important;
+        right: 28px !important;
+        z-index: 99998 !important;
+        width: 370px !important;
+        max-width: calc(100vw - 40px) !important;
+        height: 520px !important;
+        max-height: calc(100vh - 120px) !important;
+        background: var(--card, #fff) !important;
+        border: 1.5px solid rgba(0,0,0,.07) !important;
+        border-radius: 20px !important;
+        box-shadow: 0 20px 60px rgba(0,0,0,.16), 0 4px 16px rgba(0,0,0,.08) !important;
+        display: flex !important;
+        flex-direction: column !important;
+        overflow: hidden !important;
+        transform-origin: bottom right !important;
+        animation: naiSlideIn .25s cubic-bezier(.34,1.56,.64,1) both !important;
+        box-sizing: border-box !important;
+        font-family: 'Bricolage Grotesque', -apple-system, sans-serif !important;
+        color: var(--ink, #0d0f12) !important;
+        line-height: 1.5 !important;
+        font-size: 14px !important;
       }
       @keyframes naiSlideIn {
         from { opacity: 0; transform: scale(.88) translateY(16px); }
         to   { opacity: 1; transform: scale(1) translateY(0); }
       }
       #nova-ai-panel.closing {
-        animation: naiSlideOut .18s ease-in both;
+        animation: naiSlideOut .18s ease-in both !important;
       }
       @keyframes naiSlideOut {
         to { opacity: 0; transform: scale(.9) translateY(12px); }
       }
-      .nai-header {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        padding: 14px 16px;
-        border-bottom: 1px solid rgba(0,0,0,.06);
-        flex-shrink: 0;
-        background: linear-gradient(135deg, rgba(200,241,53,.08), rgba(15,217,180,.06));
+
+      /* Header */
+      #nova-ai-panel .nai-header {
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        gap: 10px !important;
+        padding: 14px 16px !important;
+        border-bottom: 1px solid rgba(0,0,0,.06) !important;
+        flex-shrink: 0 !important;
+        background: linear-gradient(135deg, rgba(200,241,53,.08), rgba(15,217,180,.06)) !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
       }
-      .nai-avatar {
-        width: 34px;
-        height: 34px;
-        border-radius: 11px;
-        background: linear-gradient(135deg, var(--lime, #c8f135), var(--teal, #0fd9b4));
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: .95rem;
-        flex-shrink: 0;
-        box-shadow: 0 2px 8px rgba(200,241,53,.3);
+      #nova-ai-panel .nai-avatar {
+        width: 34px !important;
+        height: 34px !important;
+        min-width: 34px !important;
+        border-radius: 11px !important;
+        background: linear-gradient(135deg, var(--lime, #c8f135), var(--teal, #0fd9b4)) !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        font-size: .95rem !important;
+        flex-shrink: 0 !important;
+        box-shadow: 0 2px 8px rgba(200,241,53,.3) !important;
       }
-      .nai-header-text { flex: 1; }
-      .nai-title {
-        font-family: 'Bricolage Grotesque', sans-serif;
-        font-size: .82rem;
-        font-weight: 800;
-        color: var(--ink, #0d0f12);
-        letter-spacing: -.01em;
+      #nova-ai-panel .nai-header-text {
+        flex: 1 !important;
+        min-width: 0 !important;
+        overflow: hidden !important;
       }
-      .nai-subtitle {
-        font-size: .67rem;
-        color: var(--mist, #8b94a3);
-        margin-top: 1px;
+      #nova-ai-panel .nai-title {
+        font-size: .82rem !important;
+        font-weight: 800 !important;
+        color: var(--ink, #0d0f12) !important;
+        display: block !important;
+        white-space: nowrap !important;
       }
-      .nai-close {
-        width: 28px;
-        height: 28px;
-        border-radius: 8px;
-        border: none;
-        background: rgba(0,0,0,.05);
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: .85rem;
-        color: var(--mist, #8b94a3);
+      #nova-ai-panel .nai-subtitle {
+        font-size: .67rem !important;
+        color: var(--mist, #8b94a3) !important;
+        margin-top: 1px !important;
+        display: block !important;
+        white-space: nowrap !important;
+      }
+      #nova-ai-panel .nai-close {
+        width: 28px !important;
+        height: 28px !important;
+        min-width: 28px !important;
+        border-radius: 8px !important;
+        border: none !important;
+        background: rgba(0,0,0,.05) !important;
+        cursor: pointer !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        font-size: .85rem !important;
+        color: var(--mist, #8b94a3) !important;
         transition: background .15s, color .15s;
+        flex-shrink: 0 !important;
       }
-      .nai-close:hover { background: rgba(0,0,0,.1); color: var(--ink, #0d0f12); }
-      .nai-messages {
-        flex: 1;
-        overflow-y: auto;
-        overflow-x: hidden;
-        padding: 14px 14px 8px;
-        display: flex;
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 10px;
-        scroll-behavior: smooth;
-        width: 100%;
-        box-sizing: border-box;
+      #nova-ai-panel .nai-close:hover {
+        background: rgba(0,0,0,.1) !important;
+        color: var(--ink, #0d0f12) !important;
       }
-      .nai-messages::-webkit-scrollbar { width: 4px; }
-      .nai-messages::-webkit-scrollbar-track { background: transparent; }
-      .nai-messages::-webkit-scrollbar-thumb { background: rgba(0,0,0,.1); border-radius: 4px; }
-      .nai-msg {
-        max-width: 88%;
-        min-width: 0;
-        width: auto;
-        line-height: 1.5;
-        font-size: .78rem;
-        border-radius: 14px;
-        padding: 9px 13px;
-        word-break: break-word;
-        overflow-wrap: break-word;
-        white-space: normal;
-        writing-mode: horizontal-tb;
-        box-sizing: border-box;
-        animation: naiMsgIn .2s ease both;
+
+      /* Messages area */
+      #nova-ai-panel .nai-messages {
+        flex: 1 !important;
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+        padding: 14px 14px 8px !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 10px !important;
+        scroll-behavior: smooth !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+      }
+      #nova-ai-panel .nai-messages::-webkit-scrollbar { width: 4px !important; }
+      #nova-ai-panel .nai-messages::-webkit-scrollbar-track { background: transparent !important; }
+      #nova-ai-panel .nai-messages::-webkit-scrollbar-thumb { background: rgba(0,0,0,.1) !important; border-radius: 4px !important; }
+
+      /* Message bubbles */
+      #nova-ai-panel .nai-msg {
+        max-width: 88% !important;
+        min-width: 40px !important;
+        width: auto !important;
+        line-height: 1.55 !important;
+        font-size: .78rem !important;
+        border-radius: 14px !important;
+        padding: 9px 13px !important;
+        word-break: break-word !important;
+        overflow-wrap: break-word !important;
+        white-space: pre-wrap !important;
+        box-sizing: border-box !important;
+        display: block !important;
+        animation: naiMsgIn .2s ease both !important;
       }
       @keyframes naiMsgIn {
         from { opacity: 0; transform: translateY(6px); }
         to   { opacity: 1; transform: translateY(0); }
       }
-      .nai-msg.user {
-        align-self: flex-end;
-        background: linear-gradient(135deg, var(--lime, #c8f135), var(--lime-d, #9ec000));
-        color: var(--ink, #0d0f12);
-        font-weight: 500;
-        border-bottom-right-radius: 4px;
+      #nova-ai-panel .nai-msg.user {
+        align-self: flex-end !important;
+        background: linear-gradient(135deg, var(--lime, #c8f135), var(--lime-d, #9ec000)) !important;
+        color: var(--ink, #0d0f12) !important;
+        font-weight: 500 !important;
+        border-bottom-right-radius: 4px !important;
       }
-      .nai-msg.bot {
-        align-self: flex-start;
-        background: var(--surface, #f4f6fa);
-        color: var(--ink, #0d0f12);
-        border-bottom-left-radius: 4px;
-        border: 1px solid rgba(0,0,0,.05);
+      #nova-ai-panel .nai-msg.bot {
+        align-self: flex-start !important;
+        background: var(--surface, #f4f6fa) !important;
+        color: var(--ink, #0d0f12) !important;
+        border-bottom-left-radius: 4px !important;
+        border: 1px solid rgba(0,0,0,.05) !important;
       }
-      .nai-msg.bot code {
-        background: rgba(0,0,0,.07);
-        padding: 1px 5px;
-        border-radius: 4px;
-        font-family: 'DM Mono', monospace;
-        font-size: .72rem;
+      #nova-ai-panel .nai-msg.bot code {
+        background: rgba(0,0,0,.07) !important;
+        padding: 1px 5px !important;
+        border-radius: 4px !important;
+        font-family: 'DM Mono', monospace !important;
+        font-size: .72rem !important;
+        white-space: pre-wrap !important;
       }
-      .nai-msg.bot strong { font-weight: 700; }
-      .nai-msg.system {
-        align-self: center;
-        background: transparent;
-        color: var(--mist, #8b94a3);
-        font-size: .68rem;
-        padding: 2px 8px;
-        max-width: 100%;
-        text-align: center;
+      #nova-ai-panel .nai-msg.bot strong { font-weight: 700 !important; }
+      #nova-ai-panel .nai-msg.system {
+        align-self: center !important;
+        background: transparent !important;
+        color: var(--mist, #8b94a3) !important;
+        font-size: .68rem !important;
+        padding: 2px 8px !important;
+        max-width: 100% !important;
+        text-align: center !important;
       }
-      .nai-action-card {
-        align-self: flex-start;
-        background: var(--lime-p, rgba(200,241,53,.1));
-        border: 1.5px solid rgba(158,192,0,.25);
-        border-radius: 12px;
-        padding: 10px 13px;
-        max-width: 88%;
-        font-size: .75rem;
-        color: var(--ink, #0d0f12);
-        animation: naiMsgIn .2s ease both;
+
+      /* Action card */
+      #nova-ai-panel .nai-action-card {
+        align-self: flex-start !important;
+        background: var(--lime-p, rgba(200,241,53,.1)) !important;
+        border: 1.5px solid rgba(158,192,0,.25) !important;
+        border-radius: 12px !important;
+        padding: 10px 13px !important;
+        max-width: 88% !important;
+        font-size: .75rem !important;
+        color: var(--ink, #0d0f12) !important;
+        box-sizing: border-box !important;
+        display: block !important;
+        animation: naiMsgIn .2s ease both !important;
       }
-      .nai-action-card .nai-action-label {
-        font-weight: 700;
-        font-size: .7rem;
-        color: var(--lime-d, #9ec000);
-        margin-bottom: 5px;
-        display: flex;
-        align-items: center;
-        gap: 5px;
+      #nova-ai-panel .nai-action-card .nai-action-label {
+        font-weight: 700 !important;
+        font-size: .7rem !important;
+        color: var(--lime-d, #9ec000) !important;
+        margin-bottom: 5px !important;
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        gap: 5px !important;
       }
-      .nai-action-btns {
-        display: flex;
-        gap: 7px;
-        margin-top: 9px;
+      #nova-ai-panel .nai-action-btns {
+        display: flex !important;
+        flex-direction: row !important;
+        gap: 7px !important;
+        margin-top: 9px !important;
       }
-      .nai-action-btns button {
-        padding: 5px 12px;
-        border-radius: 7px;
-        border: 1.5px solid;
-        font-size: .7rem;
-        font-weight: 700;
-        cursor: pointer;
+      #nova-ai-panel .nai-action-btns button {
+        padding: 5px 12px !important;
+        border-radius: 7px !important;
+        border: 1.5px solid !important;
+        font-size: .7rem !important;
+        font-weight: 700 !important;
+        cursor: pointer !important;
         transition: all .15s;
       }
-      .nai-btn-confirm {
-        background: var(--lime, #c8f135);
+      #nova-ai-panel .nai-btn-confirm {
+        background: var(--lime, #c8f135) !important;
         border-color: var(--lime-d, #9ec000) !important;
-        color: var(--ink, #0d0f12);
+        color: var(--ink, #0d0f12) !important;
       }
-      .nai-btn-confirm:hover { transform: scale(1.03); }
-      .nai-btn-deny {
-        background: transparent;
+      #nova-ai-panel .nai-btn-confirm:hover { transform: scale(1.03) !important; }
+      #nova-ai-panel .nai-btn-deny {
+        background: transparent !important;
         border-color: rgba(0,0,0,.12) !important;
-        color: var(--mist, #8b94a3);
+        color: var(--mist, #8b94a3) !important;
       }
-      .nai-btn-deny:hover { border-color: rgba(0,0,0,.25) !important; color: var(--ink, #0d0f12); }
-      .nai-typing {
-        align-self: flex-start;
-        background: var(--surface, #f4f6fa);
-        border: 1px solid rgba(0,0,0,.05);
-        border-radius: 14px;
-        border-bottom-left-radius: 4px;
-        padding: 11px 15px;
-        display: flex;
-        gap: 5px;
-        align-items: center;
+      #nova-ai-panel .nai-btn-deny:hover {
+        border-color: rgba(0,0,0,.25) !important;
+        color: var(--ink, #0d0f12) !important;
       }
-      .nai-typing span {
-        width: 6px; height: 6px;
-        border-radius: 50%;
-        background: var(--mist, #8b94a3);
-        animation: naiDot 1.2s ease-in-out infinite;
+
+      /* Typing indicator */
+      #nova-ai-panel .nai-typing {
+        align-self: flex-start !important;
+        background: var(--surface, #f4f6fa) !important;
+        border: 1px solid rgba(0,0,0,.05) !important;
+        border-radius: 14px !important;
+        border-bottom-left-radius: 4px !important;
+        padding: 11px 15px !important;
+        display: flex !important;
+        flex-direction: row !important;
+        gap: 5px !important;
+        align-items: center !important;
       }
-      .nai-typing span:nth-child(2) { animation-delay: .2s; }
-      .nai-typing span:nth-child(3) { animation-delay: .4s; }
+      #nova-ai-panel .nai-typing span {
+        width: 6px !important;
+        height: 6px !important;
+        border-radius: 50% !important;
+        background: var(--mist, #8b94a3) !important;
+        animation: naiDot 1.2s ease-in-out infinite !important;
+        display: inline-block !important;
+        flex-shrink: 0 !important;
+      }
+      #nova-ai-panel .nai-typing span:nth-child(2) { animation-delay: .2s !important; }
+      #nova-ai-panel .nai-typing span:nth-child(3) { animation-delay: .4s !important; }
       @keyframes naiDot {
         0%,60%,100% { transform: scale(1); opacity: .5; }
         30% { transform: scale(1.4); opacity: 1; }
       }
-      .nai-suggestions {
-        padding: 0 14px 8px;
-        display: flex;
-        flex-wrap: wrap;
-        gap: 6px;
-        flex-shrink: 0;
+
+      /* Suggestion chips */
+      #nova-ai-panel .nai-suggestions {
+        padding: 0 14px 8px !important;
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: wrap !important;
+        gap: 6px !important;
+        flex-shrink: 0 !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
       }
-      .nai-chip {
-        padding: 5px 11px;
-        border-radius: 20px;
-        border: 1.5px solid rgba(0,0,0,.08);
-        background: var(--card, #fff);
-        font-size: .69rem;
-        font-weight: 600;
-        color: var(--ink2, #1a1f27);
-        cursor: pointer;
+      #nova-ai-panel .nai-chip {
+        padding: 5px 11px !important;
+        border-radius: 20px !important;
+        border: 1.5px solid rgba(0,0,0,.08) !important;
+        background: var(--card, #fff) !important;
+        font-size: .69rem !important;
+        font-weight: 600 !important;
+        color: var(--ink2, #1a1f27) !important;
+        cursor: pointer !important;
         transition: all .15s;
-        white-space: nowrap;
+        white-space: nowrap !important;
+        display: inline-block !important;
       }
-      .nai-chip:hover {
-        border-color: var(--lime-d, #9ec000);
-        background: var(--lime-p, rgba(200,241,53,.1));
-        color: var(--lime-d, #9ec000);
+      #nova-ai-panel .nai-chip:hover {
+        border-color: var(--lime-d, #9ec000) !important;
+        background: var(--lime-p, rgba(200,241,53,.1)) !important;
+        color: var(--lime-d, #9ec000) !important;
       }
-      .nai-input-row {
-        display: flex;
-        align-items: flex-end;
-        gap: 8px;
-        padding: 10px 14px 14px;
-        border-top: 1px solid rgba(0,0,0,.06);
-        flex-shrink: 0;
+
+      /* Input row */
+      #nova-ai-panel .nai-input-row {
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: flex-end !important;
+        gap: 8px !important;
+        padding: 10px 14px 14px !important;
+        border-top: 1px solid rgba(0,0,0,.06) !important;
+        flex-shrink: 0 !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
       }
-      .nai-input {
-        flex: 1;
-        border: 1.5px solid rgba(0,0,0,.1);
-        border-radius: 12px;
-        padding: 9px 13px;
-        font-size: .78rem;
-        font-family: inherit;
-        background: var(--surface, #f4f6fa);
-        color: var(--ink, #0d0f12);
-        resize: none;
-        outline: none;
-        line-height: 1.45;
-        max-height: 90px;
-        overflow-y: auto;
+      #nova-ai-panel .nai-input {
+        flex: 1 !important;
+        min-width: 0 !important;
+        border: 1.5px solid rgba(0,0,0,.1) !important;
+        border-radius: 12px !important;
+        padding: 9px 13px !important;
+        font-size: .78rem !important;
+        font-family: inherit !important;
+        background: var(--surface, #f4f6fa) !important;
+        color: var(--ink, #0d0f12) !important;
+        resize: none !important;
+        outline: none !important;
+        line-height: 1.45 !important;
+        max-height: 90px !important;
+        overflow-y: auto !important;
         transition: border-color .2s, box-shadow .2s;
+        box-sizing: border-box !important;
+        display: block !important;
+        writing-mode: horizontal-tb !important;
       }
-      .nai-input:focus {
-        border-color: var(--lime-d, #9ec000);
-        box-shadow: 0 0 0 3px rgba(158,192,0,.14);
-        background: var(--card, #fff);
+      #nova-ai-panel .nai-input:focus {
+        border-color: var(--lime-d, #9ec000) !important;
+        box-shadow: 0 0 0 3px rgba(158,192,0,.14) !important;
+        background: var(--card, #fff) !important;
       }
-      .nai-send {
-        width: 38px;
-        height: 38px;
-        border-radius: 11px;
-        border: none;
-        background: linear-gradient(135deg, var(--lime, #c8f135), var(--teal, #0fd9b4));
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1rem;
-        flex-shrink: 0;
+      #nova-ai-panel .nai-send {
+        width: 38px !important;
+        height: 38px !important;
+        min-width: 38px !important;
+        border-radius: 11px !important;
+        border: none !important;
+        background: linear-gradient(135deg, var(--lime, #c8f135), var(--teal, #0fd9b4)) !important;
+        cursor: pointer !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        font-size: 1rem !important;
+        flex-shrink: 0 !important;
         transition: transform .15s, opacity .15s;
-        box-shadow: 0 3px 10px rgba(200,241,53,.3);
+        box-shadow: 0 3px 10px rgba(200,241,53,.3) !important;
       }
-      .nai-send:hover:not(:disabled) { transform: scale(1.08); }
-      .nai-send:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+      #nova-ai-panel .nai-send:hover:not(:disabled) { transform: scale(1.08) !important; }
+      #nova-ai-panel .nai-send:disabled { opacity: .45 !important; cursor: not-allowed !important; }
     `;
     document.head.appendChild(style);
   }
