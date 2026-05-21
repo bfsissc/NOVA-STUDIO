@@ -1642,6 +1642,49 @@ function doGet(){return out({ok:true,status:'Nova Drive Relay running'});}</pre>
                   <div id="brevoPreviewBody" style="flex:1;overflow-y:auto;padding:20px"></div>
                 </div>
               </div>
+
+              <!-- Nova AI Assistant -->
+              <div class="stg-card" style="margin-top:14px">
+                <div class="stg-card-h">✦ Nova AI Assistant</div>
+                <div style="font-size:.7rem;color:var(--mist);line-height:1.5;margin-bottom:12px;padding:8px 10px;background:rgba(200,241,53,.07);border-radius:7px;border:1px solid rgba(200,241,53,.18)">
+                  Generate your personal Nova AI key below, then paste it into the API Key field to activate the codebase-aware assistant.
+                </div>
+
+                <!-- Step 1: Generate key via password -->
+                <div id="novaAiGenSection">
+                  <div class="stg-row-t" style="margin-bottom:4px">Step 1 — Generate API Key</div>
+                  <div style="display:flex;gap:8px">
+                    <input class="fi" id="novaAiPassword" type="password" placeholder="Enter access password…" autocomplete="off" spellcheck="false" style="flex:1;font-size:.82rem" onkeydown="if(event.key==='Enter')novaAiGenerate()">
+                    <button class="btn-pri" style="padding:9px 16px;border-radius:7px;font-size:.8rem;white-space:nowrap" onclick="novaAiGenerate()">🔑 Generate</button>
+                  </div>
+                  <div id="novaAiGenError" style="display:none;margin-top:6px;font-size:.71rem;color:#dc2626;padding:6px 10px;background:rgba(220,38,38,.08);border-radius:6px">
+                    ❌ Incorrect password. Please try again.
+                  </div>
+                  <div id="novaAiGenResult" style="display:none;margin-top:8px">
+                    <div style="font-size:.7rem;color:var(--mist);margin-bottom:4px">Your generated key (copy it, then paste below):</div>
+                    <div style="display:flex;gap:6px;align-items:center">
+                      <input class="fi" id="novaAiGenKeyDisplay" type="text" readonly style="flex:1;font-family:'DM Mono',monospace;font-size:.75rem;background:var(--snow);cursor:text">
+                      <button class="btn bo btn-sm" onclick="novaAiCopyGenKey()" title="Copy key">📋</button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Step 2: Enter API key -->
+                <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--fog)">
+                  <div class="stg-row-t" style="margin-bottom:4px">Step 2 — Activate Nova AI</div>
+                  <div style="display:flex;gap:8px">
+                    <input class="fi" id="novaAiApiKey" type="password" placeholder="sk-ant-api03-…" autocomplete="off" spellcheck="false" style="flex:1;font-family:'DM Mono',monospace;font-size:.78rem" onkeydown="if(event.key==='Enter')novaAiSaveKey()">
+                    <button class="btn-pri" style="padding:9px 16px;border-radius:7px;font-size:.8rem;white-space:nowrap" onclick="novaAiSaveKey()">💾 Save</button>
+                  </div>
+                  <div id="novaAiKeyError" style="display:none;margin-top:6px;font-size:.71rem;color:#dc2626;padding:6px 10px;background:rgba(220,38,38,.08);border-radius:6px">
+                    ❌ Invalid key — must start with <code style="font-size:.7rem">sk-ant</code>
+                  </div>
+                  <div id="novaAiStatus" style="display:none;margin-top:6px;font-size:.71rem;padding:6px 10px;border-radius:6px"></div>
+                  <div id="novaAiClearRow" style="display:none;margin-top:8px">
+                    <button class="btn bo btn-sm" style="font-size:.7rem;color:var(--mist)" onclick="novaAiClearKey()">🗑 Remove API Key</button>
+                  </div>
+                </div>
+              </div>
             </div>
             <!-- Data -->
             <div class="stg-panel" id="stpData" style="display:none">

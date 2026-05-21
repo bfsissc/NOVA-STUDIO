@@ -155,6 +155,7 @@ When a user asks you to perform an action (navigate, click, fill a field, etc.),
   let isOpen = false;
   let isTyping = false;
   let pendingAction = null;
+  let _welcomeShown = false;
 
   // ── Action executor ──────────────────────────────────────────────────────
   // Maps action keys from AI response to real JS calls
@@ -238,18 +239,20 @@ When a user asks you to perform an action (navigate, click, fill a field, etc.),
 
   // ── Call Claude API ──────────────────────────────────────────────────────
   async function callAI(userMessage) {
+    // Add user message to history
     chatHistory.push({ role: 'user', content: userMessage });
 
-    // Build messages with system context injected as first user turn
-    const messages = chatHistory.length === 1
-      ? [
-          { role: 'user', content: `${NOVA_KNOWLEDGE}\n\n---\n\nUser: ${userMessage}` }
-        ]
-      : chatHistory;
+    const apiKey = getApiKey();
+    if (!apiKey) throw new Error('Nova AI is not integrated. Please contact your administrator.');
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
         max_tokens: 1000,
@@ -257,6 +260,11 @@ When a user asks you to perform an action (navigate, click, fill a field, etc.),
         messages: chatHistory
       })
     });
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err?.error?.message || `HTTP ${response.status}`);
+    }
 
     const data = await response.json();
     const rawText = data.content?.map(b => b.text || '').join('') || 'Sorry, I could not get a response.';
@@ -273,6 +281,7 @@ When a user asks you to perform an action (navigate, click, fill a field, etc.),
       } catch (e) { /* ignore parse error */ }
     }
 
+    // Add assistant reply to history
     chatHistory.push({ role: 'assistant', content: rawText });
     return { text: displayText, action: parsedAction };
   }
@@ -677,8 +686,159 @@ When a user asks you to perform an action (navigate, click, fill a field, etc.),
       }
       #nova-ai-panel .nai-send:hover:not(:disabled) { transform: scale(1.08) !important; }
       #nova-ai-panel .nai-send:disabled { opacity: .45 !important; cursor: not-allowed !important; }
+
+      /* API key setup screen */
+      #nova-ai-panel .nai-setup {
+        flex: 1 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        padding: 24px 20px !important;
+        gap: 12px !important;
+        text-align: center !important;
+        box-sizing: border-box !important;
+      }
+      #nova-ai-panel .nai-setup-icon {
+        font-size: 2rem !important;
+        line-height: 1 !important;
+        margin-bottom: 4px !important;
+      }
+      #nova-ai-panel .nai-setup-title {
+        font-size: .88rem !important;
+        font-weight: 800 !important;
+        color: var(--ink, #0d0f12) !important;
+        margin: 0 !important;
+      }
+      #nova-ai-panel .nai-setup-sub {
+        font-size: .72rem !important;
+        color: var(--mist, #8b94a3) !important;
+        line-height: 1.5 !important;
+        max-width: 260px !important;
+        margin: 0 !important;
+      }
+      #nova-ai-panel .nai-setup-sub a {
+        color: var(--lime-d, #9ec000) !important;
+        font-weight: 700 !important;
+        text-decoration: none !important;
+      }
+      #nova-ai-panel .nai-key-input {
+        width: 100% !important;
+        border: 1.5px solid rgba(0,0,0,.12) !important;
+        border-radius: 10px !important;
+        padding: 10px 13px !important;
+        font-size: .75rem !important;
+        font-family: 'DM Mono', monospace !important;
+        background: var(--surface, #f4f6fa) !important;
+        color: var(--ink, #0d0f12) !important;
+        outline: none !important;
+        box-sizing: border-box !important;
+        writing-mode: horizontal-tb !important;
+      }
+      #nova-ai-panel .nai-key-input:focus {
+        border-color: var(--lime-d, #9ec000) !important;
+        box-shadow: 0 0 0 3px rgba(158,192,0,.14) !important;
+      }
+      #nova-ai-panel .nai-key-btn {
+        width: 100% !important;
+        padding: 10px !important;
+        border-radius: 10px !important;
+        border: none !important;
+        background: linear-gradient(135deg, var(--lime, #c8f135), var(--teal, #0fd9b4)) !important;
+        color: var(--ink, #0d0f12) !important;
+        font-size: .78rem !important;
+        font-weight: 800 !important;
+        cursor: pointer !important;
+        box-sizing: border-box !important;
+      }
+      #nova-ai-panel .nai-key-error {
+        font-size: .68rem !important;
+        color: #dc2626 !important;
+        display: none !important;
+      }
+      #nova-ai-panel .nai-key-note {
+        font-size: .65rem !important;
+        color: var(--mist, #8b94a3) !important;
+        line-height: 1.5 !important;
+        padding: 8px 10px !important;
+        background: var(--surface, #f4f6fa) !important;
+        border-radius: 8px !important;
+        text-align: left !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+      }
+      #nova-ai-panel .nai-clear-key {
+        font-size: .65rem !important;
+        color: var(--mist, #8b94a3) !important;
+        background: none !important;
+        border: none !important;
+        cursor: pointer !important;
+        text-decoration: underline !important;
+        padding: 0 !important;
+      }
     `;
     document.head.appendChild(style);
+  }
+
+  const NOVA_AI_KEY_STORE = 'nova_ai_api_key';
+
+  function getApiKey() {
+    return localStorage.getItem(NOVA_AI_KEY_STORE) || '';
+  }
+
+  function saveApiKey(key) {
+    localStorage.setItem(NOVA_AI_KEY_STORE, key.trim());
+  }
+
+  function clearApiKey() {
+    localStorage.removeItem(NOVA_AI_KEY_STORE);
+  }
+
+  function showSetupScreen() {
+    const msgs = document.getElementById('naiMessages');
+    const sugg = document.getElementById('naiSuggestions');
+    const inputRow = document.querySelector('#nova-ai-panel .nai-input-row');
+
+    msgs.style.display = 'none';
+    sugg.style.display = 'none';
+    inputRow.style.display = 'none';
+
+    // Remove any existing setup screen
+    document.getElementById('naiSetup')?.remove();
+
+    const setup = document.createElement('div');
+    setup.className = 'nai-setup';
+    setup.id = 'naiSetup';
+    setup.innerHTML = `
+      <div class="nai-setup-icon">✦</div>
+      <div class="nai-setup-title">Nova AI Not Integrated</div>
+      <p class="nai-setup-sub">
+        Nova AI has not been set up yet.<br>
+        Please contact your administrator to get access.
+      </p>
+      <div class="nai-key-note">⚙️ Admins can enable Nova AI via <strong>Settings → Integrations</strong>.</div>
+    `;
+
+    // Insert before input row
+    const panel = document.getElementById('nova-ai-panel');
+    panel.insertBefore(setup, inputRow);
+  }
+
+  function hideSetupScreen() {
+    document.getElementById('naiSetup')?.remove();
+    const msgs = document.getElementById('naiMessages');
+    const sugg = document.getElementById('naiSuggestions');
+    const inputRow = document.querySelector('#nova-ai-panel .nai-input-row');
+    msgs.style.display = '';
+    sugg.style.display = '';
+    inputRow.style.display = '';
+
+    // Show welcome now that key is set
+    if (!_welcomeShown) {
+      _welcomeShown = true;
+      addBotMessage("Hi! I'm **NOVA AI** — I know the entire NOVA Studio codebase.\n\nAsk me how any function works, get step-by-step guidance, or let me perform actions for you (with your permission). What can I help you with?");
+    }
+    setTimeout(() => document.getElementById('naiInput').focus(), 100);
   }
 
   function buildPanel() {
@@ -712,6 +872,9 @@ When a user asks you to perform an action (navigate, click, fill a field, etc.),
 
     document.body.appendChild(fab);
     document.body.appendChild(panel);
+
+    // Make input-row relative for the key button
+    document.querySelector('#nova-ai-panel .nai-input-row').style.position = 'relative';
 
     // Events
     document.getElementById('naiClose').addEventListener('click', closePanel);
@@ -760,7 +923,17 @@ When a user asks you to perform an action (navigate, click, fill a field, etc.),
     const panel = document.getElementById('nova-ai-panel');
     panel.style.display = 'flex';
     panel.classList.remove('closing');
-    if (chatHistory.length === 0) {
+
+    if (!getApiKey()) {
+      // No key yet — show setup screen
+      showSetupScreen();
+      return;
+    }
+
+    // Key exists — ensure setup screen is gone and show welcome once
+    document.getElementById('naiSetup')?.remove();
+    if (!_welcomeShown) {
+      _welcomeShown = true;
       addBotMessage("Hi! I'm **NOVA AI** — I know the entire NOVA Studio codebase.\n\nAsk me how any function works, get step-by-step guidance, or let me perform actions for you (with your permission). What can I help you with?");
     }
     setTimeout(() => document.getElementById('naiInput').focus(), 100);
@@ -907,6 +1080,8 @@ When a user asks you to perform an action (navigate, click, fill a field, etc.),
   function init() {
     injectStyles();
     buildPanel();
+    // Expose a reset hook for the settings page
+    window._novaAiWelcomeReset = function() { _welcomeShown = false; };
   }
 
   // Wait for DOM
