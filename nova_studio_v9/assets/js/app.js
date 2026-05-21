@@ -415,8 +415,8 @@ function doLogout(){
   showToast('Signed out','ok');
 }
 
-const VIEWS=['home','cert','projects','profile','settings','mailer','sync','portal','help','tp','imgcomp','fileconv','imgedit','teams','followup'];
-const SBM={home:'sbHome',projects:'sbProj',profile:'sbProfile',cert:'sbCert',settings:'sbSettings',mailer:'sbMailer',sync:'sbSync',portal:'sbPortal',help:'sbHelp',tp:'sbTp',imgcomp:'sbImgComp',fileconv:'sbFileConv',imgedit:'sbImgEdit',teams:'sbTeams',followup:'sbFollowup'};
+const VIEWS=['home','cert','projects','profile','settings','mailer','sync','portal','help','tp','imgcomp','fileconv','imgedit','teams','followup','drafts'];
+const SBM={home:'sbHome',projects:'sbProj',profile:'sbProfile',cert:'sbCert',settings:'sbSettings',mailer:'sbMailer',sync:'sbSync',portal:'sbPortal',help:'sbHelp',tp:'sbTp',imgcomp:'sbImgComp',fileconv:'sbFileConv',imgedit:'sbImgEdit',teams:'sbTeams',followup:'sbFollowup',drafts:'sbDrafts'};
 
 function goView(v){
   VIEWS.forEach(id=>{
@@ -437,6 +437,7 @@ function goView(v){
   if(v==='tp'){tpInit();}
   if(v==='teams'){if(typeof TM!=='undefined')TM.openView();}
   if(v==='followup'){if(typeof FU!=='undefined')FU.openView();}
+  if(v==='drafts'){dpInit();}
 }
 
 const TL={cert:'🎓 Certificate Maker',mailer:'📧 Certificate Mailer'};
@@ -7432,3 +7433,479 @@ window.goView = function(v) {
   }
 
 })();
+
+// ════════════════════════════════════════════════════════════════════
+// ✉️  DRAFT PROPOSALS MODULE
+// ════════════════════════════════════════════════════════════════════
+
+(function() {
+
+  // ── State ──────────────────────────────────────────────────────────
+  var _drafts       = [];        // in-memory cache
+  var _activeDraftId = null;     // currently open draft id (null = new)
+  var _isDirty      = false;     // unsaved changes flag
+  var _initialized  = false;
+
+  // ── Firestore helpers ───────────────────────────────────────────────
+  function _draftCol() {
+    return fbDb.collection('users').doc(U.email).collection('drafts');
+  }
+
+  // ── Load all drafts from Firestore ──────────────────────────────────
+  async function _draftLoad() {
+    if (!U || !U.email || U.email === 'demo@nova.studio') {
+      return JSON.parse(localStorage.getItem('nova_drafts') || '[]');
+    }
+    try {
+      var snap = await _draftCol().orderBy('updatedAt','desc').get();
+      _drafts = snap.docs.map(function(d){ return Object.assign({id:d.id}, d.data()); });
+      try { localStorage.setItem('nova_drafts', JSON.stringify(_drafts)); } catch(e){}
+    } catch(e) {
+      _drafts = JSON.parse(localStorage.getItem('nova_drafts') || '[]');
+    }
+    return _drafts;
+  }
+
+  // ── Save a single draft to Firestore + mirror to Drive ──────────────
+  async function _draftSaveOne(draft) {
+    if (!U || !U.email || U.email === 'demo@nova.studio') {
+      var arr = JSON.parse(localStorage.getItem('nova_drafts') || '[]');
+      var i = arr.findIndex(function(d){ return d.id === draft.id; });
+      if (i >= 0) arr[i] = draft; else arr.unshift(draft);
+      try { localStorage.setItem('nova_drafts', JSON.stringify(arr)); } catch(e){}
+      _drafts = arr;
+      return;
+    }
+    try {
+      await _draftCol().doc(draft.id).set(draft);
+      // Update in-memory cache
+      var i = _drafts.findIndex(function(d){ return d.id === draft.id; });
+      if (i >= 0) _drafts[i] = draft; else _drafts.unshift(draft);
+      try { localStorage.setItem('nova_drafts', JSON.stringify(_drafts)); } catch(e){}
+    } catch(e) {
+      console.warn('[Drafts] Firestore save failed:', e);
+    }
+    // Mirror to Google Drive (non-blocking)
+    _draftMirrorToDrive(draft).catch(function(e){ console.warn('[Drafts] Drive mirror skipped:', e.message); });
+  }
+
+  // ── Delete a draft from Firestore ───────────────────────────────────
+  async function _draftDeleteOne(id) {
+    _drafts = _drafts.filter(function(d){ return d.id !== id; });
+    try { localStorage.setItem('nova_drafts', JSON.stringify(_drafts)); } catch(e){}
+    if (!U || !U.email || U.email === 'demo@nova.studio') return;
+    try {
+      await _draftCol().doc(id).delete();
+    } catch(e) { console.warn('[Drafts] Firestore delete failed:', e); }
+    // Remove from Drive (best-effort)
+    _draftDeleteFromDrive(id).catch(function(){});
+  }
+
+  // ── Mirror draft as .txt to NOVA Backend Drive folder ───────────────
+  async function _draftMirrorToDrive(draft) {
+    var token = NOVA_DRIVE_TOKEN || (function(){ try { return sessionStorage.getItem('nova_drive_token'); } catch(e){ return null; } })();
+    if (!token) return;
+
+    var folderId = NOVA_DRIVE_FOLDER_ID || (function(){ try { return sessionStorage.getItem('nova_drive_folder_id'); } catch(e){ return null; } })();
+
+    var slug     = (draft.title || 'untitled').replace(/[^a-z0-9_\-]/gi,'_').slice(0,40);
+    var filename = 'draft_' + draft.id + '_' + slug + '.txt';
+    var content  = _draftToText(draft);
+    var blob     = new Blob([content], { type: 'text/plain' });
+
+    // Check for existing file
+    var existingId = null;
+    try {
+      var q = 'name="' + filename + '"' + (folderId ? ' and "' + folderId + '" in parents' : '') + ' and trashed=false';
+      var sr = await fetch('https://www.googleapis.com/drive/v3/files?q=' + encodeURIComponent(q) + '&fields=files(id)&spaces=drive',
+        { headers: { 'Authorization': 'Bearer ' + token } });
+      if (sr.ok) {
+        var sd = await sr.json();
+        if (sd.files && sd.files.length > 0) existingId = sd.files[0].id;
+      }
+    } catch(e){}
+
+    if (existingId) {
+      await fetch('https://www.googleapis.com/upload/drive/v3/files/' + existingId + '?uploadType=media',
+        { method: 'PATCH', headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'text/plain' }, body: blob });
+    } else {
+      var meta = { name: filename, mimeType: 'text/plain' };
+      if (folderId) meta.parents = [folderId];
+      var boundary = 'nova_draft_' + Date.now();
+      var metaStr  = '--' + boundary + '\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n' + JSON.stringify(meta) + '\r\n';
+      var dataStr  = '--' + boundary + '\r\nContent-Type: text/plain\r\n\r\n';
+      var closeStr = '\r\n--' + boundary + '--';
+      var enc      = new TextEncoder();
+      var mBytes   = enc.encode(metaStr + dataStr);
+      var cBytes   = enc.encode(closeStr);
+      var body     = await blob.arrayBuffer();
+      var combined = new Uint8Array(mBytes.byteLength + body.byteLength + cBytes.byteLength);
+      combined.set(mBytes, 0);
+      combined.set(new Uint8Array(body), mBytes.byteLength);
+      combined.set(cBytes, mBytes.byteLength + body.byteLength);
+      await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id',
+        { method: 'POST', headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'multipart/related; boundary=' + boundary }, body: combined });
+    }
+  }
+
+  // ── Remove Drive file for a draft ───────────────────────────────────
+  async function _draftDeleteFromDrive(id) {
+    var token = NOVA_DRIVE_TOKEN || (function(){ try { return sessionStorage.getItem('nova_drive_token'); } catch(e){ return null; } })();
+    if (!token) return;
+    var folderId = NOVA_DRIVE_FOLDER_ID || (function(){ try { return sessionStorage.getItem('nova_drive_folder_id'); } catch(e){ return null; } })();
+    try {
+      var q = 'name contains "draft_' + id + '_"' + (folderId ? ' and "' + folderId + '" in parents' : '') + ' and trashed=false';
+      var sr = await fetch('https://www.googleapis.com/drive/v3/files?q=' + encodeURIComponent(q) + '&fields=files(id)&spaces=drive',
+        { headers: { 'Authorization': 'Bearer ' + token } });
+      if (sr.ok) {
+        var sd = await sr.json();
+        if (sd.files && sd.files.length > 0) {
+          await fetch('https://www.googleapis.com/drive/v3/files/' + sd.files[0].id,
+            { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + token } });
+        }
+      }
+    } catch(e){}
+  }
+
+  // ── Convert draft object to plain text for download/Drive ───────────
+  function _draftToText(draft) {
+    var lines = [];
+    lines.push('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    lines.push('NOVA Studio — Draft Proposal');
+    lines.push('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    lines.push('Title    : ' + (draft.title || ''));
+    lines.push('Type     : ' + (draft.type  || '').toUpperCase());
+    if (draft.recipient) lines.push('To       : ' + draft.recipient);
+    if (draft.subject)   lines.push('Subject  : ' + draft.subject);
+    if (draft.tags && draft.tags.length) lines.push('Tags     : ' + draft.tags.join(', '));
+    lines.push('Created  : ' + (draft.createdAt  ? new Date(draft.createdAt).toLocaleString()  : '—'));
+    lines.push('Updated  : ' + (draft.updatedAt  ? new Date(draft.updatedAt).toLocaleString()  : '—'));
+    lines.push('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    lines.push('');
+    lines.push(draft.body || '');
+    return lines.join('\n');
+  }
+
+  // ── Generate unique id ───────────────────────────────────────────────
+  function _uid() {
+    return Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+  }
+
+  // ── Type display helpers ─────────────────────────────────────────────
+  var TYPE_META = {
+    email:    { icon:'📧', color:'#2563eb', bg:'#eff6ff', border:'#bfdbfe' },
+    message:  { icon:'💬', color:'#16a34a', bg:'#f0fdf4', border:'#bbf7d0' },
+    proposal: { icon:'📋', color:'#9333ea', bg:'#fdf4ff', border:'#e9d5ff' },
+    letter:   { icon:'📄', color:'#d97706', bg:'#fffbeb', border:'#fde68a' }
+  };
+  function _typeMeta(t){ return TYPE_META[t] || TYPE_META['email']; }
+
+  function _relTime(ts) {
+    if (!ts) return '';
+    var d = Date.now() - ts;
+    if (d < 60000)  return 'just now';
+    if (d < 3600000) return Math.floor(d/60000) + 'm ago';
+    if (d < 86400000) return Math.floor(d/3600000) + 'h ago';
+    return Math.floor(d/86400000) + 'd ago';
+  }
+
+  // ── Toast ────────────────────────────────────────────────────────────
+  function _toast(msg, ok) {
+    var t = document.getElementById('dpToast');
+    if (!t) return;
+    t.textContent = msg;
+    t.style.display = 'block';
+    t.style.background  = ok === false ? '#fee2e2'  : '#dcfce7';
+    t.style.color       = ok === false ? '#dc2626'  : '#15803d';
+    t.style.border      = '1.5px solid ' + (ok === false ? '#fca5a5' : '#86efac');
+    clearTimeout(t._to);
+    t._to = setTimeout(function(){ t.style.display='none'; }, 2800);
+  }
+
+  // ── Render list of drafts ────────────────────────────────────────────
+  function dpFilterRender() {
+    var search = (document.getElementById('dpSearch') || {}).value || '';
+    var typeF  = (document.getElementById('dpTypeFilter') || {}).value || '';
+    search = search.toLowerCase();
+
+    var filtered = _drafts.filter(function(d) {
+      var matchType   = !typeF   || d.type === typeF;
+      var matchSearch = !search  || (d.title || '').toLowerCase().includes(search)
+                                 || (d.body  || '').toLowerCase().includes(search)
+                                 || (d.recipient || '').toLowerCase().includes(search)
+                                 || (d.tags  || []).join(',').toLowerCase().includes(search);
+      return matchType && matchSearch;
+    });
+
+    var list = document.getElementById('dpList');
+    if (!list) return;
+
+    var count = document.getElementById('dpDraftCount');
+    if (count) count.textContent = _drafts.length + ' draft' + (_drafts.length === 1 ? '' : 's');
+
+    if (!filtered.length) {
+      list.innerHTML = '<div style="padding:24px;text-align:center;color:var(--mist);font-size:.78rem">' +
+        (_drafts.length ? '🔍 No drafts match your filter' : '✉️ No drafts yet.<br><br>Click <b>+ New Draft</b> to create one.') +
+        '</div>';
+      return;
+    }
+
+    list.innerHTML = filtered.map(function(d) {
+      var m = _typeMeta(d.type);
+      var isActive = d.id === _activeDraftId;
+      var snippet  = (d.body || '').replace(/\n/g,' ').slice(0,80) || '—';
+      var tagsHtml = (d.tags || []).map(function(tag) {
+        return '<span style="font-size:.6rem;font-weight:700;padding:2px 7px;border-radius:10px;background:var(--fog);color:var(--mist)">' + _esc(tag) + '</span>';
+      }).join('');
+
+      return '<div class="dp-card" data-id="' + d.id + '" onclick="dpOpenEdit(\'' + d.id + '\')" style="' +
+        'cursor:pointer;border-radius:10px;padding:12px 14px;margin-bottom:8px;' +
+        'border:1.5px solid ' + (isActive ? m.border : 'var(--fog)') + ';' +
+        'background:' + (isActive ? m.bg : 'var(--card)') + ';' +
+        'transition:border-color .15s,background .15s">' +
+        // Type badge + time
+        '<div style="display:flex;align-items:center;gap:6px;margin-bottom:7px">' +
+          '<span style="font-size:.65rem;font-weight:800;padding:2px 8px;border-radius:10px;' +
+            'background:' + m.bg + ';color:' + m.color + ';border:1px solid ' + m.border + '">' +
+            m.icon + ' ' + (d.type || 'email').toUpperCase() +
+          '</span>' +
+          '<span style="font-size:.63rem;color:var(--mist);margin-left:auto">' + _relTime(d.updatedAt) + '</span>' +
+        '</div>' +
+        // Title
+        '<div style="font-size:.82rem;font-weight:800;color:var(--ink);letter-spacing:-.01em;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + _esc(d.title || 'Untitled') + '</div>' +
+        // Snippet
+        '<div style="font-size:.7rem;color:var(--mist);line-height:1.4;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">' + _esc(snippet) + '</div>' +
+        // Tags
+        (tagsHtml ? '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:7px">' + tagsHtml + '</div>' : '') +
+        // Recipient
+        (d.recipient ? '<div style="font-size:.66rem;color:var(--mist);margin-top:5px">→ ' + _esc(d.recipient) + '</div>' : '') +
+      '</div>';
+    }).join('');
+  }
+
+  function _esc(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // ── Init / open view ─────────────────────────────────────────────────
+  window.dpInit = async function() {
+    if (!_initialized) {
+      _initialized = true;
+    }
+    await _draftLoad();
+    dpFilterRender();
+    // If no draft is active, show empty state
+    if (!_activeDraftId) {
+      _showEmptyState();
+    }
+  };
+
+  // ── New draft ────────────────────────────────────────────────────────
+  window.dpNewDraft = function() {
+    _activeDraftId = null;
+    _isDirty       = false;
+
+    // Clear fields
+    _setField('dpTitle', '');
+    _setField('dpRecipient', '');
+    _setField('dpSubject', '');
+    _setField('dpTags', '');
+    _setField('dpBody', '');
+    var typeEl = document.getElementById('dpType');
+    if (typeEl) typeEl.value = 'email';
+
+    _showEditor('New Draft', false);
+    dpTypeChange();
+    document.getElementById('dpLastSaved').textContent = '';
+    document.getElementById('dpUnsavedHint').style.display = 'none';
+    setTimeout(function(){ var el=document.getElementById('dpTitle'); if(el) el.focus(); }, 50);
+  };
+
+  // ── Open existing draft for editing ──────────────────────────────────
+  window.dpOpenEdit = function(id) {
+    var draft = _drafts.find(function(d){ return d.id === id; });
+    if (!draft) return;
+
+    _activeDraftId = id;
+    _isDirty       = false;
+
+    _setField('dpTitle',     draft.title     || '');
+    _setField('dpRecipient', draft.recipient || '');
+    _setField('dpSubject',   draft.subject   || '');
+    _setField('dpTags',      (draft.tags || []).join(', '));
+    _setField('dpBody',      draft.body      || '');
+    var typeEl = document.getElementById('dpType');
+    if (typeEl) typeEl.value = draft.type || 'email';
+
+    _showEditor(draft.title || 'Untitled', true);
+    dpTypeChange();
+
+    var ls = document.getElementById('dpLastSaved');
+    if (ls && draft.updatedAt) ls.textContent = 'Last saved ' + _relTime(draft.updatedAt);
+
+    document.getElementById('dpUnsavedHint').style.display = 'none';
+    dpFilterRender(); // re-highlight active card
+  };
+
+  // ── Save current draft ───────────────────────────────────────────────
+  window.dpSaveDraft = async function() {
+    var title = (_getField('dpTitle') || '').trim();
+    var body  = (_getField('dpBody')  || '').trim();
+
+    if (!title) { _toast('Please enter a draft title.', false); document.getElementById('dpTitle').focus(); return; }
+    if (!body)  { _toast('Message body cannot be empty.', false); document.getElementById('dpBody').focus(); return; }
+
+    var tagsRaw = (_getField('dpTags') || '').split(',').map(function(t){ return t.trim(); }).filter(Boolean);
+    var now     = Date.now();
+
+    var draft;
+    if (_activeDraftId) {
+      draft = Object.assign({}, _drafts.find(function(d){ return d.id === _activeDraftId; }) || {});
+    } else {
+      draft = { id: _uid(), createdAt: now };
+    }
+
+    Object.assign(draft, {
+      title:     title,
+      type:      _getField('dpType')      || 'email',
+      recipient: _getField('dpRecipient') || '',
+      subject:   _getField('dpSubject')   || '',
+      tags:      tagsRaw,
+      body:      body,
+      updatedAt: now
+    });
+
+    // Disable save button during save
+    var saveBtn = document.getElementById('dpSaveBtn');
+    if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Saving…'; }
+
+    await _draftSaveOne(draft);
+    _activeDraftId = draft.id;
+    _isDirty = false;
+
+    if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '💾 Save Draft'; }
+
+    // Show delete button now that it's saved
+    var delBtn = document.getElementById('dpDeleteBtn');
+    if (delBtn) delBtn.style.display = 'inline-flex';
+
+    document.getElementById('dpEditorTitle').textContent = draft.title;
+    document.getElementById('dpUnsavedHint').style.display = 'none';
+    var ls = document.getElementById('dpLastSaved');
+    if (ls) ls.textContent = 'Saved just now · synced to Firestore' + (NOVA_DRIVE_TOKEN ? ' & Drive' : '');
+
+    dpFilterRender();
+    _toast('✅ Draft saved successfully!');
+  };
+
+  // ── Download draft as .txt ───────────────────────────────────────────
+  window.dpDownloadDraft = function() {
+    var id    = _activeDraftId;
+    var draft = id ? _drafts.find(function(d){ return d.id === id; }) : null;
+
+    // If unsaved new draft, build from current fields
+    if (!draft) {
+      var title = (_getField('dpTitle') || 'draft').trim() || 'draft';
+      draft = {
+        id: 'preview',
+        title: title,
+        type:      _getField('dpType')      || 'email',
+        recipient: _getField('dpRecipient') || '',
+        subject:   _getField('dpSubject')   || '',
+        tags:      (_getField('dpTags') || '').split(',').map(function(t){ return t.trim(); }).filter(Boolean),
+        body:      _getField('dpBody')      || '',
+        createdAt: Date.now(),
+        updatedAt: Date.now()
+      };
+    }
+
+    var content  = _draftToText(draft);
+    var slug     = (draft.title || 'draft').replace(/[^a-z0-9_\-\s]/gi,'').replace(/\s+/g,'_').slice(0,40);
+    var filename = 'draft_' + slug + '.txt';
+    var blob     = new Blob([content], { type: 'text/plain' });
+    var url      = URL.createObjectURL(blob);
+    var a        = document.createElement('a');
+    a.href       = url;
+    a.download   = filename;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function(){ document.body.removeChild(a); URL.revokeObjectURL(url); }, 200);
+    _toast('⬇ Downloading "' + filename + '"');
+  };
+
+  // ── Confirm + delete ─────────────────────────────────────────────────
+  window.dpConfirmDelete = function() {
+    if (!_activeDraftId) return;
+    var draft = _drafts.find(function(d){ return d.id === _activeDraftId; });
+    if (!draft) return;
+    if (!confirm('Delete draft "' + (draft.title || 'Untitled') + '"?\n\nThis will remove it from Firestore and Google Drive.')) return;
+    dpDeleteActive();
+  };
+
+  async function dpDeleteActive() {
+    var id = _activeDraftId;
+    if (!id) return;
+    await _draftDeleteOne(id);
+    _activeDraftId = null;
+    _isDirty       = false;
+    dpFilterRender();
+    _showEmptyState();
+    _toast('🗑 Draft deleted.');
+  }
+
+  // ── Close editor ─────────────────────────────────────────────────────
+  window.dpCloseEditor = function() {
+    if (_isDirty && !confirm('You have unsaved changes. Discard them?')) return;
+    _activeDraftId = null;
+    _isDirty       = false;
+    _showEmptyState();
+    dpFilterRender();
+  };
+
+  // ── Mark dirty (unsaved changes) ─────────────────────────────────────
+  window.dpMarkDirty = function() {
+    if (!_isDirty) {
+      _isDirty = true;
+      var hint = document.getElementById('dpUnsavedHint');
+      if (hint) hint.style.display = 'block';
+    }
+  };
+
+  // ── Show/hide subject field based on type ────────────────────────────
+  window.dpTypeChange = function() {
+    var type = _getField('dpType');
+    var subjectWrap = document.getElementById('dpSubjectWrap');
+    if (subjectWrap) subjectWrap.style.display = (type === 'email' || type === 'letter') ? '' : 'none';
+  };
+
+  // ── UI helpers ───────────────────────────────────────────────────────
+  function _showEditor(title, hasId) {
+    var empty  = document.getElementById('dpEditorEmpty');
+    var editor = document.getElementById('dpEditor');
+    if (empty)  empty.style.display  = 'none';
+    if (editor) { editor.style.display = 'flex'; }
+    var tEl = document.getElementById('dpEditorTitle');
+    if (tEl) tEl.textContent = title;
+    var delBtn = document.getElementById('dpDeleteBtn');
+    if (delBtn) delBtn.style.display = hasId ? 'inline-flex' : 'none';
+  }
+
+  function _showEmptyState() {
+    var empty  = document.getElementById('dpEditorEmpty');
+    var editor = document.getElementById('dpEditor');
+    if (empty)  empty.style.display  = 'flex';
+    if (editor) editor.style.display = 'none';
+  }
+
+  function _setField(id, val) {
+    var el = document.getElementById(id);
+    if (el) el.value = val;
+  }
+
+  function _getField(id) {
+    var el = document.getElementById(id);
+    return el ? el.value : '';
+  }
+
+})();
+// ════ END DRAFT PROPOSALS MODULE ════
