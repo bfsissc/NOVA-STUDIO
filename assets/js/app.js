@@ -3200,8 +3200,8 @@ async function stgUpdateStorageInfo() {
 }
 
 function stgTab(tab) {
-  var ID_MAP = {appearance:'Appearance',workspace:'Workspace',notifications:'Notifications',privacy:'Privacy',data:'Data',dataupload:'DataUpload',integrations:'Integrations'};
-  ['appearance','workspace','notifications','privacy','data','dataupload','integrations'].forEach(t => {
+  var ID_MAP = {appearance:'Appearance',workspace:'Workspace',notifications:'Notifications',privacy:'Privacy',data:'Data',dataupload:'DataUpload',integrations:'Integrations',novaai:'NovaAi'};
+  ['appearance','workspace','notifications','privacy','data','dataupload','integrations','novaai'].forEach(t => {
     var suffix = ID_MAP[t] || (t[0].toUpperCase() + t.slice(1));
     var pan = document.getElementById('stp'+suffix) || document.getElementById('stp'+t[0].toUpperCase()+t.slice(1));
     var nav = document.getElementById('stn'+suffix) || document.getElementById('stn'+t[0].toUpperCase()+t.slice(1));
@@ -3210,6 +3210,7 @@ function stgTab(tab) {
   });
   if (tab === 'data') stgUpdateStorageInfo();
   if (tab === 'integrations') ejsLoadKeys();
+  if (tab === 'novaai') novaAiLoadKeys();
   if (tab === 'dataupload') { anUpdateStgIndicator(); stgUpdateStandaloneIndicator(); }
 }
 
@@ -3273,14 +3274,66 @@ function brevoLoadKeys() {
 
 // ── Nova AI Key Management ──────────────────────────────────────────────────
 
-var NOVA_AI_KEY_STORE = 'nova_ai_api_key';
+var NOVA_AI_KEY_STORE  = 'nova_ai_api_key';
+var NOVA_AI_PW_STORE   = 'nova_ai_pw_hash';
+var NOVA_AI_PW_DEFAULT = 887605624;
+
+function _novaHash(s) {
+  var h = 0;
+  for (var i = 0; i < s.length; i++) { h = (Math.imul(31, h) + s.charCodeAt(i)) | 0; }
+  return h;
+}
+
+function novaAiSetPassword() {
+  var curEl = document.getElementById('novaAiCurPw');
+  var newEl = document.getElementById('novaAiNewPw');
+  var cnfEl = document.getElementById('novaAiCnfPw');
+  var errEl = document.getElementById('novaAiPwError');
+  var okEl  = document.getElementById('novaAiPwOk');
+  if (!curEl || !newEl || !cnfEl) return;
+
+  var cur = curEl.value, nw = newEl.value.trim(), cnf = cnfEl.value.trim();
+  var storedHash = parseInt(localStorage.getItem(NOVA_AI_PW_STORE) || NOVA_AI_PW_DEFAULT, 10);
+
+  errEl.style.display = 'none';
+  okEl.style.display  = 'none';
+
+  if (_novaHash(cur) !== storedHash) {
+    errEl.textContent = '\u274C Current password is incorrect.';
+    errEl.style.display = 'block';
+    curEl.value = '';
+    return;
+  }
+  if (nw.length < 4) {
+    errEl.textContent = '\u274C New password must be at least 4 characters.';
+    errEl.style.display = 'block';
+    return;
+  }
+  if (nw !== cnf) {
+    errEl.textContent = '\u274C New passwords do not match.';
+    errEl.style.display = 'block';
+    cnfEl.value = '';
+    return;
+  }
+
+  localStorage.setItem(NOVA_AI_PW_STORE, _novaHash(nw));
+  curEl.value = ''; newEl.value = ''; cnfEl.value = '';
+  okEl.style.display = 'block';
+  if (typeof showToast === 'function') showToast('Nova AI access password updated \u2713', 'ok');
+}
 
 function novaAiLoadKeys() {
   var existing = localStorage.getItem(NOVA_AI_KEY_STORE) || '';
   var inp = document.getElementById('novaAiApiKey');
   var status = document.getElementById('novaAiStatus');
   var clearRow = document.getElementById('novaAiClearRow');
+  var pasteCard = document.getElementById('novaAiPasteCard');
   if (inp) inp.value = existing ? '••••••••••••••••••••••••' : '';
+  if (pasteCard && existing) {
+    pasteCard.style.borderStyle = 'solid';
+    pasteCard.style.borderColor = 'rgba(34,197,94,.4)';
+    pasteCard.style.background = 'rgba(34,197,94,.06)';
+  }
   if (status) {
     if (existing) {
       status.style.display = 'block';
@@ -3302,14 +3355,10 @@ function novaAiGenerate() {
 
   var entered = pwEl.value;
   // Verify the access password using a hash check (password never stored in plain text)
-  var _chk = (function(s){
-    var h = 0;
-    for (var i = 0; i < s.length; i++) { h = (Math.imul(31, h) + s.charCodeAt(i)) | 0; }
-    return h;
-  })(entered);
+  var _chk = _novaHash(entered);
+  var _storedHash = parseInt(localStorage.getItem(NOVA_AI_PW_STORE) || NOVA_AI_PW_DEFAULT, 10);
 
-  // Hash of access password — verified at build time
-  if (_chk !== 887605624) {
+  if (_chk !== _storedHash) {
     errEl.style.display = 'block';
     resEl.style.display = 'none';
     pwEl.value = '';
@@ -3350,6 +3399,7 @@ function novaAiSaveKey() {
   var errEl = document.getElementById('novaAiKeyError');
   var status = document.getElementById('novaAiStatus');
   var clearRow = document.getElementById('novaAiClearRow');
+  var pasteCard = document.getElementById('novaAiPasteCard');
   if (!inp) return;
 
   var val = inp.value.trim();
@@ -3357,14 +3407,19 @@ function novaAiSaveKey() {
   if (val.startsWith('•')) { showToast('Key is already saved', 'info'); return; }
 
   if (!val.startsWith('sk-ant')) {
-    errEl.style.display = 'block';
+    if (errEl) errEl.style.display = 'block';
     return;
   }
-  errEl.style.display = 'none';
+  if (errEl) errEl.style.display = 'none';
 
   localStorage.setItem(NOVA_AI_KEY_STORE, val);
   inp.value = '••••••••••••••••••••••••';
-  inp.type = 'password';
+  // Update paste card to show saved state
+  if (pasteCard) {
+    pasteCard.style.borderStyle = 'solid';
+    pasteCard.style.borderColor = 'rgba(34,197,94,.4)';
+    pasteCard.style.background = 'rgba(34,197,94,.06)';
+  }
 
   if (status) {
     status.style.display = 'block';
@@ -3384,7 +3439,13 @@ function novaAiClearKey() {
   var inp = document.getElementById('novaAiApiKey');
   var status = document.getElementById('novaAiStatus');
   var clearRow = document.getElementById('novaAiClearRow');
-  if (inp) { inp.value = ''; inp.type = 'password'; }
+  var pasteCard = document.getElementById('novaAiPasteCard');
+  if (inp) { inp.value = ''; }
+  if (pasteCard) {
+    pasteCard.style.borderStyle = 'dashed';
+    pasteCard.style.borderColor = 'var(--fog-d)';
+    pasteCard.style.background = 'var(--snow)';
+  }
   if (status) { status.style.display = 'none'; }
   if (clearRow) clearRow.style.display = 'none';
   showToast('Nova AI key removed', 'info');

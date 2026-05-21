@@ -108,7 +108,7 @@ NOVA Studio is built with vanilla HTML/CSS/JS, Firebase/Firestore for auth and r
     - projCreate() / projDelete(id) — manage projects
 
 14. SETTINGS (view: 'settings')
-    - stgTab(tab) — switch settings tab ('appearance','workspace','notifications','privacy','data','dataupload','integrations')
+    - stgTab(tab) — switch settings tab ('appearance','workspace','notifications','privacy','data','dataupload','integrations','novaai')
     - stgGetSettings() / stgApplyUI() — get/apply settings
     - Key integrations: Brevo API key (mailer), Google Drive token
 

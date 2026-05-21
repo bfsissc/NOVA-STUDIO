@@ -36,6 +36,166 @@
 [data-theme="ios"] .ui-style-card,[data-theme="ios-dark"] .ui-style-card{border-radius:14px}
 [data-theme="ios-dark"] .ui-style-card{background:#2c2c2e;border-color:rgba(255,255,255,.1)}
 [data-theme="dark"] .ui-style-card{background:var(--white);border-color:var(--fog)}
+/* ══ Nova AI Assistant Card — complete redesign ══ */
+#novaAiAssistantCard {
+  background: linear-gradient(135deg, #fafff0 0%, #f0f9e8 100%) !important;
+  border: 1.5px solid rgba(158,192,0,.25) !important;
+  border-radius: 14px !important;
+  padding: 18px !important;
+  margin-top: 14px !important;
+  box-shadow: 0 2px 16px rgba(158,192,0,.08) !important;
+}
+#novaAiAssistantCard .nova-header {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  margin-bottom: 12px !important;
+}
+#novaAiAssistantCard .nova-badge {
+  background: var(--ink, #1a1f27) !important;
+  color: #c8f135 !important;
+  font-size: .65rem !important;
+  font-weight: 800 !important;
+  letter-spacing: .08em !important;
+  padding: 3px 8px !important;
+  border-radius: 20px !important;
+  text-transform: uppercase !important;
+}
+#novaAiAssistantCard .nova-hint {
+  font-size: .7rem !important;
+  color: #5a6a3a !important;
+  line-height: 1.5 !important;
+  margin-bottom: 16px !important;
+  padding: 9px 12px !important;
+  background: rgba(200,241,53,.12) !important;
+  border-radius: 8px !important;
+  border-left: 3px solid rgba(158,192,0,.5) !important;
+}
+/* Step labels */
+#novaAiAssistantCard .nova-step-label {
+  font-size: .72rem !important;
+  font-weight: 700 !important;
+  color: var(--ink, #1a1f27) !important;
+  margin-bottom: 10px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 7px !important;
+}
+#novaAiAssistantCard .nova-step-num {
+  width: 20px !important; height: 20px !important;
+  background: var(--ink, #1a1f27) !important;
+  color: #c8f135 !important;
+  border-radius: 50% !important;
+  font-size: .65rem !important;
+  font-weight: 800 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-shrink: 0 !important;
+}
+/* Password wrapper */
+#novaAiGenSection { display: block !important; visibility: visible !important; }
+#novaAiPasswordCard {
+  display: block !important;
+  visibility: visible !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  background: #fff !important;
+  border: 1.5px solid #dde8c0 !important;
+  border-radius: 10px !important;
+  padding: 12px 14px !important;
+  margin-bottom: 10px !important;
+  transition: border-color .2s, box-shadow .2s !important;
+  position: relative !important;
+  overflow: visible !important;
+}
+#novaAiPasswordCard:focus-within {
+  border-color: #9dc423 !important;
+  box-shadow: 0 0 0 3px rgba(157,196,35,.15) !important;
+}
+#novaAiPasswordCard .pw-label {
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  margin-bottom: 8px !important;
+  font-size: .72rem !important;
+  font-weight: 700 !important;
+  color: #556 !important;
+}
+#novaAiPassword {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  background: #f8fbf2 !important;
+  border: 1.5px solid #dde8c0 !important;
+  border-radius: 8px !important;
+  padding: 10px 40px 10px 12px !important;
+  font-size: .85rem !important;
+  color: #1a1f27 !important;
+  outline: none !important;
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  height: auto !important;
+  min-height: 38px !important;
+  font-family: inherit !important;
+  line-height: 1.4 !important;
+}
+#novaAiPassword:focus {
+  border-color: #9dc423 !important;
+  background: #fff !important;
+  box-shadow: 0 0 0 3px rgba(157,196,35,.12) !important;
+}
+#novaAiPassword::placeholder { color: #aab8a0 !important; font-size: .82rem !important; }
+/* Eye toggle button */
+#novaAiPwToggle {
+  position: absolute !important;
+  right: 24px !important;
+  bottom: 20px !important;
+  background: none !important;
+  border: none !important;
+  cursor: pointer !important;
+  padding: 4px !important;
+  color: #8a9a7a !important;
+  font-size: .85rem !important;
+  line-height: 1 !important;
+  display: flex !important;
+  align-items: center !important;
+}
+/* Divider between steps */
+#novaAiAssistantCard .nova-divider {
+  height: 1px !important;
+  background: linear-gradient(90deg, transparent, rgba(158,192,0,.3), transparent) !important;
+  margin: 14px 0 !important;
+}
+/* Paste card */
+#novaAiPasteCard {
+  background: #fff !important;
+  border: 2px dashed #dde8c0 !important;
+  border-radius: 10px !important;
+  padding: 14px 12px !important;
+  margin-bottom: 10px !important;
+  text-align: center !important;
+  cursor: pointer !important;
+  transition: border-color .2s, background .2s !important;
+}
+#novaAiPasteCard:hover { border-color: #9dc423 !important; background: #f8fbf2 !important; }
+/* Status & error chips */
+#novaAiGenError, #novaAiKeyError {
+  display: none;
+  margin-top: 7px !important;
+  font-size: .71rem !important;
+  color: #dc2626 !important;
+  padding: 7px 11px !important;
+  background: rgba(220,38,38,.07) !important;
+  border-radius: 7px !important;
+  border-left: 3px solid rgba(220,38,38,.4) !important;
+}
+#novaAiStatus { display: none; border-radius: 7px !important; }
+/* Change Password accordion */
+#novaAiAssistantCard details summary { list-style: none !important; }
+#novaAiAssistantCard details summary::-webkit-details-marker { display: none !important; }
 </style>
 <!-- ✅ Storage polyfill — MUST be first: patches localStorage before any other script runs -->
 <script>
@@ -1164,48 +1324,154 @@
                 </div>
               </div>
 
-              <!-- Nova AI -->
-              <div class="stg-card" style="margin-top:14px">
-                <div class="stg-card-h">✦ Nova AI Assistant</div>
-                <div style="font-size:.7rem;color:var(--mist);line-height:1.5;margin-bottom:12px;padding:8px 10px;background:rgba(200,241,53,.07);border-radius:7px;border:1px solid rgba(200,241,53,.18)">
-                  Generate your personal Nova AI key below, then paste it into the API Key field to activate the codebase-aware assistant.
+              <!-- Nova AI — Redesigned Card -->
+              <div id="novaAiAssistantCard" class="stg-card" style="margin-top:14px">
+
+                <!-- Header -->
+                <div class="nova-header">
+                  <span style="font-size:1.1rem">✦</span>
+                  <span style="font-size:.82rem;font-weight:800;color:var(--ink);letter-spacing:-.02em">Nova AI Assistant</span>
+                  <span class="nova-badge">Beta</span>
                 </div>
 
-                <!-- Step 1: Generate key via password -->
+                <!-- Info hint -->
+                <div class="nova-hint">
+                  Generate your personal Nova AI key using your access password, then activate the codebase-aware assistant below.
+                </div>
+
+                <!-- ── Step 1: Password + Generate ── -->
                 <div id="novaAiGenSection">
-                  <div class="stg-row-t" style="margin-bottom:4px">Step 1 — Generate API Key</div>
-                  <div style="display:flex;gap:8px">
-                    <input class="fi" id="novaAiPassword" type="password" placeholder="Enter access password…" autocomplete="off" spellcheck="false" style="flex:1;font-size:.82rem" onkeydown="if(event.key==='Enter')novaAiGenerate()">
-                    <button class="btn-pri" style="padding:9px 16px;border-radius:7px;font-size:.8rem;white-space:nowrap" onclick="novaAiGenerate()">🔑 Generate</button>
+
+                  <div class="nova-step-label">
+                    <span class="nova-step-num">1</span>
+                    Generate API Key
                   </div>
-                  <div id="novaAiGenError" style="display:none;margin-top:6px;font-size:.71rem;color:#dc2626;padding:6px 10px;background:rgba(220,38,38,.08);border-radius:6px">
-                    ❌ Incorrect password. Please try again.
+
+                  <!-- Password card -->
+                  <div id="novaAiPasswordCard">
+                    <div class="pw-label">
+                      <span>🔑</span>
+                      <span>Access Password</span>
+                    </div>
+                    <!-- Password input + show/hide wrapper -->
+                    <div style="position:relative;display:block">
+                      <input
+                        id="novaAiPassword"
+                        type="password"
+                        placeholder="Enter your access password…"
+                        autocomplete="current-password"
+                        spellcheck="false"
+                        onkeydown="if(event.key==='Enter')novaAiGenerate()"
+                      >
+                      <!-- Eye toggle -->
+                      <button
+                        type="button"
+                        id="novaAiPwToggle"
+                        title="Show / hide password"
+                        onclick="(function(){var i=document.getElementById('novaAiPassword');var b=document.getElementById('novaAiPwToggle');i.type=i.type==='password'?'text':'password';b.textContent=i.type==='password'?'👁':'🙈';})()"
+                        style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:.85rem;line-height:1;color:#8a9a7a;padding:2px 4px"
+                      >👁</button>
+                    </div>
+                  </div><!-- /novaAiPasswordCard -->
+
+                  <!-- Generate button -->
+                  <button
+                    class="btn-pri"
+                    style="width:100%;padding:11px;border-radius:9px;font-size:.83rem;font-weight:800;letter-spacing:.01em;gap:6px;margin-top:2px"
+                    onclick="novaAiGenerate()"
+                  >🗝 Generate Key</button>
+
+                  <!-- Error message -->
+                  <div id="novaAiGenError" style="display:none;margin-top:7px;font-size:.71rem;color:#dc2626;padding:7px 11px;background:rgba(220,38,38,.07);border-radius:7px;border-left:3px solid rgba(220,38,38,.4)">
+                    ✖ Incorrect password — please try again.
                   </div>
-                  <div id="novaAiGenResult" style="display:none;margin-top:8px">
-                    <div style="font-size:.7rem;color:var(--mist);margin-bottom:4px">Your generated key (copy it, then paste below):</div>
+
+                  <!-- Generated key result -->
+                  <div id="novaAiGenResult" style="display:none;margin-top:10px">
+                    <div style="font-size:.68rem;font-weight:700;color:#5a6a3a;margin-bottom:6px;display:flex;align-items:center;gap:5px">
+                      <span style="color:#22c55e">✓</span> Key generated — copy it, then paste below
+                    </div>
                     <div style="display:flex;gap:6px;align-items:center">
-                      <input class="fi" id="novaAiGenKeyDisplay" type="text" readonly style="flex:1;font-family:'DM Mono',monospace;font-size:.75rem;background:var(--snow);cursor:text">
-                      <button class="btn bo btn-sm" onclick="novaAiCopyGenKey()" title="Copy key">📋</button>
+                      <input class="fi" id="novaAiGenKeyDisplay" type="text" readonly
+                        style="flex:1;font-family:'DM Mono',monospace;font-size:.72rem;background:#f8fbf2;border-color:#dde8c0;cursor:text;color:#3a4a2a">
+                      <button class="btn bo btn-sm" onclick="novaAiCopyGenKey()" title="Copy key"
+                        style="padding:8px 10px;border-radius:7px;font-size:.8rem">📋</button>
                     </div>
                   </div>
+
+                </div><!-- /novaAiGenSection -->
+
+                <!-- Divider -->
+                <div class="nova-divider"></div>
+
+                <!-- ── Step 2: Activate ── -->
+                <div>
+                  <div class="nova-step-label">
+                    <span class="nova-step-num">2</span>
+                    Activate Nova AI
+                  </div>
+
+                  <!-- Paste card -->
+                  <div id="novaAiPasteCard"
+                    onclick="document.getElementById('novaAiApiKey').focus()"
+                    title="Click to paste your key"
+                    style="background:#fff;border:2px dashed #dde8c0;border-radius:10px;padding:14px 12px;margin-bottom:10px;text-align:center;cursor:pointer;transition:border-color .2s,background .2s"
+                  >
+                    <div style="font-size:1.3rem;margin-bottom:4px">📋</div>
+                    <div style="font-size:.7rem;font-weight:700;color:var(--mist);margin-bottom:7px">Paste your generated key here</div>
+                    <input class="fi" id="novaAiApiKey" type="text"
+                      placeholder="sk-ant-…  (paste your key)"
+                      autocomplete="off" spellcheck="false"
+                      style="font-family:'DM Mono',monospace;font-size:.73rem;text-align:center;background:transparent;border:none;box-shadow:none;padding:4px 0;width:100%;outline:none;color:var(--ink)"
+                      onkeydown="if(event.key==='Enter')novaAiSaveKey()"
+                      oninput="this.type='text'"
+                      onfocus="document.getElementById('novaAiPasteCard').style.borderColor='#9dc423';document.getElementById('novaAiPasteCard').style.background='#f8fbf2'"
+                      onblur="document.getElementById('novaAiPasteCard').style.borderColor='#dde8c0';document.getElementById('novaAiPasteCard').style.background='#fff'">
+                  </div>
+
+                  <!-- Save & Activate button -->
+                  <button class="btn-pri"
+                    style="width:100%;padding:11px;border-radius:9px;font-size:.83rem;font-weight:800"
+                    onclick="novaAiSaveKey()">💾 Save &amp; Activate</button>
+
+                  <div id="novaAiKeyError" style="display:none;margin-top:7px;font-size:.71rem;color:#dc2626;padding:7px 11px;background:rgba(220,38,38,.07);border-radius:7px;border-left:3px solid rgba(220,38,38,.4)">
+                    ✖ Invalid key — must start with <code style="font-size:.7rem;background:rgba(220,38,38,.08);padding:1px 4px;border-radius:3px">sk-ant</code>
+                  </div>
+                  <div id="novaAiStatus" style="display:none;margin-top:7px;font-size:.71rem;padding:7px 11px;border-radius:7px"></div>
+                  <div id="novaAiClearRow" style="display:none;margin-top:9px">
+                    <button class="btn bo btn-sm" style="font-size:.7rem;color:var(--mist);gap:5px" onclick="novaAiClearKey()">🗑 Remove API Key</button>
+                  </div>
                 </div>
 
-                <!-- Step 2: Enter API key -->
-                <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--fog)">
-                  <div class="stg-row-t" style="margin-bottom:4px">Step 2 — Activate Nova AI</div>
-                  <div style="display:flex;gap:8px">
-                    <input class="fi" id="novaAiApiKey" type="password" placeholder="sk-ant-api03-…" autocomplete="off" spellcheck="false" style="flex:1;font-family:'DM Mono',monospace;font-size:.78rem" onkeydown="if(event.key==='Enter')novaAiSaveKey()">
-                    <button class="btn-pri" style="padding:9px 16px;border-radius:7px;font-size:.8rem;white-space:nowrap" onclick="novaAiSaveKey()">💾 Save</button>
+                <!-- ── Step 3: Change Access Password (collapsible) ── -->
+                <details style="margin-top:14px;padding-top:12px;border-top:1px solid var(--fog)">
+                  <summary style="font-size:.74rem;font-weight:700;color:var(--mist);cursor:pointer;user-select:none;list-style:none;display:flex;align-items:center;gap:6px">
+                    <span>🔐</span> Change Access Password
+                    <span style="font-size:.63rem;font-weight:400;margin-left:auto;color:var(--fog-d);opacity:.8">click to expand</span>
+                  </summary>
+                  <div style="margin-top:12px;display:flex;flex-direction:column;gap:9px">
+                    <div style="font-size:.68rem;color:var(--mist);padding:7px 10px;background:var(--snow);border-radius:7px;line-height:1.5;border-left:2px solid var(--fog-d)">
+                      This password gates the key generator above. Keep it private.
+                    </div>
+                    <div>
+                      <div class="stg-row-t" style="margin-bottom:4px;font-size:.72rem">Current Password</div>
+                      <input class="fi" id="novaAiCurPw" type="password" placeholder="Enter current password…" autocomplete="off" style="font-size:.8rem">
+                    </div>
+                    <div>
+                      <div class="stg-row-t" style="margin-bottom:4px;font-size:.72rem">New Password</div>
+                      <input class="fi" id="novaAiNewPw" type="password" placeholder="Min 4 characters…" autocomplete="off" style="font-size:.8rem">
+                    </div>
+                    <div>
+                      <div class="stg-row-t" style="margin-bottom:4px;font-size:.72rem">Confirm New Password</div>
+                      <input class="fi" id="novaAiCnfPw" type="password" placeholder="Repeat new password…" autocomplete="off" style="font-size:.8rem" onkeydown="if(event.key==='Enter')novaAiSetPassword()">
+                    </div>
+                    <button class="btn-pri" style="padding:10px;border-radius:8px;font-size:.8rem;font-weight:800" onclick="novaAiSetPassword()">🔒 Update Password</button>
+                    <div id="novaAiPwError" style="display:none;font-size:.71rem;color:#dc2626;padding:7px 10px;background:rgba(220,38,38,.07);border-radius:7px;border-left:3px solid rgba(220,38,38,.4)"></div>
+                    <div id="novaAiPwOk" style="display:none;font-size:.71rem;color:#15803d;padding:7px 10px;background:rgba(34,197,94,.08);border-radius:7px;border:1px solid rgba(34,197,94,.2)">✅ Password updated successfully!</div>
                   </div>
-                  <div id="novaAiKeyError" style="display:none;margin-top:6px;font-size:.71rem;color:#dc2626;padding:6px 10px;background:rgba(220,38,38,.08);border-radius:6px">
-                    ❌ Invalid key — must start with <code style="font-size:.7rem">sk-ant</code>
-                  </div>
-                  <div id="novaAiStatus" style="display:none;margin-top:6px;font-size:.71rem;padding:6px 10px;border-radius:6px"></div>
-                  <div id="novaAiClearRow" style="display:none;margin-top:8px">
-                    <button class="btn bo btn-sm" style="font-size:.7rem;color:var(--mist)" onclick="novaAiClearKey()">🗑 Remove API Key</button>
-                  </div>
-                </div>
-              </div>
+                </details>
+
+              </div><!-- /novaAiAssistantCard -->
             </div>
             <!-- Data -->
             <div class="stg-panel" id="stpData" style="display:none">
