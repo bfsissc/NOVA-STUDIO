@@ -81,7 +81,7 @@ window.onload = () => {
 };
 
 function boot(anim){
-  updateGreeting(); renderAvatars(); renderProfile(); updateStats(); updateGmailTracker(); setTimeout(function(){if(typeof tpInit==='function'){tpInit().then(function(){tpRenderHomeWidget();});}},600);
+  updateGreeting(); renderAvatars(); renderProfile(); updateStats(); updateGmailTracker(); setTimeout(function(){if(typeof tpInit==='function'){tpInit().then(function(){tpRenderHomeWidget();});}},600); favRenderSidebar(); favInjectStars(); favRenderHomeWidget();
   document.getElementById('loginScreen').classList.add('out');
   document.getElementById('app').classList.add('visible');
   if(anim) showToast('Welcome, '+U.firstName+'! 👋','ok');
@@ -430,7 +430,7 @@ function goView(v){
   if(v==='projects'){projShowBin=false;projRender();}
   if(v==='settings'){stgApplyUI(stgGetSettings());stgUpdateStorageInfo();}
   if(v==='mailer'){setTimeout(mlInitCanvas,80);}
-  if(v==='home'){updateGmailTracker();if(typeof tpRenderHomeWidget==='function')tpRenderHomeWidget();anRestoreFromStorage();}
+  if(v==='home'){updateGmailTracker();if(typeof tpRenderHomeWidget==='function')tpRenderHomeWidget();anRestoreFromStorage();favRenderHomeWidget();}
   if(v==='sync'){syncOnViewOpen();}
   if(v==='portal'){if(typeof cpInit==='function')cpInit();}
   if(v==='help'){const el=document.getElementById('viewHelp');if(el)el.scrollTop=0;}
@@ -7909,3 +7909,241 @@ window.goView = function(v) {
 
 })();
 // ════ END DRAFT PROPOSALS MODULE ════
+
+// ════════════════════════════════════════════════════════════════════
+// ⭐  FAVOURITE TOOLS MODULE
+// ════════════════════════════════════════════════════════════════════
+
+(function() {
+
+  // ── All available tools the user can favourite ─────────────────────
+  var FAV_REGISTRY = [
+    { key:'cert',     icon:'🎓', label:'Certificates',     desc:'Bulk certificate generation with CSV',       action:function(){ launchTool('cert'); } },
+    { key:'mailer',   icon:'📧', label:'Cert Mailer',       desc:'Send certificates directly by email',        action:function(){ launchTool('mailer'); } },
+    { key:'drafts',   icon:'✉️', label:'Draft Proposals',   desc:'Create & save email / message templates',   action:function(){ goView('drafts'); } },
+    { key:'portal',   icon:'🏫', label:'College Portal',    desc:'Create and manage college portals',          action:function(){ goView('portal'); } },
+    { key:'sync',     icon:'🔄', label:'Data Sync',         desc:'Real-time collaborative workbook rooms',     action:function(){ goView('sync'); } },
+    { key:'teams',    icon:'👥', label:'My Teams',           desc:'Manage team members and roles',              action:function(){ goView('teams'); } },
+    { key:'followup', icon:'📂', label:'Followup Tracker',  desc:'Track college data collection progress',     action:function(){ goView('followup'); } },
+    { key:'tp',       icon:'🤝', label:'Training Partners', desc:'Find and connect with training partners',    action:function(){ goView('tp'); } },
+    { key:'imgcomp',  icon:'🖼️', label:'Image Resizer',     desc:'Resize & compress images in bulk',           action:function(){ goView('imgcomp'); } },
+    { key:'fileconv', icon:'🔄', label:'File Converter',    desc:'Convert between document formats',           action:function(){ goView('fileconv'); } },
+    { key:'imgedit',  icon:'🎨', label:'Image Editor',      desc:'AI-powered photo & image editor',            action:function(){ goView('imgedit'); } },
+    { key:'projects', icon:'📁', label:'My Projects',       desc:'Browse and reopen saved projects',           action:function(){ goView('projects'); } },
+  ];
+
+  // Map key → registry entry for fast lookup
+  var _regMap = {};
+  FAV_REGISTRY.forEach(function(t){ _regMap[t.key] = t; });
+
+  // ── Get / set favs from U object ───────────────────────────────────
+  function _getFavs() {
+    return (U && U.favTools) ? U.favTools.slice() : [];
+  }
+
+  function _setFavs(arr) {
+    if (!U) return;
+    U.favTools = arr;
+    persist(); // saves to Firestore + localStorage
+  }
+
+  function _isFav(key) {
+    return _getFavs().indexOf(key) >= 0;
+  }
+
+  // ── Toggle a tool in/out of favourites ─────────────────────────────
+  window.favToggle = function(key, event) {
+    if (event) { event.stopPropagation(); event.preventDefault(); }
+    var favs = _getFavs();
+    var idx  = favs.indexOf(key);
+    if (idx >= 0) {
+      favs.splice(idx, 1);
+    } else {
+      favs.push(key);
+    }
+    _setFavs(favs);
+    favRenderSidebar();
+    favInjectStars();
+    favRenderHomeWidget();
+    // If modal is open, refresh it too
+    if (document.getElementById('favModal').style.display !== 'none') {
+      _renderModalBody();
+    }
+    // Small feedback toast
+    var t = _regMap[key];
+    _toast(idx >= 0 ? '☆ Removed from favourites' : '⭐ Added to favourites: ' + (t ? t.label : key));
+  };
+
+  // ── Render the ⭐ Favourites sidebar section ────────────────────────
+  window.favRenderSidebar = function() {
+    var favs    = _getFavs();
+    var section = document.getElementById('sbFavSection');
+    var list    = document.getElementById('sbFavList');
+    if (!section || !list) return;
+
+    if (!favs.length) {
+      section.style.display = 'none';
+      return;
+    }
+
+    section.style.display = '';
+    list.innerHTML = favs.map(function(key) {
+      var t = _regMap[key];
+      if (!t) return '';
+      return '<div class="sb-i" onclick="' + _actionStr(key) + '">' +
+               '<span class="sb-ic">' + t.icon + '</span>' +
+               t.label +
+             '</div>';
+    }).join('');
+  };
+
+  function _actionStr(key) {
+    var t = _regMap[key];
+    if (!t) return '';
+    if (key === 'cert' || key === 'mailer') return "launchTool('" + key + "')";
+    return "goView('" + key + "')";
+  }
+
+  // ── Inject ★ star buttons into existing sidebar tool items ─────────
+  window.favInjectStars = function() {
+    // Only inject once per item; re-run updates .active class
+    FAV_REGISTRY.forEach(function(t) {
+      // Sidebar id mapping (same as SBM in app.js)
+      var sbId = ({ cert:'sbCert', mailer:'sbMailer', portal:'sbPortal', sync:'sbSync',
+                    teams:'sbTeams', followup:'sbFollowup', tp:'sbTp', imgcomp:'sbImgComp',
+                    fileconv:'sbFileConv', imgedit:'sbImgEdit', drafts:'sbDrafts',
+                    projects:'sbProj' })[t.key];
+      if (!sbId) return;
+      var el = document.getElementById(sbId);
+      if (!el) return;
+
+      // Find or create star span
+      var star = el.querySelector('.sb-fav-star');
+      if (!star) {
+        star = document.createElement('span');
+        star.className = 'sb-fav-star';
+        star.title     = 'Toggle favourite';
+        // Use data-key so the onclick has the right scope even after re-inject
+        star.setAttribute('data-fav-key', t.key);
+        star.addEventListener('click', function(e) {
+          favToggle(this.getAttribute('data-fav-key'), e);
+        });
+        el.appendChild(star);
+      }
+
+      var isFav = _isFav(t.key);
+      star.textContent = isFav ? '⭐' : '☆';
+      star.classList.toggle('active', isFav);
+      star.title = isFav ? 'Remove from favourites' : 'Add to favourites';
+    });
+  };
+
+  // ── Render Quick Access widget on Dashboard ─────────────────────────
+  window.favRenderHomeWidget = function() {
+    var container = document.getElementById('favQuickAccess');
+    if (!container) return;
+
+    var favs = _getFavs();
+    if (!favs.length) {
+      container.style.display = 'none';
+      return;
+    }
+
+    container.style.display = '';
+
+    var cards = favs.map(function(key) {
+      var t = _regMap[key];
+      if (!t) return '';
+      return '<div class="fav-qcard fu" onclick="' + _actionStr(key) + '" title="' + t.label + '">' +
+               '<div class="fav-qcard-icon">' + t.icon + '</div>' +
+               '<div class="fav-qcard-label">' + t.label + '</div>' +
+             '</div>';
+    }).join('');
+
+    container.innerHTML =
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">' +
+        '<div style="font-size:.78rem;font-weight:800;color:var(--ink);letter-spacing:-.01em">⭐ Quick Access</div>' +
+        '<button onclick="favOpenManager()" style="font-size:.67rem;font-weight:700;color:var(--mist);background:none;border:1px solid var(--fog);border-radius:6px;padding:3px 9px;cursor:pointer;transition:all .12s" onmouseover="this.style.borderColor=\'var(--ink3)\';this.style.color=\'var(--ink)\'" onmouseout="this.style.borderColor=\'var(--fog)\';this.style.color=\'var(--mist)\'">Manage</button>' +
+      '</div>' +
+      '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:10px">' +
+        cards +
+      '</div>';
+  };
+
+  // ── Open Manage Favourites modal ────────────────────────────────────
+  window.favOpenManager = function() {
+    _renderModalBody();
+    document.getElementById('favModal').style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+  };
+
+  window.favCloseManager = function() {
+    document.getElementById('favModal').style.display = 'none';
+    document.body.style.overflow = '';
+  };
+
+  function _renderModalBody() {
+    var body = document.getElementById('favModalBody');
+    if (!body) return;
+
+    var favs = _getFavs();
+
+    var html = '';
+
+    // Pinned section
+    if (favs.length) {
+      html += '<div style="font-size:.68rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--mist);margin-bottom:8px">Pinned Tools</div>';
+      html += favs.map(function(key) {
+        var t = _regMap[key];
+        if (!t) return '';
+        return _toolRow(t, true);
+      }).join('');
+      html += '<div style="height:1px;background:var(--fog);margin:16px 0"></div>';
+    }
+
+    // All tools
+    html += '<div style="font-size:.68rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--mist);margin-bottom:8px">All Tools</div>';
+    html += FAV_REGISTRY.map(function(t) {
+      return _toolRow(t, _isFav(t.key));
+    }).join('');
+
+    body.innerHTML = html;
+  }
+
+  function _toolRow(t, isFav) {
+    return '<div class="fav-tool-row" onclick="favToggle(\'' + t.key + '\')">' +
+      '<div class="fav-tool-icon">' + t.icon + '</div>' +
+      '<div style="flex:1;min-width:0">' +
+        '<div class="fav-tool-name">' + t.label + '</div>' +
+        '<div class="fav-tool-desc">' + t.desc + '</div>' +
+      '</div>' +
+      '<button class="fav-toggle' + (isFav ? ' on' : '') + '" onclick="event.stopPropagation();favToggle(\'' + t.key + '\')" title="' + (isFav ? 'Remove' : 'Add') + '"></button>' +
+    '</div>';
+  }
+
+  // ── Keyboard close (Escape) ─────────────────────────────────────────
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      var modal = document.getElementById('favModal');
+      if (modal && modal.style.display !== 'none') favCloseManager();
+    }
+  });
+
+  // ── Toast ────────────────────────────────────────────────────────────
+  var _toastEl = null;
+  var _toastTo = null;
+  function _toast(msg) {
+    if (!_toastEl) {
+      _toastEl = document.createElement('div');
+      _toastEl.style.cssText = 'position:fixed;bottom:22px;left:50%;transform:translateX(-50%);padding:8px 18px;border-radius:8px;font-size:.75rem;font-weight:700;z-index:9999;pointer-events:none;background:#1a1f27;color:#fff;box-shadow:0 4px 18px rgba(0,0,0,.22);transition:opacity .2s;white-space:nowrap';
+      document.body.appendChild(_toastEl);
+    }
+    _toastEl.textContent = msg;
+    _toastEl.style.opacity = '1';
+    _toastEl.style.display = 'block';
+    clearTimeout(_toastTo);
+    _toastTo = setTimeout(function(){ _toastEl.style.opacity = '0'; setTimeout(function(){ if(_toastEl) _toastEl.style.display='none'; }, 200); }, 2000);
+  }
+
+})();
+// ════ END FAVOURITE TOOLS MODULE ════
