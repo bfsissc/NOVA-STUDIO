@@ -7,13 +7,62 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%23c8f135'/><text x='16' y='22' font-size='18' text-anchor='middle' font-family='serif' font-weight='800'>N</text></svg>">
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,300;12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Instrument+Serif:ital@0;1&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/styles.css">
+<link rel="stylesheet" href="assets/css/liquid-glass.css">
+<style>
+/* ── UI STYLE ROW ── */
+.stg-row-uistyle{
+  display:flex!important;flex-direction:column!important;align-items:flex-start!important;
+  gap:14px!important;padding:14px 0!important;
+  border-bottom:1px solid var(--fog);width:100%!important;box-sizing:border-box}
+/* ── UI STYLE CARDS ── */
+#uiStyleGrid{display:grid!important;grid-template-columns:repeat(3,1fr)!important;gap:10px!important;width:100%!important}
+.ui-style-card{
+  border:2px solid var(--fog);border-radius:12px;overflow:hidden;
+  cursor:pointer;position:relative;transition:border-color .18s,box-shadow .18s;
+  background:#fff;display:block!important}
+.ui-style-card:hover{border-color:var(--mist2);box-shadow:0 2px 10px rgba(0,0,0,.08)}
+.ui-style-card.active{border-color:var(--lime)!important;box-shadow:0 0 0 1px var(--lime)}
+.ui-style-preview{height:54px;position:relative;overflow:hidden}
+.ui-style-info{padding:8px 10px 8px}
+.ui-style-name{font-size:.73rem;font-weight:700;color:var(--ink);letter-spacing:-.01em}
+.ui-style-desc{font-size:.63rem;color:var(--mist);margin-top:2px}
+.ui-style-check{
+  position:absolute;top:6px;right:6px;width:18px;height:18px;
+  background:var(--lime);color:#fff;border-radius:50%;
+  font-size:.65rem;font-weight:800;display:flex!important;align-items:center;justify-content:center;
+  opacity:0;transform:scale(.6);transition:opacity .18s,transform .18s;pointer-events:none}
+.ui-style-card.active .ui-style-check{opacity:1!important;transform:scale(1)!important}
+/* iOS theme overrides */
+[data-theme="ios"] .ui-style-card,[data-theme="ios-dark"] .ui-style-card{border-radius:14px}
+[data-theme="ios-dark"] .ui-style-card{background:#2c2c2e;border-color:rgba(255,255,255,.1)}
+[data-theme="dark"] .ui-style-card{background:var(--white);border-color:var(--fog)}
+</style>
+<!-- ✅ Storage polyfill — MUST be first: patches localStorage before any other script runs -->
+<script>
+(function(){
+  var _mem = function(){
+    var s={};
+    return {
+      getItem:    function(k){ return s.hasOwnProperty(k)?s[k]:null; },
+      setItem:    function(k,v){ s[k]=String(v); },
+      removeItem: function(k){ delete s[k]; },
+      clear:      function(){ s={}; },
+      key:        function(i){ return Object.keys(s)[i]||null; },
+      get length(){ return Object.keys(s).length; }
+    };
+  };
+  try { localStorage.setItem('__t','1'); localStorage.removeItem('__t'); }
+  catch(e) { try { Object.defineProperty(window,'localStorage',{value:_mem(),writable:false}); } catch(e2){window.localStorage=_mem();} }
+  try { sessionStorage.setItem('__t','1'); sessionStorage.removeItem('__t'); }
+  catch(e) { try { Object.defineProperty(window,'sessionStorage',{value:_mem(),writable:false}); } catch(e2){window.sessionStorage=_mem();} }
+})();
+</script>
 <script src="https://accounts.google.com/gsi/client" async defer id="gsiScript"></script>
 <script src="https://cdn.jsdelivr.net/npm/firebase@10.12.0/firebase-app-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/firebase@10.12.0/firebase-auth-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/firebase@10.12.0/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/firebase@10.12.0/firebase-storage-compat.js"></script>
 <script src="assets/js/config.js"></script>
-<script src="assets/js/storage-polyfill.js"></script>
 <script src="assets/js/vendor.sheetjs.js"></script>
 </head>
 <body data-initial-view="settings">
@@ -867,6 +916,7 @@
             <div class="stg-nav-item" id="stnNotifications" onclick="stgTab('notifications')">🔔 Notifications</div>
             <div class="stg-nav-item" id="stnPrivacy" onclick="stgTab('privacy')">🔒 Privacy</div>
             <div class="stg-nav-item" id="stnData" onclick="stgTab('data')">💾 Data & Storage</div>
+            <div class="stg-nav-item" id="stnDataupload" onclick="stgTab('dataupload')">📤 Data Upload</div>
             <div class="stg-nav-item" id="stnIntegrations" onclick="stgTab('integrations')">🔗 Integrations</div>
           </div>
           <!-- Settings panels -->
@@ -881,6 +931,51 @@
                     <button class="stg-theme-btn active" id="stgThemeLight" onclick="stgSetTheme('light')">☀️ Light</button>
                     <button class="stg-theme-btn" id="stgThemeDark" onclick="stgSetTheme('dark')">🌙 Dark</button>
                     <button class="stg-theme-btn" id="stgThemeSystem" onclick="stgSetTheme('system')">💻 System</button>
+                  </div>
+                </div>
+                <!-- UI Style / Layout Theme -->
+                <div class="stg-row stg-row-uistyle">
+                  <div class="stg-row-l"><div class="stg-row-t">UI Style</div><div class="stg-row-s">Switch between different design languages for the entire dashboard</div></div>
+                  <div id="uiStyleGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;width:100%">
+                    <div class="ui-style-card active" id="uiStyleDefault" onclick="stgSetUIStyle('default')" title="Default NOVA theme">
+                      <div class="ui-style-preview" style="background:linear-gradient(135deg,#f4f6fa 60%,#c8f135 100%);border-radius:8px 8px 0 0;height:54px;position:relative;overflow:hidden">
+                        <div style="position:absolute;top:8px;left:8px;width:28px;height:28px;background:#fff;border-radius:7px;box-shadow:0 2px 6px rgba(0,0,0,.1)"></div>
+                        <div style="position:absolute;top:8px;left:44px;right:8px;height:6px;background:#e8ecf2;border-radius:3px"></div>
+                        <div style="position:absolute;top:20px;left:44px;right:24px;height:5px;background:#e8ecf2;border-radius:3px;opacity:.6"></div>
+                        <div style="position:absolute;bottom:8px;right:8px;width:32px;height:12px;background:#c8f135;border-radius:4px"></div>
+                      </div>
+                      <div class="ui-style-info">
+                        <div class="ui-style-name">Default</div>
+                        <div class="ui-style-desc">Classic NOVA look</div>
+                      </div>
+                      <div class="ui-style-check">&#10003;</div>
+                    </div>
+                    <div class="ui-style-card" id="uiStyleIos" onclick="stgSetUIStyle('ios')" title="iOS-inspired light theme">
+                      <div class="ui-style-preview" style="background:linear-gradient(135deg,#f2f2f7 60%,#007aff 100%);border-radius:8px 8px 0 0;height:54px;position:relative;overflow:hidden">
+                        <div style="position:absolute;top:8px;left:8px;width:28px;height:28px;background:rgba(255,255,255,.95);border-radius:9px;box-shadow:0 1px 4px rgba(0,0,0,.1)"></div>
+                        <div style="position:absolute;top:9px;left:44px;right:8px;height:5px;background:rgba(0,0,0,.08);border-radius:3px"></div>
+                        <div style="position:absolute;top:20px;left:44px;right:24px;height:4px;background:rgba(0,0,0,.06);border-radius:3px"></div>
+                        <div style="position:absolute;bottom:8px;right:8px;width:32px;height:12px;background:#007aff;border-radius:6px"></div>
+                      </div>
+                      <div class="ui-style-info">
+                        <div class="ui-style-name">iOS Light</div>
+                        <div class="ui-style-desc">Apple-inspired design</div>
+                      </div>
+                      <div class="ui-style-check">&#10003;</div>
+                    </div>
+                    <div class="ui-style-card" id="uiStyleIosDark" onclick="stgSetUIStyle('ios-dark')" title="iOS-inspired dark theme">
+                      <div class="ui-style-preview" style="background:linear-gradient(135deg,#1c1c1e 60%,#0a84ff 100%);border-radius:8px 8px 0 0;height:54px;position:relative;overflow:hidden">
+                        <div style="position:absolute;top:8px;left:8px;width:28px;height:28px;background:rgba(44,44,46,.98);border-radius:9px;box-shadow:0 1px 4px rgba(0,0,0,.5)"></div>
+                        <div style="position:absolute;top:9px;left:44px;right:8px;height:5px;background:rgba(255,255,255,.12);border-radius:3px"></div>
+                        <div style="position:absolute;top:20px;left:44px;right:24px;height:4px;background:rgba(255,255,255,.08);border-radius:3px"></div>
+                        <div style="position:absolute;bottom:8px;right:8px;width:32px;height:12px;background:#0a84ff;border-radius:6px"></div>
+                      </div>
+                      <div class="ui-style-info">
+                        <div class="ui-style-name">iOS Dark</div>
+                        <div class="ui-style-desc">Dark mode, Apple-style</div>
+                      </div>
+                      <div class="ui-style-check">&#10003;</div>
+                    </div>
                   </div>
                 </div>
                 <div class="stg-row">
@@ -1120,6 +1215,54 @@
                 </div>
               </div>
             </div>
+
+            <!-- Data Upload panel -->
+            <div class="stg-panel" id="stpDataupload" style="display:none">
+              <div class="stg-card">
+                <div class="stg-card-h">📤 Data Upload</div>
+                <div style="font-size:.72rem;color:var(--mist);margin-bottom:14px">Upload a CSV, Excel, or JSON file — charts and KPIs are built automatically and you'll be taken straight to the Dashboard.</div>
+
+                <!-- Upload zone -->
+                <div id="stgUploadZone"
+                     style="border:2px dashed var(--fog);border-radius:12px;padding:36px 20px;text-align:center;cursor:pointer;transition:all .25s;background:var(--card)"
+                     onclick="document.getElementById('stgDataFileInput').click()"
+                     ondragover="event.preventDefault();this.style.borderColor='var(--lime)';this.style.background='var(--hover)';document.getElementById('stgUploadZoneIcon').textContent='📥'"
+                     ondragleave="this.style.borderColor='var(--fog)';this.style.background='var(--card)';document.getElementById('stgUploadZoneIcon').textContent='📂'"
+                     ondrop="stgHandleDataDrop(event);this.style.borderColor='var(--fog)';this.style.background='var(--card)'">
+                  <div id="stgUploadZoneIcon" style="font-size:2.4rem;margin-bottom:10px;line-height:1;transition:all .2s">📂</div>
+                  <div style="font-size:.82rem;font-weight:700;color:var(--ink);margin-bottom:6px">Click to browse or drag &amp; drop</div>
+                  <div style="font-size:.7rem;color:var(--mist);margin-bottom:14px">.csv &nbsp;·&nbsp; .xlsx &nbsp;·&nbsp; .xls &nbsp;·&nbsp; .json</div>
+                  <button class="btn btn-sm" style="pointer-events:none;opacity:.85;font-size:.72rem;padding:5px 16px">📁 Choose File</button>
+                </div>
+                <input type="file" id="stgDataFileInput" accept=".csv,.xlsx,.xls,.json" style="display:none" onchange="stgOnDataFileChange(this)">
+
+                <!-- Upload status / progress -->
+                <div id="stgDataUploadStatus" style="font-size:.73rem;color:var(--mist);margin-top:12px;min-height:20px;text-align:center;transition:color .2s"></div>
+
+                <!-- Loaded file indicator (hidden until data loaded) -->
+                <div id="stgStandaloneLoaded" style="display:none;align-items:center;gap:10px;margin-top:14px;background:var(--hover);border-radius:10px;padding:12px 14px;border:1.5px solid var(--fog)">
+                  <div style="font-size:1.4rem">✅</div>
+                  <div style="flex:1;min-width:0">
+                    <div style="font-size:.78rem;font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis" id="stgStandaloneFileName"></div>
+                    <div style="font-size:.67rem;color:var(--mist);margin-top:2px" id="stgStandaloneFileInfo"></div>
+                  </div>
+                  <div style="display:flex;gap:6px;flex-shrink:0">
+                    <button class="btn btn-sm" style="font-size:.7rem" onclick="goView('home')">📊 Dashboard</button>
+                    <button class="btn btn-sm" style="background:#fff5f5;color:#dc2626;border:1.5px solid #fecaca;font-size:.7rem" onclick="anResetAll();stgUpdateStandaloneIndicator()">✕ Clear</button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="stg-card" style="margin-top:14px">
+                <div class="stg-card-h">How it works</div>
+                <div style="font-size:.72rem;color:var(--mist);line-height:1.8">
+                  <div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:6px"><span style="font-size:1rem">1️⃣</span><span>Upload a <strong>CSV, Excel (.xlsx/.xls), or JSON array</strong> using the zone above or by dragging a file in.</span></div>
+                  <div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:6px"><span style="font-size:1rem">2️⃣</span><span>The file is parsed instantly in your browser — <strong>no data leaves your device</strong>.</span></div>
+                  <div style="display:flex;gap:10px;align-items:flex-start"><span style="font-size:1rem">3️⃣</span><span>You'll be <strong>automatically taken to the Dashboard</strong> where charts and KPIs are built from your data columns.</span></div>
+                </div>
+              </div>
+            </div>
+
           </div>
         </div>
       </div>

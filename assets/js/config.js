@@ -15,7 +15,8 @@ var _fbConfig = {
   try {
     firebase.firestore().settings({
       experimentalAutoDetectLongPolling: true,
-      useFetchStreams: false
+      useFetchStreams: false,
+      merge: true
     });
   } catch (e) {
     console.warn('Firestore settings already initialized:', e);

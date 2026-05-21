@@ -77,5 +77,6 @@ console.cloud.google.com -> APIs & Services -> Enable APIs & Services -> Google 
 - Fixed the college portal deployment/upload CORS issue.
 - Added Firestore long-polling auto detection for hosted-domain stability.
 - Portal templates uploaded from device now save a Firebase Storage URL.
+- If Firebase Storage CORS is still blocked, portal publish falls back to a compressed Firestore-safe template so deployment can continue.
 - Existing portals that saved a Google Drive thumbnail URL should be opened in admin, template re-uploaded or reloaded, and published again.
 - Kept the full app files: profile, settings, teams, drive manager, notifications, folders, certificate, mailer, projects, data sync, and portal.

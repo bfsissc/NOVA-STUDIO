@@ -421,33 +421,45 @@ async function cpHandleTemplateFileInput(input) {
     });
     CP.templateUrl = base64DataUrl;
 
-    if (typeof fbStorage === 'undefined') throw new Error('Firebase Storage not initialized');
-
-    // Compress to ~800 KB before uploading — avoids Firebase Storage quota/size issues
+    // Compress first so we always have a deployable fallback if Storage CORS is blocked.
     badge.textContent = 'Compressing…';
     var compressedDataUrl = await cpCompressForFirestore(base64DataUrl, 800000);
     var uploadBlob = cpDataUrlToBlob(compressedDataUrl);
+    CP.templateUrl = compressedDataUrl;
 
-    var uid  = (typeof U !== 'undefined' && U) ? U.uid : 'anon';
-    var path = 'portal-templates/' + uid + '/' + Date.now() + '.jpg';
-    var storageRef = fbStorage.ref(path);
+    if (typeof fbStorage !== 'undefined') {
+      try {
+        var uid  = (typeof U !== 'undefined' && U) ? (U.uid || U.email || 'anon').replace(/[^a-zA-Z0-9_-]/g, '_') : 'anon';
+        var safeName = (file.name || 'template').replace(/\.[^.]+$/, '').replace(/[^a-zA-Z0-9_-]/g, '-').slice(0, 60) || 'template';
+        var path = 'portal-templates/' + uid + '/' + safeName + '_' + Date.now() + '.jpg';
+        var storageRef = fbStorage.ref(path);
 
-    badge.textContent = 'Uploading… 0%';
-    var uploadTask = storageRef.put(uploadBlob, { contentType: 'image/jpeg' });
-    uploadTask.on('state_changed', function(snapshot) {
-      var pct = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
-      badge.textContent = 'Uploading… ' + pct + '%';
-    }, function(err) { throw err; });
-    await uploadTask;
-    var downloadUrl = await storageRef.getDownloadURL();
-    CP.storageUrl = downloadUrl;
-    CP.templateUrl = downloadUrl;
+        badge.textContent = 'Uploading… 0%';
+        var uploadTask = storageRef.put(uploadBlob, { contentType: 'image/jpeg' });
+        uploadTask.on('state_changed', function(snapshot) {
+          var pct = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
+          badge.textContent = 'Uploading… ' + pct + '%';
+        });
+        await uploadTask;
+        var downloadUrl = await storageRef.getDownloadURL();
+        CP.storageUrl = downloadUrl;
+        CP.templateUrl = downloadUrl;
+        badge.textContent = file.name + ' (' + (CP.templateWidth || '?') + '×' + (CP.templateHeight || '?') + ') — uploaded ✓';
+      } catch(storageErr) {
+        console.warn('Template Storage upload failed, using compressed Firestore fallback:', storageErr);
+        CP.storageUrl = '';
+        CP.templateUrl = compressedDataUrl;
+        badge.textContent = file.name + ' (' + (CP.templateWidth || '?') + '×' + (CP.templateHeight || '?') + ') — ready ✓';
+      }
+    } else {
+      CP.storageUrl = '';
+      badge.textContent = file.name + ' (' + (CP.templateWidth || '?') + '×' + (CP.templateHeight || '?') + ') — ready ✓';
+    }
 
-    badge.textContent = file.name + ' (' + (CP.templateWidth || '?') + '×' + (CP.templateHeight || '?') + ') — uploaded ✓';
     statusEl.textContent = '✅';
     var urlInput = document.getElementById('cpTemplateDriveUrl');
     if (urlInput) urlInput.value = '';
-    cpToast('Template uploaded & ready ✓', 'ok');
+    cpToast(CP.storageUrl ? 'Template uploaded & ready ✓' : 'Template ready ✓', 'ok');
     cpSaveDraft();
   } catch(err) {
     statusEl.textContent = '❌';
@@ -826,8 +838,8 @@ async function cpPublishPortal() {
     if (!CP.currentSlug || !collegeName) { cpToast('Missing college name.', 'err'); btn.disabled = false; btn.textContent = '🚀 Publish Portal'; return; }
     if (!CP.templateUrl) { cpToast('No template — go back to Step 2 and load a template.', 'err'); btn.disabled = false; btn.textContent = '🚀 Publish Portal'; return; }
 
-    // Always store a Firebase Storage URL in Firestore — never raw base64.
-    // This keeps the Firestore document tiny and the student portal fast.
+    // Prefer Firebase Storage. If CORS is not applied yet, fall back to a
+    // compressed data URL so portal deployment still works.
     var templateUrlToStore = '';
 
     if (CP.storageUrl && !CP.storageUrl.startsWith('data:')) {
