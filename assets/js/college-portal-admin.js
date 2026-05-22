@@ -583,13 +583,16 @@ async function cpSetLoadedTemplateDataUrl(dataUrl, label) {
   var wrap = document.getElementById('cpTemplateBadgeWrap');
   var statusEl = document.getElementById('cpTemplateLoadStatus');
   var thumb = document.getElementById('cpTemplateThumb');
-  if (wrap) wrap.style.display = 'block';
-  if (statusEl) statusEl.textContent = 'OK';
+  // FIX: badge wrap uses display:flex (not block) — using flex so badge is visible
+  if (wrap) wrap.style.display = 'flex';
+  if (statusEl) statusEl.textContent = '✅';
   if (thumb) { thumb.src = dataUrl; thumb.style.display = 'block'; }
   if (badge) {
     badge.textContent = (label || 'Template') + ' (' + img.naturalWidth + 'x' + img.naturalHeight + ', ' + cpFormatBytes(CP.templateBytes) + ')' +
-      (CP.templateNeedsCompression ? ' - compression needed before next' : ' - ready');
+      (CP.templateNeedsCompression ? ' — compression needed before next' : ' — ready ✓');
   }
+  // FIX: update canvas immediately if already on step 3
+  if (CP.step === 3 && typeof cpDrawNameCanvas === 'function') cpDrawNameCanvas();
   cpSaveDraft();
 }
 
@@ -602,8 +605,9 @@ async function cpHandleTemplateFileInput(input) {
   var badge = document.getElementById('cpTemplateBadge');
   var wrap = document.getElementById('cpTemplateBadgeWrap');
   var statusEl = document.getElementById('cpTemplateLoadStatus');
-  if (wrap) wrap.style.display = 'block';
-  if (statusEl) statusEl.textContent = '...';
+  // FIX: use flex (not block) to match the badge wrap's CSS
+  if (wrap) wrap.style.display = 'flex';
+  if (statusEl) statusEl.textContent = '⏳';
   if (badge) badge.textContent = 'Reading file...';
 
   try {
