@@ -22,7 +22,7 @@ var CP = {
   storageUrl:       '',
   templateQuality:  null,
   templateBytes:    0,
-  templateTargetBytes: 1048576,
+  templateTargetBytes: 716800,
   templateNeedsCompression: false,
   csvDriveUrl:      '',
   templateWidth:    2480,
@@ -1339,15 +1339,16 @@ async function cpUploadLogoToDrive(blob, fileName) {
 }
 
 function cpAdaptiveCompressTemplate(dataUrl, targetBytes) {
-  targetBytes = targetBytes || 1048576;
+  targetBytes = targetBytes || 716800;
   return new Promise(function(resolve) {
     var originalBytes = cpDataUrlBytes(dataUrl);
     var img = new Image();
     img.onload = function() {
-      var naturalW = img.naturalWidth || 1;
+      var naturalW = img.naturalWidth  || 1;
       var naturalH = img.naturalHeight || 1;
+      // Start at native size (capped at 2200px) and step down to 800px
       var maxEdge = Math.min(2200, Math.max(naturalW, naturalH));
-      var minEdge = 900;
+      var minEdge = 800;
       var best = null;
 
       function renderAt(edge, quality) {
@@ -1357,7 +1358,7 @@ function cpAdaptiveCompressTemplate(dataUrl, targetBytes) {
           else        { w = Math.round(w * edge / h); h = edge; }
         }
         var c = document.createElement('canvas');
-        c.width = Math.max(1, w);
+        c.width  = Math.max(1, w);
         c.height = Math.max(1, h);
         var ctx = c.getContext('2d');
         ctx.fillStyle = '#ffffff';
@@ -1368,33 +1369,37 @@ function cpAdaptiveCompressTemplate(dataUrl, targetBytes) {
           dataUrl: out,
           bytes: cpDataUrlBytes(out),
           quality: quality,
-          width: c.width,
+          width:  c.width,
           height: c.height,
-          targetBytes: targetBytes,
+          targetBytes:   targetBytes,
           originalBytes: originalBytes
         };
       }
 
+      // Binary-search quality at each resolution step until we land under target
       while (maxEdge >= minEdge) {
-        var low = 0.42, high = 0.94, localBest = null;
-        for (var i = 0; i < 8; i++) {
+        // Wide quality range: 0.25–0.92 with 10 iterations for accuracy
+        var low = 0.25, high = 0.92, localBest = null;
+        for (var i = 0; i < 10; i++) {
           var q = (low + high) / 2;
           var candidate = renderAt(maxEdge, q);
           if (candidate.bytes <= targetBytes) {
             localBest = candidate;
-            low = q;
+            low = q;           // can afford better quality
           } else {
-            high = q;
+            high = q;          // still too big, go lower
           }
         }
         if (localBest) {
           best = localBest;
           break;
         }
-        maxEdge = Math.floor(maxEdge * 0.88);
+        // Still over budget — shrink dimensions by 15% and retry
+        maxEdge = Math.floor(maxEdge * 0.85);
       }
 
-      if (!best) best = renderAt(Math.max(720, maxEdge), 0.38);
+      // Absolute last resort: 720px wide at lowest usable quality
+      if (!best) best = renderAt(Math.max(720, minEdge), 0.25);
       best.changed = best.bytes < originalBytes || best.width !== naturalW || best.height !== naturalH;
       resolve(best);
     };
@@ -1405,7 +1410,7 @@ function cpAdaptiveCompressTemplate(dataUrl, targetBytes) {
         quality: 1,
         width: 0,
         height: 0,
-        targetBytes: targetBytes,
+        targetBytes:   targetBytes,
         originalBytes: originalBytes,
         changed: false
       });
@@ -1453,7 +1458,7 @@ async function cpPublishPortal() {
       try {
         // Step 1: Always compress first to keep Storage upload small and fast
         btn.textContent = 'Compressing template…';
-        var compressedDataUrl = await cpCompressForFirestore(CP.templateUrl, 1048576);
+        var compressedDataUrl = await cpCompressForFirestore(CP.templateUrl, CP.templateTargetBytes);
 
         // Step 2: Convert base64 data-URL → Blob without using fetch() (works even offline / CORS)
         btn.textContent = 'Uploading template to storage…';
@@ -1469,8 +1474,8 @@ async function cpPublishPortal() {
         console.warn('Storage upload failed, falling back to compressed Firestore embed:', storageErr);
         // Last resort: store a heavily-compressed base64 directly in Firestore
         btn.textContent = 'Compressing (storage unavailable)…';
-        templateUrlToStore = await cpCompressForFirestore(CP.templateUrl, 1048576);
-        if (!templateUrlToStore || templateUrlToStore.length * 0.75 > 950000) {
+        templateUrlToStore = await cpCompressForFirestore(CP.templateUrl, CP.templateTargetBytes);
+        if (!templateUrlToStore || templateUrlToStore.length * 0.75 > CP.templateTargetBytes) {
           throw new Error('Template too large for storage and Firestore. Please upload a smaller image (under 2 MB). Storage error: ' + storageErr.message);
         }
       }
