@@ -1597,9 +1597,18 @@ async function cpLoadPortalList() {
     var snap = await fbDb.collection('college_portals').where('createdBy', '==', U.email).limit(500).get();
     CP.portals = [];
     snap.forEach(function(doc) { CP.portals.push(Object.assign({ slug: doc.id }, doc.data())); });
-    CP.portals.sort(function(a, b) { return (b.createdAt || 0) - (a.createdAt || 0); });
+    // FIX: Firestore Timestamps are objects with .toMillis() — convert before subtracting
+    CP.portals.sort(function(a, b) {
+      var aMs = a.createdAt && a.createdAt.toMillis ? a.createdAt.toMillis() : (typeof a.createdAt === 'number' ? a.createdAt : 0);
+      var bMs = b.createdAt && b.createdAt.toMillis ? b.createdAt.toMillis() : (typeof b.createdAt === 'number' ? b.createdAt : 0);
+      return bMs - aMs;
+    });
     cpRenderPortalList();
-  } catch(e) { /* ignore */ }
+  } catch(e) {
+    // FIX: Surface errors so they are visible instead of silently swallowed
+    console.error('[CP] cpLoadPortalList error:', e);
+    cpToast('Error loading portal list: ' + e.message, 'err');
+  }
 }
 
 // ── Populate filter suggestions from portals data ──
