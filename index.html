@@ -1224,7 +1224,7 @@
         <div class="pg-h fu">
           <div><div class="pg-t">Settings</div><div class="pg-s">Customize your NOVA Studio workspace</div></div>
         </div>
-        <div style="display:grid;grid-template-columns:200px 1fr;gap:16px;max-width:820px">
+        <div class="stg-layout">
           <!-- Settings nav -->
           <div style="display:flex;flex-direction:column;gap:4px">
             <div class="stg-nav-item active" id="stnAppearance" onclick="stgTab('appearance')">🎨 Appearance</div>
@@ -1989,7 +1989,7 @@ function doGet(){return out({ok:true,status:'Nova Drive Relay running'});}</pre>
           <div><div class="pg-t">My Profile</div><div class="pg-s">Manage your info, cover photo &amp; profile picture</div></div>
           <button class="btn bd btn-sm" onclick="openEdit()">✏️ Edit Profile</button>
         </div>
-        <div class="prof-pg fu">
+        <div class="prof-pg fu" style="max-width:100%">
           <div class="cov-wrap">
             <div class="cov" id="profCov" onclick="document.getElementById('coverFile').click()">
               <img id="coverImg" src="" alt="" style="display:none">
@@ -2884,7 +2884,7 @@ function doGet(){return out({ok:true,status:'Nova Drive Relay running'});}</pre>
 
     <!-- ===== TRAINING PARTNERS VIEW ===== -->
     <div class="view" id="viewTp" style="flex-direction:column;overflow-y:auto;">
-      <div class="vp" style="max-width:1100px;padding:22px 28px 40px;">
+      <div class="vp" style="max-width:100%;padding:22px 28px 40px;">
 
         <!-- Header -->
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
@@ -2919,10 +2919,10 @@ function doGet(){return out({ok:true,status:'Nova Drive Relay running'});}</pre>
         </div>
 
         <!-- Stats strip -->
-        <div id="tpStatsStrip" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;margin-bottom:20px;"></div>
+        <div id="tpStatsStrip" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-bottom:20px;"></div>
 
         <!-- List / Rankings -->
-        <div id="tpList" style="display:flex;flex-direction:column;gap:12px;"></div>
+        <div id="tpList" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(480px,1fr));gap:14px;align-items:start;"></div>
 
         <!-- Empty -->
         <div id="tpEmpty" style="display:none;text-align:center;padding:60px 24px;color:var(--mist);">
