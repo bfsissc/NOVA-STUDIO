@@ -1733,3 +1733,25 @@ button{cursor:pointer;font-family:inherit}input,select,textarea{font-family:inhe
   transition: all .15s;
 }
 .dm-open-btn:hover { background: #1a73e8; color: #fff; }
+
+/* ══ DEVELOPER LOCK PANEL ═══════════════════════════════════════ */
+#stpDeveloper .stg-card { transition: box-shadow .2s; }
+#devFuncList > div:hover { background: var(--hover); border-radius: 8px; padding-left: 8px; transition: all .15s; }
+#devLockManifest { scrollbar-width: thin; scrollbar-color: rgba(200,241,53,.3) transparent; }
+#devLockManifest::-webkit-scrollbar { width: 5px; height: 5px; }
+#devLockManifest::-webkit-scrollbar-thumb { background: rgba(200,241,53,.3); border-radius: 3px; }
+#devPwdStrengthBar { transition: all .2s; }
+#stnDeveloper { position: relative; }
+#stnDeveloper::before {
+  content: '';
+  position: absolute;
+  left: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--coral);
+  display: none;
+}
+#stnDeveloper.has-locks::before { display: block; }

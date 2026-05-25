@@ -938,6 +938,7 @@
             <div class="stg-nav-item" id="stnData" onclick="stgTab('data')">💾 Data & Storage</div>
             <div class="stg-nav-item" id="stnDataupload" onclick="stgTab('dataupload')">📤 Data Upload</div>
             <div class="stg-nav-item" id="stnIntegrations" onclick="stgTab('integrations')">🔗 Integrations</div>
+            <div class="stg-nav-item" id="stnDeveloper" onclick="stgTab('developer')" style="margin-top:8px;border-top:1px solid var(--fog);padding-top:8px">🔐 Developer</div>
           </div>
           <!-- Settings panels -->
           <div>
@@ -1329,6 +1330,150 @@
                 </div>
               </div>
             </div>
+
+            <!-- ══ DEVELOPER LOCK PANEL ══ -->
+            <div class="stg-panel" id="stpDeveloper" style="display:none">
+
+              <!-- Intro banner -->
+              <div style="background:linear-gradient(135deg,#0d0f12,#1a1f27);border-radius:14px;padding:18px 20px;margin-bottom:14px;color:#fff;position:relative;overflow:hidden">
+                <div style="position:absolute;right:-10px;top:-10px;font-size:4rem;opacity:.07;line-height:1">🔐</div>
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+                  <div style="width:32px;height:32px;border-radius:9px;background:rgba(200,241,53,.15);border:1px solid rgba(200,241,53,.3);display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0">🔐</div>
+                  <div>
+                    <div style="font-size:.88rem;font-weight:800;letter-spacing:-.02em">Developer Lock</div>
+                    <div style="font-size:.67rem;color:rgba(255,255,255,.5);margin-top:1px">Code-level protection for your functions</div>
+                  </div>
+                  <div id="devLockMasterBadge" style="margin-left:auto;font-size:.6rem;font-weight:700;padding:3px 9px;border-radius:99px;background:rgba(239,68,68,.2);color:#fca5a5;border:1px solid rgba(239,68,68,.3)">NOT SET UP</div>
+                </div>
+                <div style="font-size:.7rem;color:rgba(255,255,255,.55);line-height:1.65">
+                  Lock individual functions with a password. Once locked, the lock marker is embedded in the source file — any AI or developer who reads the code will see it's protected and cannot make changes without the unlock password.
+                </div>
+              </div>
+
+              <!-- Password Setup Card -->
+              <div class="stg-card" id="devPasswordCard">
+                <div class="stg-card-h">🔑 Developer Password</div>
+
+                <!-- Not set state -->
+                <div id="devPwdNotSet">
+                  <div style="font-size:.73rem;color:var(--mist);margin-bottom:12px;line-height:1.6">
+                    Set a master password to protect your locked functions. This password is stored as a secure hash — not as plain text.
+                  </div>
+                  <div style="display:flex;flex-direction:column;gap:8px">
+                    <div>
+                      <div class="stg-row-t" style="margin-bottom:3px">New Password <span style="font-weight:400;color:var(--mist)">(min 6 chars)</span></div>
+                      <input class="fi" id="devPwdNew" type="password" placeholder="Enter password…" style="font-size:.82rem" oninput="devPwdStrength(this.value)">
+                      <div id="devPwdStrengthBar" style="height:3px;border-radius:2px;margin-top:5px;background:var(--fog);overflow:hidden"><div id="devPwdStrengthFill" style="height:100%;width:0%;border-radius:2px;transition:width .3s,background .3s"></div></div>
+                      <div id="devPwdStrengthLabel" style="font-size:.6rem;color:var(--mist);margin-top:3px"></div>
+                    </div>
+                    <div>
+                      <div class="stg-row-t" style="margin-bottom:3px">Confirm Password</div>
+                      <input class="fi" id="devPwdConfirm" type="password" placeholder="Repeat password…" style="font-size:.82rem" onkeydown="if(event.key==='Enter')devSetPassword()">
+                    </div>
+                    <button class="btn-pri" style="border-radius:8px;padding:10px;font-size:.8rem" onclick="devSetPassword()">🔑 Set Developer Password</button>
+                  </div>
+                </div>
+
+                <!-- Set state -->
+                <div id="devPwdSet" style="display:none">
+                  <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:9px;margin-bottom:12px">
+                    <span style="font-size:1.2rem">✅</span>
+                    <div>
+                      <div style="font-size:.78rem;font-weight:800;color:#15803d">Password is set</div>
+                      <div style="font-size:.65rem;color:#166534;margin-top:1px">Your functions are protected</div>
+                    </div>
+                    <div style="margin-left:auto;font-family:'DM Mono',monospace;font-size:.6rem;color:var(--mist)" id="devPwdHashPreview">sha256:••••••••</div>
+                  </div>
+                  <div style="display:flex;gap:8px;flex-wrap:wrap">
+                    <button class="btn bo btn-sm" onclick="devShowChangePassword()">🔄 Change Password</button>
+                    <button class="btn btn-sm" style="background:#fff5f5;color:#dc2626;border:1.5px solid #fecaca" onclick="devRemovePassword()">🗑 Remove Password</button>
+                  </div>
+                  <!-- Change password form (hidden) -->
+                  <div id="devChangePwdForm" style="display:none;margin-top:12px;padding:12px;background:var(--snow);border-radius:9px;border:1px solid var(--fog)">
+                    <div style="font-size:.73rem;font-weight:700;margin-bottom:8px">Change Password</div>
+                    <input class="fi" id="devPwdCurrent" type="password" placeholder="Current password…" style="font-size:.8rem;margin-bottom:6px">
+                    <input class="fi" id="devPwdChange" type="password" placeholder="New password…" style="font-size:.8rem;margin-bottom:6px">
+                    <input class="fi" id="devPwdChangeConfirm" type="password" placeholder="Confirm new password…" style="font-size:.8rem;margin-bottom:8px">
+                    <div style="display:flex;gap:6px">
+                      <button class="btn-pri" style="flex:1;border-radius:7px;padding:8px;font-size:.76rem" onclick="devChangePassword()">✓ Update Password</button>
+                      <button class="btn bo btn-sm" onclick="document.getElementById('devChangePwdForm').style.display='none'">Cancel</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Lock Functions Card -->
+              <div class="stg-card" style="margin-top:14px" id="devLockFunctionsCard">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+                  <div class="stg-card-h" style="margin-bottom:0">🔒 Functions & Max Focus</div>
+                  <button onclick="devLockAll()" style="font-size:.63rem;font-weight:700;padding:5px 11px;border-radius:7px;cursor:pointer;border:1.5px solid #fecaca;background:#fff5f5;color:#dc2626">🔒 Lock All</button>
+                </div>
+                <!-- Legend -->
+                <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;padding:8px 10px;background:var(--snow);border-radius:8px;border:1px solid var(--fog)">
+                  <div style="display:flex;align-items:center;gap:5px;font-size:.6rem;color:var(--mist)"><span style="width:14px;height:14px;border-radius:4px;background:#fff5f5;border:1px solid #fecaca;display:inline-flex;align-items:center;justify-content:center;font-size:.55rem">🔒</span>Lock — blocks AI edits</div>
+                  <div style="display:flex;align-items:center;gap:5px;font-size:.6rem;color:var(--mist)"><span style="width:14px;height:14px;border-radius:4px;background:#fefce8;border:1px solid #fef08a;display:inline-flex;align-items:center;justify-content:center;font-size:.55rem">🎯</span>Max Focus — AI focuses here only</div>
+                </div>
+                <div style="font-size:.68rem;color:var(--mist);margin-bottom:10px;line-height:1.6">
+                  <b>🔒 Lock</b> prevents any AI from editing that function. <b>🎯 Max Focus</b> tells the AI to concentrate entirely on that function when you upload the file.
+                </div>
+                <div id="devFuncList" style="display:flex;flex-direction:column;gap:0"></div>
+
+                <div id="devNoPwdWarning" style="display:none;margin-top:12px;padding:9px 12px;background:#fffbeb;border:1.5px solid #fcd34d;border-radius:8px;font-size:.72rem;color:#92400e">
+                  ⚠️ Set a developer password first before locking functions.
+                </div>
+              </div>
+
+              <!-- Max Focus Manifest Card -->
+              <div class="stg-card" style="margin-top:14px" id="devFocusSummaryCard">
+                <div class="stg-card-h">🎯 Max Focus Directive</div>
+                <div style="font-size:.7rem;color:var(--mist);margin-bottom:10px;line-height:1.6">
+                  Copy this block and paste it at the top of your JS file before uploading to any AI. The AI will detect it and focus <b>only</b> on the marked functions.
+                </div>
+                <div id="devFocusManifest" style="background:#0d0f12;border-radius:10px;padding:13px 15px;font-family:'DM Mono',monospace;font-size:.6rem;color:#fbbf24;line-height:1.8;white-space:pre;overflow-x:auto;max-height:220px;overflow-y:auto"></div>
+                <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+                  <button class="btn btn-sm" style="background:#fefce8;color:#854d0e;border:1.5px solid #fef08a;font-weight:700" onclick="devCopyFocusBlock()">📋 Copy Focus Directive</button>
+                  <button class="btn btn-sm" style="background:#f0fdf4;color:#16a34a;border:1.5px solid #bbf7d0;font-weight:700" onclick="devDownloadFullDirective()">⬇ Download Full Directive</button>
+                </div>
+              </div>
+
+              <!-- Active Lock Summary -->
+              <div class="stg-card" style="margin-top:14px" id="devLockSummaryCard">
+                <div class="stg-card-h">📋 Lock Manifest</div>
+                <div style="font-size:.7rem;color:var(--mist);margin-bottom:10px;line-height:1.6">
+                  Paste this block at the top of your JS files — any AI reading the code will see the lock and refuse to modify those functions without the password.
+                </div>
+                <div id="devLockManifest" style="background:#0d0f12;border-radius:10px;padding:13px 15px;font-family:'DM Mono',monospace;font-size:.62rem;color:#c8f135;line-height:1.8;white-space:pre;overflow-x:auto;max-height:260px;overflow-y:auto"></div>
+                <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+                  <button class="btn bo btn-sm" onclick="devCopyManifest()">📋 Copy Lock Manifest</button>
+                  <button class="btn btn-sm" style="background:#f0fdf4;color:#16a34a;border:1.5px solid #bbf7d0;font-weight:700" onclick="devDownloadFullDirective()">⬇ Download Full File</button>
+                  <button class="btn btn-sm" style="background:#eef2ff;color:#4f46e5;border:1.5px solid #c7d2fe;font-weight:700" onclick="devUnlockAll()">🔓 Unlock All</button>
+                </div>
+              </div>
+
+              <!-- Verify Unlock -->
+              <div class="stg-card" style="margin-top:14px">
+                <div class="stg-card-h">🔍 Verify / Unlock a Function</div>
+                <div style="font-size:.7rem;color:var(--mist);margin-bottom:10px;line-height:1.6">
+                  Enter the password to prove ownership and unlock a specific function for editing.
+                </div>
+                <div style="display:flex;flex-direction:column;gap:8px">
+                  <div>
+                    <div class="stg-row-t" style="margin-bottom:3px">Select Function</div>
+                    <select class="stg-select" id="devVerifyFunc">
+                      <option value="">— choose a function —</option>
+                    </select>
+                  </div>
+                  <div>
+                    <div class="stg-row-t" style="margin-bottom:3px">Enter Password</div>
+                    <input class="fi" id="devVerifyPwd" type="password" placeholder="Developer password…" style="font-size:.82rem" onkeydown="if(event.key==='Enter')devVerifyUnlock()">
+                  </div>
+                  <button class="btn-pri" style="border-radius:8px;padding:9px;font-size:.78rem" onclick="devVerifyUnlock()">🔓 Verify &amp; Unlock</button>
+                  <div id="devVerifyResult" style="display:none;font-size:.72rem;padding:8px 10px;border-radius:7px"></div>
+                </div>
+              </div>
+
+            </div>
+            <!-- ══ END DEVELOPER LOCK PANEL ══ -->
 
           </div>
         </div>
