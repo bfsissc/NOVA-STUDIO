@@ -407,6 +407,8 @@ function cpSelectUploadModeCard(mode, silent) {
 }
 
 function cpInit() {
+  // FIX 2: Build the tab layout before loading portals or restoring drafts
+  cpEnsureAdminLayout();
   cpLoadPortalList();
 
   // Restore any unsaved wizard draft from before the page refresh
@@ -422,6 +424,8 @@ function cpInit() {
     var cUrl = localStorage.getItem('cp_last_csv_url') || '';
     var ci = document.getElementById('cpCsvDriveUrl');
     if (ci && cUrl) ci.value = cUrl;
+    // FIX 2b: Default to list view so portals show immediately when no draft is pending
+    cpSetPortalView('list');
   }
 }
 
@@ -1597,7 +1601,7 @@ async function cpLoadPortalList() {
     var snap = await fbDb.collection('college_portals').where('createdBy', '==', U.email).limit(500).get();
     CP.portals = [];
     snap.forEach(function(doc) { CP.portals.push(Object.assign({ slug: doc.id }, doc.data())); });
-    // FIX: Firestore Timestamps are objects with .toMillis() — convert before subtracting
+    // FIX 1: Firestore Timestamps are objects with .toMillis() - must convert before subtracting
     CP.portals.sort(function(a, b) {
       var aMs = a.createdAt && a.createdAt.toMillis ? a.createdAt.toMillis() : (typeof a.createdAt === 'number' ? a.createdAt : 0);
       var bMs = b.createdAt && b.createdAt.toMillis ? b.createdAt.toMillis() : (typeof b.createdAt === 'number' ? b.createdAt : 0);
@@ -1605,7 +1609,7 @@ async function cpLoadPortalList() {
     });
     cpRenderPortalList();
   } catch(e) {
-    // FIX: Surface errors so they are visible instead of silently swallowed
+    // FIX 1b: Surface errors instead of silently swallowing them
     console.error('[CP] cpLoadPortalList error:', e);
     cpToast('Error loading portal list: ' + e.message, 'err');
   }
