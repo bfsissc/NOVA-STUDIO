@@ -33,6 +33,7 @@ var CP = {
   students:         [],
   portals:          [],
   step:             1,
+  uploadMode:       '', // 'local' or 'backend' — chosen in Step 1
 };
 
 // ══════════════════════════════════════════════════════════════════
@@ -53,6 +54,7 @@ function cpSaveDraft() {
       csvDriveUrl:   CP.csvDriveUrl,
       students:      CP.students,
       step:          CP.step,
+      uploadMode:    CP.uploadMode,
       fields: {
         collegeName:   getVal('cpCollegeName'),
         cardMessage:   getVal('cpCardMessage'),
@@ -93,6 +95,7 @@ function cpRestoreDraft() {
     CP.templateHeight = draft.templateHeight || 1754;
     CP.csvDriveUrl    = draft.csvDriveUrl    || '';
     CP.students       = draft.students       || [];
+    CP.uploadMode     = draft.uploadMode     || '';
 
     var f = draft.fields || {};
     function _set(id, prop, val) { var el = document.getElementById(id); if (el && val !== undefined) el[prop] = val; }
@@ -323,10 +326,80 @@ function cpEnsureWizardFilters() {
     '<div><div class="cp-label">District <span style="font-weight:400;color:var(--mist)">(for filtering)</span></div>' +
     '<input class="cp-fi" id="cpDistrict" placeholder="e.g. Mumbai, Pune"></div>';
   if (anchor && anchor.parentNode) anchor.parentNode.insertBefore(row, anchor);
+
+  // ── Upload Mode Selection (Step 1) ────────────────────────────────
+  if (!document.getElementById('cpUploadModeSection')) {
+    var step1 = document.getElementById('cpStep1');
+    if (step1) {
+      var modeSection = document.createElement('div');
+      modeSection.id = 'cpUploadModeSection';
+      modeSection.style.marginTop = '18px';
+      modeSection.innerHTML =
+        '<div class="cp-label" style="margin-bottom:8px">📦 Template Storage Mode <span style="font-weight:400;color:var(--mist)">(required)</span></div>' +
+        '<div style="font-size:.7rem;color:var(--mist);margin-bottom:12px;line-height:1.55">Choose how your certificate template will be stored. You can change this later when creating another portal.</div>' +
+        '<div style="display:flex;flex-direction:column;gap:10px">' +
+
+          // Local option
+          '<div id="cpModeCardLocal" onclick="cpSelectUploadModeCard(\'local\')" style="cursor:pointer;border:2px solid var(--fog);border-radius:12px;padding:14px 16px;display:flex;align-items:flex-start;gap:12px;transition:border .15s,background .15s;background:var(--surface)">' +
+            '<div style="font-size:1.5rem;margin-top:1px;line-height:1">📦</div>' +
+            '<div style="flex:1">' +
+              '<div style="font-weight:700;color:var(--ink);font-size:.9rem">Store Locally <span style="font-size:.72rem;font-weight:500;color:var(--mist)">(Firestore)</span></div>' +
+              '<div style="font-size:.75rem;color:var(--mist);margin-top:4px;line-height:1.55">Template is compressed and stored directly in Firestore. No backend upload needed — works even without Firebase Storage CORS setup. Ideal for quick portals.</div>' +
+            '</div>' +
+            '<div id="cpModeCheckLocal" style="display:none;font-size:1.1rem;margin-top:1px">✅</div>' +
+          '</div>' +
+
+          // Backend option
+          '<div id="cpModeCardBackend" onclick="cpSelectUploadModeCard(\'backend\')" style="cursor:pointer;border:2px solid var(--fog);border-radius:12px;padding:14px 16px;display:flex;align-items:flex-start;gap:12px;transition:border .15s,background .15s;background:var(--surface)">' +
+            '<div style="font-size:1.5rem;margin-top:1px;line-height:1">☁️</div>' +
+            '<div style="flex:1">' +
+              '<div style="font-weight:700;color:var(--ink);font-size:.9rem">NOVA Backend <span style="font-size:.72rem;font-weight:500;color:var(--mist)">(Drive + Storage)</span></div>' +
+              '<div style="font-size:.75rem;color:var(--mist);margin-top:4px;line-height:1.55">Compress then upload to Firebase Storage and back up to NOVA Drive. Best for large portals. Requires Firebase Storage CORS to be configured.</div>' +
+            '</div>' +
+            '<div id="cpModeCheckBackend" style="display:none;font-size:1.1rem;margin-top:1px">✅</div>' +
+          '</div>' +
+
+        '</div>' +
+        '<div id="cpUploadModeHint" style="display:none;margin-top:8px;font-size:.72rem;font-weight:600;color:#16a34a;background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:8px;padding:6px 10px"></div>';
+      step1.appendChild(modeSection);
+
+      // Re-apply saved mode if restoring draft
+      if (CP.uploadMode) cpSelectUploadModeCard(CP.uploadMode, true);
+    }
+  }
+}
+
+// ── Upload Mode Card Selection (Step 1) ───────────────────────────
+function cpSelectUploadModeCard(mode, silent) {
+  CP.uploadMode = mode;
+  var cardLocal   = document.getElementById('cpModeCardLocal');
+  var cardBackend = document.getElementById('cpModeCardBackend');
+  var checkLocal  = document.getElementById('cpModeCheckLocal');
+  var checkBack   = document.getElementById('cpModeCheckBackend');
+  var hint        = document.getElementById('cpUploadModeHint');
+
+  if (cardLocal) {
+    cardLocal.style.border     = (mode === 'local')   ? '2px solid var(--accent,#4f46e5)' : '2px solid var(--fog)';
+    cardLocal.style.background = (mode === 'local')   ? 'var(--accent-soft,#eef2ff)' : 'var(--surface)';
+  }
+  if (cardBackend) {
+    cardBackend.style.border     = (mode === 'backend') ? '2px solid var(--accent,#4f46e5)' : '2px solid var(--fog)';
+    cardBackend.style.background = (mode === 'backend') ? 'var(--accent-soft,#eef2ff)' : 'var(--surface)';
+  }
+  if (checkLocal)  checkLocal.style.display  = (mode === 'local')   ? 'block' : 'none';
+  if (checkBack)   checkBack.style.display   = (mode === 'backend') ? 'block' : 'none';
+
+  if (hint) {
+    hint.style.display = 'block';
+    hint.textContent = mode === 'local'
+      ? '📦 Local mode selected — template will be compressed & stored in Firestore. No Storage upload needed.'
+      : '☁️ Backend mode selected — template will be compressed then uploaded to Firebase Storage + NOVA Drive.';
+  }
+
+  if (!silent) cpSaveDraft();
 }
 
 function cpInit() {
-  cpEnsureAdminLayout();
   cpLoadPortalList();
 
   // Restore any unsaved wizard draft from before the page refresh
@@ -406,7 +479,58 @@ function cpRenderStep(n) {
 }
 
 async function cpNextStep() {
-  // Compression is now fully automatic on upload — no prompt needed
+  // If on Step 2 and template still needs compression (e.g. loaded from Drive URL),
+  // auto-compress it now before advancing — same as the file-picker path.
+  if (CP.step === 2 && CP.templateNeedsCompression) {
+    var btn = document.getElementById('cpBtnNext');
+    if (btn) { btn.disabled = true; btn.textContent = 'Compressing…'; }
+    try {
+      var adaptive = await cpAdaptiveCompressTemplate(CP.templateUrl, CP.templateTargetBytes);
+      CP.templateUrl   = adaptive.dataUrl;
+      CP.templateBytes = adaptive.bytes;
+      CP.templateQuality = adaptive;
+      CP.templateNeedsCompression = adaptive.bytes > CP.templateTargetBytes;
+      var img = new Image();
+      await new Promise(function(resolve, reject) {
+        img.onload = resolve;
+        img.onerror = function() { reject(new Error('Compressed image decode failed')); };
+        img.src = adaptive.dataUrl;
+      });
+      CP.templateImg = img;
+      CP.templateWidth  = img.naturalWidth;
+      CP.templateHeight = img.naturalHeight;
+      var thumb = document.getElementById('cpTemplateThumb');
+      if (thumb) thumb.src = adaptive.dataUrl;
+      var badge = document.getElementById('cpTemplateBadge');
+      if (badge) badge.textContent = 'Auto-compressed (' + adaptive.width + 'x' + adaptive.height + ', ' + cpFormatBytes(adaptive.bytes) + ') — ready ✓';
+      cpSaveDraft();
+
+      // Also upload the freshly-compressed blob to Firebase Storage now
+      if (typeof fbStorage !== 'undefined') {
+        try {
+          var uid = (typeof U !== 'undefined' && U && U.uid) ? U.uid : 'anon';
+          var path = 'portal-templates/' + uid + '/template_' + Date.now() + '.jpg';
+          var sRef = fbStorage.ref(path);
+          var blob = cpDataUrlToBlob(adaptive.dataUrl);
+          if (btn) btn.textContent = 'Uploading…';
+          await sRef.put(blob, { contentType: 'image/jpeg' });
+          CP.storageUrl  = await sRef.getDownloadURL();
+          CP.templateUrl = CP.storageUrl;
+        } catch(storageErr) {
+          console.warn('[CP] Storage upload after compress failed (non-fatal):', storageErr.message);
+          CP.storageUrl = '';
+        }
+      }
+
+      cpToast('Template compressed & ready ✓', 'ok');
+    } catch(e) {
+      cpToast('Auto-compress failed: ' + e.message, 'err');
+      if (btn) { btn.disabled = false; btn.textContent = 'Next →'; }
+      return;
+    }
+    if (btn) { btn.disabled = false; btn.textContent = 'Next →'; }
+  }
+
   if (cpValidateStep(CP.step)) { cpSaveDraft(); cpRenderStep(CP.step + 1); }
 }
 function cpPrevStep() { cpSaveDraft(); cpRenderStep(Math.max(1, CP.step - 1)); }
@@ -418,6 +542,17 @@ function cpValidateStep(n) {
     var slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
     document.getElementById('cpSlugPreview').textContent = slug;
     CP.currentSlug = slug;
+    if (!CP.uploadMode) {
+      cpToast('Please select a template storage mode before continuing.', 'err');
+      // Flash the cards to draw attention
+      var section = document.getElementById('cpUploadModeSection');
+      if (section) {
+        section.style.outline = '2px solid #ef4444';
+        section.style.borderRadius = '10px';
+        setTimeout(function() { section.style.outline = ''; }, 1800);
+      }
+      return false;
+    }
     return true;
   }
   if (n === 2) {
@@ -452,164 +587,9 @@ function cpTemplateUrlChanged() {
   if (wrap) wrap.style.display = 'none';
 }
 
-async function cpHandleTemplateFileInput(input) {
-  var file = input.files && input.files[0];
-  if (!file) return;
-  if (!file.type.startsWith('image/')) { cpToast('Please select an image file (PNG, JPG, etc.)', 'err'); return; }
-  if (file.size > 10 * 1024 * 1024) { cpToast('Image is too large (max 10 MB).', 'err'); return; }
-  CP.storageUrl = '';
-
-  var badge    = document.getElementById('cpTemplateBadge');
-  var badgeWrap= document.getElementById('cpTemplateBadgeWrap');
-  var statusEl = document.getElementById('cpTemplateLoadStatus');
-  badge.textContent = 'Uploading…';
-  statusEl.textContent = '⏳';
-  badgeWrap.style.display = 'flex';
-
-  try {
-    var localUrl = URL.createObjectURL(file);
-    var previewImg = new Image();
-    previewImg.onload = function() {
-      CP.templateImg    = previewImg;
-      CP.templateWidth  = previewImg.naturalWidth;
-      CP.templateHeight = previewImg.naturalHeight;
-      var thumb = document.getElementById('cpTemplateThumb');
-      if (thumb) { thumb.src = localUrl; thumb.style.display = 'block'; }
-      if (CP.step === 3) cpDrawNameCanvas();
-    };
-    previewImg.src = localUrl;
-
-    var base64DataUrl = await new Promise(function(res, rej) {
-      var r = new FileReader();
-      r.onload = function(e) { res(e.target.result); };
-      r.onerror = rej;
-      r.readAsDataURL(file);
-    });
-    CP.templateUrl = base64DataUrl;
-
-    // Adaptive quality mode: make a best-quality copy that fits portal limits.
-    badge.textContent = 'Adaptive quality…';
-    var adaptive = await cpAdaptiveCompressTemplate(base64DataUrl, 1048576);
-    var compressedDataUrl = adaptive.dataUrl;
-    CP.templateQuality = adaptive;
-    var adaptiveImg = new Image();
-    await new Promise(function(resolve, reject) {
-      adaptiveImg.onload = resolve;
-      adaptiveImg.onerror = function() { reject(new Error('Compressed image decode failed')); };
-      adaptiveImg.src = compressedDataUrl;
-    });
-    CP.templateImg = adaptiveImg;
-    CP.templateWidth = adaptiveImg.naturalWidth;
-    CP.templateHeight = adaptiveImg.naturalHeight;
-    var adaptiveThumb = document.getElementById('cpTemplateThumb');
-    if (adaptiveThumb) { adaptiveThumb.src = compressedDataUrl; adaptiveThumb.style.display = 'block'; }
-    var uploadBlob = cpDataUrlToBlob(compressedDataUrl);
-    CP.templateUrl = compressedDataUrl;
-
-    if (typeof fbStorage !== 'undefined') {
-      try {
-        var uid  = (typeof U !== 'undefined' && U) ? (U.uid || U.email || 'anon').replace(/[^a-zA-Z0-9_-]/g, '_') : 'anon';
-        var safeName = (file.name || 'template').replace(/\.[^.]+$/, '').replace(/[^a-zA-Z0-9_-]/g, '-').slice(0, 60) || 'template';
-        var path = 'portal-templates/' + uid + '/' + safeName + '_' + Date.now() + '.jpg';
-        var storageRef = fbStorage.ref(path);
-
-        badge.textContent = 'Uploading… 0%';
-        var uploadTask = storageRef.put(uploadBlob, { contentType: 'image/jpeg' });
-        uploadTask.on('state_changed', function(snapshot) {
-          var pct = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
-          badge.textContent = 'Uploading… ' + pct + '%';
-        });
-        await uploadTask;
-        var downloadUrl = await storageRef.getDownloadURL();
-        CP.storageUrl = downloadUrl;
-        CP.templateUrl = downloadUrl;
-        badge.textContent = file.name + ' (' + adaptive.width + '×' + adaptive.height + ', ' + cpFormatBytes(adaptive.bytes) + ') — uploaded ✓';
-      } catch(storageErr) {
-        console.warn('Template Storage upload failed, using compressed Firestore fallback:', storageErr);
-        CP.storageUrl = '';
-        CP.templateUrl = compressedDataUrl;
-        badge.textContent = file.name + ' (' + adaptive.width + '×' + adaptive.height + ', ' + cpFormatBytes(adaptive.bytes) + ') — ready ✓';
-      }
-    } else {
-      CP.storageUrl = '';
-      badge.textContent = file.name + ' (' + adaptive.width + '×' + adaptive.height + ', ' + cpFormatBytes(adaptive.bytes) + ') — ready ✓';
-    }
-
-    statusEl.textContent = '✅';
-    var urlInput = document.getElementById('cpTemplateDriveUrl');
-    if (urlInput) urlInput.value = '';
-    cpToast(CP.storageUrl ? 'Template uploaded & ready ✓' : 'Template ready ✓', 'ok');
-    cpSaveDraft();
-  } catch(err) {
-    statusEl.textContent = '❌';
-    badge.textContent = 'Upload failed: ' + err.message;
-    cpToast('Upload failed: ' + err.message, 'err');
-  }
-}
-
 function cpTriggerTemplateUpload() {
   var input = document.getElementById('cpTemplateFileInput');
   if (input) input.click();
-}
-
-async function cpFetchTemplateFromUrl() {
-  var raw = (document.getElementById('cpTemplateDriveUrl').value || '').trim();
-  if (!raw) { cpToast('Please paste a Google Drive link or upload a file.', 'err'); return; }
-  CP.storageUrl = '';
-  var badge    = document.getElementById('cpTemplateBadge');
-  var badgeWrap= document.getElementById('cpTemplateBadgeWrap');
-  var statusEl = document.getElementById('cpTemplateLoadStatus');
-  badge.textContent = 'Loading…';
-  statusEl.textContent = '⏳';
-  badgeWrap.style.display = 'flex';
-  localStorage.setItem('cp_last_tpl_url', raw);
-  var fileId = cpExtractDriveFileId(raw);
-  var driveUrls = fileId ? [
-    'https://drive.google.com/thumbnail?id=' + fileId + '&sz=w2000',
-    'https://lh3.googleusercontent.com/d/' + fileId + '=w2000',
-    'https://drive.google.com/uc?export=download&id=' + fileId,
-  ] : [raw];
-  var proxies = ['https://corsproxy.io/?', 'https://api.allorigins.win/raw?url='];
-  var urlsToTry = [];
-  driveUrls.forEach(function(u) { urlsToTry.push(u); });
-  proxies.forEach(function(proxy) { driveUrls.forEach(function(u) { urlsToTry.push(proxy + encodeURIComponent(u)); }); });
-  var lastErr = '';
-  for (var ui = 0; ui < urlsToTry.length; ui++) {
-    badge.textContent = 'Trying method ' + (ui + 1) + ' of ' + urlsToTry.length + '…';
-    try {
-      var ctrl = new AbortController();
-      var timer = setTimeout(function() { ctrl.abort(); }, 8000);
-      var resp = await fetch(urlsToTry[ui], { signal: ctrl.signal });
-      clearTimeout(timer);
-      if (!resp.ok) throw new Error('HTTP ' + resp.status);
-      var ct = resp.headers.get('content-type') || '';
-      if (ct.includes('text/html')) throw new Error('Got HTML');
-      var blob = await resp.blob();
-      if (!blob.type.startsWith('image/') && blob.size < 5000) throw new Error('Wrong type');
-      var dataUrl = await new Promise(function(res, rej) {
-        var r = new FileReader(); r.onload = function(e) { res(e.target.result); }; r.onerror = rej; r.readAsDataURL(blob);
-      });
-      var img = new Image();
-      await new Promise(function(resolve, reject) { img.onload = resolve; img.onerror = function() { reject(new Error('Decode failed')); }; img.src = dataUrl; });
-      badge.textContent = 'Adaptive quality…';
-      var adaptive = await cpAdaptiveCompressTemplate(dataUrl, 1048576);
-      CP.templateQuality = adaptive;
-      var finalImg = new Image();
-      await new Promise(function(resolve, reject) { finalImg.onload = resolve; finalImg.onerror = function() { reject(new Error('Compressed image decode failed')); }; finalImg.src = adaptive.dataUrl; });
-      CP.templateImg = finalImg; CP.templateWidth = finalImg.naturalWidth; CP.templateHeight = finalImg.naturalHeight; CP.templateUrl = adaptive.dataUrl;
-      badge.textContent = 'Template loaded (' + adaptive.width + '×' + adaptive.height + ', ' + cpFormatBytes(adaptive.bytes) + ') ✓';
-      statusEl.textContent = '✅';
-      var thumb = document.getElementById('cpTemplateThumb');
-      if (thumb) { thumb.src = adaptive.dataUrl; thumb.style.display = 'block'; }
-      cpToast('Template loaded ✓', 'ok');
-      if (CP.step === 3) cpDrawNameCanvas();
-      cpSaveDraft();
-      return;
-    } catch(e) { lastErr = e.message; }
-  }
-  statusEl.textContent = '❌';
-  badge.textContent = 'Could not load (' + lastErr + ')';
-  cpToast('Drive URL failed. Try uploading the file directly.', 'err');
 }
 
 // Override: simplified template flow. No Firebase Storage upload here.
@@ -646,21 +626,146 @@ async function cpSetLoadedTemplateDataUrl(dataUrl, label) {
   cpSaveDraft();
 }
 
+// ── Upload-mode choice modal ──────────────────────────────────────
+// Called after file is read. Shows two options:
+//   A) Local only  — compress + store as Firestore base64 (no backend needed)
+//   B) NOVA Backend — compress + upload to Firebase Storage + Google Drive
+// Then proceeds automatically after choice.
+// ── cpShowUploadChoiceModal: now replaced by Step 1 inline cards.
+// Kept as a thin wrapper that calls cpProcessTemplateDataUrl directly.
+function cpShowUploadChoiceModal(dataUrl, fileName, onChoice) {
+  // Mode is already selected in Step 1 — just process immediately.
+  // Fallback: if somehow called without a mode, default to 'local'.
+  if (!CP.uploadMode) CP.uploadMode = 'local';
+  cpProcessTemplateDataUrl(dataUrl, fileName);
+}
+
+// cpSelectUploadChoice / cpProceedWithUploadChoice kept for compatibility
+function cpSelectUploadChoice(mode) { CP.uploadMode = mode; }
+
+async function cpProceedWithUploadChoice() {
+  // No-op — processing now happens in cpProcessTemplateDataUrl
+}
+
+// ── Core template processor — uses CP.uploadMode set in Step 1 ────
+async function cpProcessTemplateDataUrl(dataUrl, fileName) {
+  var choice   = CP.uploadMode || 'local';
+  var badge    = document.getElementById('cpTemplateBadge');
+  var wrap     = document.getElementById('cpTemplateBadgeWrap');
+  var statusEl = document.getElementById('cpTemplateLoadStatus');
+  if (wrap) wrap.style.display = 'block';
+  if (statusEl) statusEl.textContent = '⏳';
+
+  try {
+    // ── Always auto-compress first ──
+    var originalBytes = cpDataUrlBytes(dataUrl);
+    var needsCompress = originalBytes > CP.templateTargetBytes;
+    var finalDataUrl  = dataUrl;
+
+    if (needsCompress) {
+      if (badge) badge.textContent = '🗜️ Auto-compressing (' + cpFormatBytes(originalBytes) + ' → target ≤ ' + cpFormatBytes(CP.templateTargetBytes) + ')…';
+      var adaptive = await cpAdaptiveCompressTemplate(dataUrl, CP.templateTargetBytes);
+      finalDataUrl = adaptive.dataUrl;
+      if (badge) badge.textContent = '✅ Compressed to ' + cpFormatBytes(adaptive.bytes) + ' (' + adaptive.width + '×' + adaptive.height + ')';
+      cpToast('Auto-compressed to ' + cpFormatBytes(adaptive.bytes) + ' ✓', 'ok');
+    }
+
+    // ── Load into CP state ──
+    await cpSetLoadedTemplateDataUrl(finalDataUrl, fileName);
+    CP.templateNeedsCompression = false;
+
+    var finalBlob = cpDataUrlToBlob(finalDataUrl);
+    var sizeLabel = cpFormatBytes(cpDataUrlBytes(finalDataUrl));
+
+    if (choice === 'local') {
+      // ── LOCAL ONLY: store as Firestore base64 ────────────────────────
+      CP.storageUrl = '';
+      if (badge) badge.textContent = fileName + (needsCompress ? ' (compressed to ' + sizeLabel + ')' : ' (' + sizeLabel + ')') + ' — ready ✓ (local)';
+      if (statusEl) statusEl.textContent = '✅';
+      cpToast('Template ready (stored locally) ✓', 'ok');
+
+    } else {
+      // ── BACKEND: Firebase Storage + Drive ────────────────────────────
+      var safeName = fileName.replace(/\.[^.]+$/, '').replace(/[^a-zA-Z0-9_-]/g, '-').slice(0, 60) || 'template';
+      var uid = (typeof U !== 'undefined' && U && U.uid) ? U.uid : 'anon';
+      var storagePath = 'portal-templates/' + uid + '/' + safeName + '_' + Date.now() + '.jpg';
+
+      // Firebase Storage upload
+      if (typeof fbStorage !== 'undefined') {
+        try {
+          if (badge) badge.textContent = '☁️ Uploading to Firebase Storage… 0%';
+          var storageRef = fbStorage.ref(storagePath);
+          var uploadTask = storageRef.put(finalBlob, { contentType: 'image/jpeg' });
+          await new Promise(function(resolve, reject) {
+            uploadTask.on('state_changed',
+              function(snapshot) {
+                var pct = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
+                if (badge) badge.textContent = '☁️ Uploading to Firebase Storage… ' + pct + '%';
+              },
+              reject,
+              resolve
+            );
+          });
+          var downloadUrl = await storageRef.getDownloadURL();
+          CP.storageUrl  = downloadUrl;
+          CP.templateUrl = downloadUrl;
+          if (badge) badge.textContent = fileName + (needsCompress ? ' (compressed to ' + sizeLabel + ')' : ' (' + sizeLabel + ')') + ' — uploaded ✓';
+          if (statusEl) statusEl.textContent = '✅';
+          cpToast('Template uploaded to Firebase Storage ✓', 'ok');
+        } catch(storageErr) {
+          console.warn('[CP] Firebase Storage upload failed:', storageErr.message);
+          CP.storageUrl = '';
+          if (badge) badge.textContent = fileName + ' — Storage upload failed, stored locally';
+          if (statusEl) statusEl.textContent = '⚠️';
+          cpToast('Storage upload failed — template stored locally as fallback', 'warn');
+        }
+      } else {
+        CP.storageUrl = '';
+        if (badge) badge.textContent = fileName + ' (' + sizeLabel + ') — ready ✓ (no storage)';
+        if (statusEl) statusEl.textContent = '✅';
+      }
+
+      // Google Drive backup (non-blocking, best-effort)
+      (async function() {
+        var driveFileName = safeName + '_' + Date.now() + '.jpg';
+        var driveResult = await cpUploadBlobToDrive(finalBlob, driveFileName);
+        if (driveResult && driveResult.driveFileId) {
+          CP.driveBkpFileId = driveResult.driveFileId;
+          var driveBadge = document.getElementById('cpDriveBadge');
+          if (driveBadge) {
+            driveBadge.textContent = '✅ Backed up → NOVA Backend / Certificate Templates';
+            driveBadge.style.display = 'block';
+          }
+          cpToast('Backed up to NOVA Drive → Certificate Templates ✓', 'ok');
+        }
+      })();
+    }
+
+    var urlInput = document.getElementById('cpTemplateDriveUrl');
+    if (urlInput) urlInput.value = '';
+    cpSaveDraft();
+
+  } catch(err) {
+    if (statusEl) statusEl.textContent = '❌';
+    if (badge) badge.textContent = 'Error: ' + err.message;
+    cpToast('Template processing failed: ' + err.message, 'err');
+  }
+}
+
 async function cpHandleTemplateFileInput(input) {
   var file = input.files && input.files[0];
   if (!file) return;
   if (!file.type.startsWith('image/')) { cpToast('Please select an image file (PNG, JPG, etc.)', 'err'); return; }
   if (file.size > 10 * 1024 * 1024) { cpToast('Image is too large (max 10 MB).', 'err'); return; }
 
-  var badge = document.getElementById('cpTemplateBadge');
-  var wrap = document.getElementById('cpTemplateBadgeWrap');
+  var badge    = document.getElementById('cpTemplateBadge');
+  var wrap     = document.getElementById('cpTemplateBadgeWrap');
   var statusEl = document.getElementById('cpTemplateLoadStatus');
   if (wrap) wrap.style.display = 'block';
   if (statusEl) statusEl.textContent = '⏳';
   if (badge) badge.textContent = 'Reading file…';
 
   try {
-    // Step 1: Read as base64
     var dataUrl = await new Promise(function(res, rej) {
       var r = new FileReader();
       r.onload = function(e) { res(e.target.result); };
@@ -668,75 +773,24 @@ async function cpHandleTemplateFileInput(input) {
       r.readAsDataURL(file);
     });
 
-    var originalBytes = cpDataUrlBytes(dataUrl);
-    var needsCompress = originalBytes > CP.templateTargetBytes; // >1MB
+    // Show a quick preview thumbnail immediately
+    var previewImg = new Image();
+    previewImg.onload = function() {
+      var thumb = document.getElementById('cpTemplateThumb');
+      if (thumb) { thumb.src = URL.createObjectURL(file); thumb.style.display = 'block'; }
+    };
+    previewImg.src = dataUrl;
 
-    // Step 2: Auto-compress if >1MB (no prompt needed — done automatically)
-    var finalDataUrl = dataUrl;
-    if (needsCompress) {
-      if (badge) badge.textContent = '🗜️ Auto-compressing (file is ' + cpFormatBytes(originalBytes) + ', target ≤1 MB)…';
-      var adaptive = await cpAdaptiveCompressTemplate(dataUrl, CP.templateTargetBytes);
-      finalDataUrl = adaptive.dataUrl;
-      if (badge) badge.textContent = 'Compressed to ' + cpFormatBytes(adaptive.bytes) + ' (' + adaptive.width + '×' + adaptive.height + ') — uploading…';
-    }
+    if (statusEl) statusEl.textContent = '📄';
+    if (badge) badge.textContent = file.name + ' (' + cpFormatBytes(cpDataUrlBytes(dataUrl)) + ') — processing…';
 
-    // Step 3: Load into CP state
-    await cpSetLoadedTemplateDataUrl(finalDataUrl, file.name || 'Template');
+    // Process immediately using the storage mode chosen in Step 1
+    cpProcessTemplateDataUrl(dataUrl, file.name || 'template');
 
-    // Step 4: Upload compressed blob to Firebase Storage
-    var finalBlob = cpDataUrlToBlob(finalDataUrl);
-    var safeName = (file.name || 'template').replace(/\.[^.]+$/, '').replace(/[^a-zA-Z0-9_-]/g, '-').slice(0, 60) || 'template';
-    var storagePath = 'portal-templates/' + ((typeof U !== 'undefined' && U && U.uid) ? U.uid : 'anon') + '/' + safeName + '_' + Date.now() + '.jpg';
-
-    if (typeof fbStorage !== 'undefined') {
-      try {
-        if (badge) badge.textContent = '☁️ Uploading to NOVA backend…';
-        var storageRef = fbStorage.ref(storagePath);
-        var uploadTask = storageRef.put(finalBlob, { contentType: 'image/jpeg' });
-        uploadTask.on('state_changed', function(snapshot) {
-          var pct = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
-          if (badge) badge.textContent = '☁️ Uploading to NOVA backend… ' + pct + '%';
-        });
-        await uploadTask;
-        var downloadUrl = await storageRef.getDownloadURL();
-        CP.storageUrl = downloadUrl;
-        CP.templateUrl = downloadUrl;
-      } catch(storageErr) {
-        console.warn('[CP] Firebase Storage upload failed:', storageErr.message);
-        CP.storageUrl = '';
-      }
-    }
-
-    // Step 5: Also upload to Google Drive (backend) — non-blocking, best-effort
-    (async function() {
-      var driveFileName = (file.name || 'template').replace(/\.[^.]+$/, '') + '_' + Date.now() + '.jpg';
-      var driveResult = await cpUploadBlobToDrive(finalBlob, driveFileName);
-      if (driveResult && driveResult.driveFileId) {
-        CP.driveBkpFileId = driveResult.driveFileId;
-        var driveBadge = document.getElementById('cpDriveBadge');
-        if (driveBadge) {
-          driveBadge.textContent = '✅ Backed up → NOVA Backend / Certificate Templates';
-          driveBadge.style.display = 'block';
-        }
-        cpToast('Template saved to Drive → NOVA Backend / Certificate Templates ✓', 'ok');
-      }
-    })();
-
-    // Final badge
-    var sizeLabel = cpFormatBytes(cpDataUrlBytes(finalDataUrl));
-    if (badge) {
-      badge.textContent = file.name + (needsCompress ? ' (auto-compressed to ' + sizeLabel + ')' : ' (' + sizeLabel + ')') + ' — ready ✓';
-    }
-    if (statusEl) statusEl.textContent = '✅';
-
-    cpToast(needsCompress ? 'Template auto-compressed and ready ✓' : 'Template ready ✓', 'ok');
-    var urlInput = document.getElementById('cpTemplateDriveUrl');
-    if (urlInput) urlInput.value = '';
-    cpSaveDraft();
   } catch(err) {
     if (statusEl) statusEl.textContent = '❌';
-    if (badge) badge.textContent = 'Load failed: ' + err.message;
-    cpToast('Template load failed: ' + err.message, 'err');
+    if (badge) badge.textContent = 'Read failed: ' + err.message;
+    cpToast('Could not read file: ' + err.message, 'err');
   }
 }
 
@@ -782,8 +836,10 @@ async function cpFetchTemplateFromUrl() {
         r.onerror = rej;
         r.readAsDataURL(blob);
       });
-      await cpSetLoadedTemplateDataUrl(dataUrl, 'Template from link');
-      cpToast(CP.templateNeedsCompression ? 'Template loaded. Click Next to auto-compress.' : 'Template ready.', CP.templateNeedsCompression ? 'info' : 'ok');
+      // Process immediately using the storage mode chosen in Step 1
+      if (badge) badge.textContent = 'Image loaded — processing…';
+      if (statusEl) statusEl.textContent = '📄';
+      cpProcessTemplateDataUrl(dataUrl, 'Template from link');
       return;
     } catch(e) {
       lastErr = e.message;
@@ -1475,81 +1531,6 @@ async function cpPublishPortal() {
   btn.disabled = false; btn.textContent = '🚀 Publish Portal';
 }
 
-// Override: publish only already-prepared portal data.
-// No Firebase Storage upload happens during publish, so CORS cannot block deployment.
-async function cpPublishPortal() {
-  var btn = document.getElementById('cpPublishBtn');
-  btn.disabled = true; btn.textContent = 'Publishing...';
-  try {
-    var collegeName  = document.getElementById('cpCollegeName').value.trim();
-    var cardMessage  = document.getElementById('cpCardMessage').value.trim();
-    var defaultLimit = parseInt(document.getElementById('cpDefaultLimit').value) || 1;
-    var openAccess   = document.getElementById('cpOpenAccess').checked;
-    var headerColor  = document.getElementById('cpHeaderColor').value;
-    var accentColor  = document.getElementById('cpAccentColor').value;
-    var googleFormUrl= (document.getElementById('cpGoogleFormUrl') ? document.getElementById('cpGoogleFormUrl').value.trim() : '');
-    var state        = (document.getElementById('cpState') ? document.getElementById('cpState').value.trim() : '');
-    var district     = (document.getElementById('cpDistrict') ? document.getElementById('cpDistrict').value.trim() : '');
-
-    if (!CP.currentSlug || !collegeName) throw new Error('Missing college name.');
-    if (!CP.templateUrl) throw new Error('No template loaded.');
-
-    var templateUrlToStore = CP.templateUrl;
-    if (templateUrlToStore.startsWith('data:') && cpDataUrlBytes(templateUrlToStore) > 950000) {
-      throw new Error('Template is still too large. Go back and click Auto Compress.');
-    }
-
-    var portalData = {
-      collegeName:    collegeName,
-      cardMessage:    cardMessage || 'Enter your full name exactly as registered to download your certificate.',
-      defaultLimit:   defaultLimit,
-      openAccess:     openAccess,
-      headerColor:    headerColor,
-      accentColor:    accentColor,
-      templateUrl:    templateUrlToStore,
-      csvDriveUrl:    CP.csvDriveUrl || '',
-      templateWidth:  CP.templateWidth,
-      templateHeight: CP.templateHeight,
-      namePosition:   { xPct: CP.namePos.xPct, yPct: CP.namePos.yPct },
-      nameStyle:      Object.assign({}, CP.nameStyle),
-      googleFormUrl:  googleFormUrl,
-      state:          state,
-      district:       district,
-      active:         true,
-      createdAt:      firebase.firestore.FieldValue.serverTimestamp(),
-      createdBy:      (typeof U !== 'undefined' && U) ? U.email : 'unknown',
-    };
-
-    await fbDb.collection('college_portals').doc(CP.currentSlug).set(portalData, { merge: true });
-
-    if (CP.students.length > 0) {
-      btn.textContent = 'Saving students...';
-      var batch = fbDb.batch(), batchCount = 0;
-      for (var i = 0; i < CP.students.length; i++) {
-        var s = CP.students[i];
-        if (!s.name || !s.name.trim()) continue;
-        var nameLower = s.name.trim().toLowerCase().replace(/\s+/g, ' ').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-        var key = nameLower.replace(/\s+/g, '_');
-        var ref = fbDb.collection('college_portals').doc(CP.currentSlug).collection('students').doc(key);
-        batch.set(ref, { name: s.name.trim(), nameLower: nameLower, limit: s.limit || 1 }, { merge: true });
-        batchCount++;
-        if (batchCount === 490) { await batch.commit(); batch = fbDb.batch(); batchCount = 0; }
-      }
-      if (batchCount > 0) await batch.commit();
-    }
-
-    cpToast('Portal published!', 'ok');
-    cpRenderPortalLink();
-    cpLoadPortalList();
-    cpClearDraft();
-    document.getElementById('cpPublishedSuccess').style.display = 'block';
-  } catch(err) {
-    console.error(err);
-    cpToast('Publish failed: ' + err.message, 'err');
-  }
-  btn.disabled = false; btn.textContent = 'Publish Portal';
-}
-
 // ── Share link ──
 function cpRenderPortalLink() {
   if (!CP.currentSlug) return;
@@ -2106,7 +2087,7 @@ function cpUpdateDistrictOptions() {
 function cpNewPortal() {
   cpSetPortalView('create');
   cpClearDraft();
-  CP.currentSlug = ''; CP.templateImg = null; CP.templateUrl = ''; CP.storageUrl = ''; CP.csvDriveUrl = ''; CP.students = [];
+  CP.currentSlug = ''; CP.templateImg = null; CP.templateUrl = ''; CP.storageUrl = ''; CP.csvDriveUrl = ''; CP.students = []; CP.uploadMode = '';
   CP.namePos   = { xPct: 50, yPct: 62 };
   CP.nameStyle = { fontSize: 60, fontFamily: 'Georgia', color: '#1a1a1a', bold: false, italic: false, align: 'center' };
   function _set(id, prop, val) { var el = document.getElementById(id); if (el) el[prop] = val; }
@@ -2116,6 +2097,10 @@ function cpNewPortal() {
   _set('cpState','value',''); _set('cpDistrict','value','');
   _set('cpTemplateDriveUrl','value',''); _set('cpCsvDriveUrl','value','');
   ['cpTemplateBadgeWrap','cpCsvBadgeWrap','cpPublishedSuccess'].forEach(function(id){ var el=document.getElementById(id); if(el) el.style.display='none'; });
+  // Reset upload mode card visuals
+  ['cpModeCardLocal','cpModeCardBackend'].forEach(function(id){ var el=document.getElementById(id); if(el){ el.style.border='2px solid var(--fog)'; el.style.background='var(--surface)'; } });
+  ['cpModeCheckLocal','cpModeCheckBackend'].forEach(function(id){ var el=document.getElementById(id); if(el) el.style.display='none'; });
+  var hint=document.getElementById('cpUploadModeHint'); if(hint) hint.style.display='none';
   var wiz = document.getElementById('cpWizard'); if (wiz) wiz.style.display = 'block';
   cpRenderStudentTable();
   cpRenderStep(1);
