@@ -326,47 +326,54 @@ function cpEnsureWizardFilters() {
     '<div><div class="cp-label">District <span style="font-weight:400;color:var(--mist)">(for filtering)</span></div>' +
     '<input class="cp-fi" id="cpDistrict" placeholder="e.g. Mumbai, Pune"></div>';
   if (anchor && anchor.parentNode) anchor.parentNode.insertBefore(row, anchor);
+}
 
-  // ── Upload Mode Selection (Step 1) ────────────────────────────────
-  if (!document.getElementById('cpUploadModeSection')) {
-    var step1 = document.getElementById('cpStep1');
-    if (step1) {
-      var modeSection = document.createElement('div');
-      modeSection.id = 'cpUploadModeSection';
-      modeSection.style.marginTop = '18px';
-      modeSection.innerHTML =
-        '<div class="cp-label" style="margin-bottom:8px">📦 Template Storage Mode <span style="font-weight:400;color:var(--mist)">(required)</span></div>' +
-        '<div style="font-size:.7rem;color:var(--mist);margin-bottom:12px;line-height:1.55">Choose how your certificate template will be stored. You can change this later when creating another portal.</div>' +
-        '<div style="display:flex;flex-direction:column;gap:10px">' +
-
-          // Local option
-          '<div id="cpModeCardLocal" onclick="cpSelectUploadModeCard(\'local\')" style="cursor:pointer;border:2px solid var(--fog);border-radius:12px;padding:14px 16px;display:flex;align-items:flex-start;gap:12px;transition:border .15s,background .15s;background:var(--surface)">' +
-            '<div style="font-size:1.5rem;margin-top:1px;line-height:1">📦</div>' +
-            '<div style="flex:1">' +
-              '<div style="font-weight:700;color:var(--ink);font-size:.9rem">Store Locally <span style="font-size:.72rem;font-weight:500;color:var(--mist)">(Firestore)</span></div>' +
-              '<div style="font-size:.75rem;color:var(--mist);margin-top:4px;line-height:1.55">Template is compressed and stored directly in Firestore. No backend upload needed — works even without Firebase Storage CORS setup. Ideal for quick portals.</div>' +
-            '</div>' +
-            '<div id="cpModeCheckLocal" style="display:none;font-size:1.1rem;margin-top:1px">✅</div>' +
-          '</div>' +
-
-          // Backend option
-          '<div id="cpModeCardBackend" onclick="cpSelectUploadModeCard(\'backend\')" style="cursor:pointer;border:2px solid var(--fog);border-radius:12px;padding:14px 16px;display:flex;align-items:flex-start;gap:12px;transition:border .15s,background .15s;background:var(--surface)">' +
-            '<div style="font-size:1.5rem;margin-top:1px;line-height:1">☁️</div>' +
-            '<div style="flex:1">' +
-              '<div style="font-weight:700;color:var(--ink);font-size:.9rem">NOVA Backend <span style="font-size:.72rem;font-weight:500;color:var(--mist)">(Drive + Storage)</span></div>' +
-              '<div style="font-size:.75rem;color:var(--mist);margin-top:4px;line-height:1.55">Compress then upload to Firebase Storage and back up to NOVA Drive. Best for large portals. Requires Firebase Storage CORS to be configured.</div>' +
-            '</div>' +
-            '<div id="cpModeCheckBackend" style="display:none;font-size:1.1rem;margin-top:1px">✅</div>' +
-          '</div>' +
-
-        '</div>' +
-        '<div id="cpUploadModeHint" style="display:none;margin-top:8px;font-size:.72rem;font-weight:600;color:#16a34a;background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:8px;padding:6px 10px"></div>';
-      step1.appendChild(modeSection);
-
-      // Re-apply saved mode if restoring draft
-      if (CP.uploadMode) cpSelectUploadModeCard(CP.uploadMode, true);
-    }
+// ── Upload Mode Section — injected into Step 1 independently ──────
+// Called from cpRenderStep(1) so it always runs regardless of whether
+// cpState already exists in the HTML (which causes cpEnsureWizardFilters
+// to bail out early via its guard clause).
+function cpEnsureUploadModeSection() {
+  if (document.getElementById('cpUploadModeSection')) {
+    // Already injected — just re-apply the saved mode highlight
+    if (CP.uploadMode) cpSelectUploadModeCard(CP.uploadMode, true);
+    return;
   }
+  var step1 = document.getElementById('cpStep1');
+  if (!step1) return;
+
+  var modeSection = document.createElement('div');
+  modeSection.id = 'cpUploadModeSection';
+  modeSection.style.marginTop = '18px';
+  modeSection.innerHTML =
+    '<div class="cp-label" style="margin-bottom:8px">📦 Template Storage Mode <span style="font-weight:400;color:var(--mist)">(required)</span></div>' +
+    '<div style="font-size:.7rem;color:var(--mist);margin-bottom:12px;line-height:1.55">Choose how your certificate template will be stored before moving to the next step.</div>' +
+    '<div style="display:flex;flex-direction:column;gap:10px">' +
+
+      '<div id="cpModeCardLocal" onclick="cpSelectUploadModeCard(\'local\')" style="cursor:pointer;border:2px solid var(--fog);border-radius:12px;padding:14px 16px;display:flex;align-items:flex-start;gap:12px;transition:border .15s,background .15s;background:var(--surface)">' +
+        '<div style="font-size:1.5rem;margin-top:1px;line-height:1">📦</div>' +
+        '<div style="flex:1">' +
+          '<div style="font-weight:700;color:var(--ink);font-size:.9rem">Store Locally <span style="font-size:.72rem;font-weight:500;color:var(--mist)">(Firestore)</span></div>' +
+          '<div style="font-size:.75rem;color:var(--mist);margin-top:4px;line-height:1.55">Template is compressed and stored directly in Firestore. No backend upload needed — works even without Firebase Storage CORS setup. Ideal for quick portals.</div>' +
+        '</div>' +
+        '<div id="cpModeCheckLocal" style="display:none;font-size:1.1rem;margin-top:1px">✅</div>' +
+      '</div>' +
+
+      '<div id="cpModeCardBackend" onclick="cpSelectUploadModeCard(\'backend\')" style="cursor:pointer;border:2px solid var(--fog);border-radius:12px;padding:14px 16px;display:flex;align-items:flex-start;gap:12px;transition:border .15s,background .15s;background:var(--surface)">' +
+        '<div style="font-size:1.5rem;margin-top:1px;line-height:1">☁️</div>' +
+        '<div style="flex:1">' +
+          '<div style="font-weight:700;color:var(--ink);font-size:.9rem">NOVA Backend <span style="font-size:.72rem;font-weight:500;color:var(--mist)">(Drive + Storage)</span></div>' +
+          '<div style="font-size:.75rem;color:var(--mist);margin-top:4px;line-height:1.55">Compress then upload to Firebase Storage and back up to NOVA Drive. Best for large portals. Requires Firebase Storage CORS to be configured.</div>' +
+        '</div>' +
+        '<div id="cpModeCheckBackend" style="display:none;font-size:1.1rem;margin-top:1px">✅</div>' +
+      '</div>' +
+
+    '</div>' +
+    '<div id="cpUploadModeHint" style="display:none;margin-top:8px;font-size:.72rem;font-weight:600;color:#16a34a;background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:8px;padding:6px 10px"></div>';
+
+  step1.appendChild(modeSection);
+
+  // Re-apply saved mode if restoring from draft
+  if (CP.uploadMode) cpSelectUploadModeCard(CP.uploadMode, true);
 }
 
 // ── Upload Mode Card Selection (Step 1) ───────────────────────────
@@ -473,6 +480,7 @@ function cpRenderStep(n) {
   var nextBtn = document.getElementById('cpBtnNext');
   if (backBtn) backBtn.style.visibility = (n > 1) ? 'visible' : 'hidden';
   if (nextBtn) nextBtn.style.display    = (n === 5) ? 'none' : 'inline-flex';
+  if (n === 1) cpEnsureUploadModeSection();
   if (n === 3 && CP.templateImg) cpDrawNameCanvas();
   if (n === 4) { cpRenderStudentTable(); cpVerifyFilter(); }
   if (n === 5) cpRenderPortalLink();

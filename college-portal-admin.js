@@ -33,6 +33,7 @@ var CP = {
   students:         [],
   portals:          [],
   step:             1,
+  uploadMode:       '', // 'local' or 'backend' — chosen in Step 1
 };
 
 // ══════════════════════════════════════════════════════════════════
@@ -53,6 +54,7 @@ function cpSaveDraft() {
       csvDriveUrl:   CP.csvDriveUrl,
       students:      CP.students,
       step:          CP.step,
+      uploadMode:    CP.uploadMode,
       fields: {
         collegeName:   getVal('cpCollegeName'),
         cardMessage:   getVal('cpCardMessage'),
@@ -93,6 +95,7 @@ function cpRestoreDraft() {
     CP.templateHeight = draft.templateHeight || 1754;
     CP.csvDriveUrl    = draft.csvDriveUrl    || '';
     CP.students       = draft.students       || [];
+    CP.uploadMode     = draft.uploadMode     || '';
 
     var f = draft.fields || {};
     function _set(id, prop, val) { var el = document.getElementById(id); if (el && val !== undefined) el[prop] = val; }
@@ -325,8 +328,85 @@ function cpEnsureWizardFilters() {
   if (anchor && anchor.parentNode) anchor.parentNode.insertBefore(row, anchor);
 }
 
+// ── Upload Mode Section — injected into Step 1 independently ──────
+// Called from cpRenderStep(1) so it always runs regardless of whether
+// cpState already exists in the HTML (which causes cpEnsureWizardFilters
+// to bail out early via its guard clause).
+function cpEnsureUploadModeSection() {
+  if (document.getElementById('cpUploadModeSection')) {
+    // Already injected — just re-apply the saved mode highlight
+    if (CP.uploadMode) cpSelectUploadModeCard(CP.uploadMode, true);
+    return;
+  }
+  var step1 = document.getElementById('cpStep1');
+  if (!step1) return;
+
+  var modeSection = document.createElement('div');
+  modeSection.id = 'cpUploadModeSection';
+  modeSection.style.marginTop = '18px';
+  modeSection.innerHTML =
+    '<div class="cp-label" style="margin-bottom:8px">📦 Template Storage Mode <span style="font-weight:400;color:var(--mist)">(required)</span></div>' +
+    '<div style="font-size:.7rem;color:var(--mist);margin-bottom:12px;line-height:1.55">Choose how your certificate template will be stored before moving to the next step.</div>' +
+    '<div style="display:flex;flex-direction:column;gap:10px">' +
+
+      '<div id="cpModeCardLocal" onclick="cpSelectUploadModeCard(\'local\')" style="cursor:pointer;border:2px solid var(--fog);border-radius:12px;padding:14px 16px;display:flex;align-items:flex-start;gap:12px;transition:border .15s,background .15s;background:var(--surface)">' +
+        '<div style="font-size:1.5rem;margin-top:1px;line-height:1">📦</div>' +
+        '<div style="flex:1">' +
+          '<div style="font-weight:700;color:var(--ink);font-size:.9rem">Store Locally <span style="font-size:.72rem;font-weight:500;color:var(--mist)">(Firestore)</span></div>' +
+          '<div style="font-size:.75rem;color:var(--mist);margin-top:4px;line-height:1.55">Template is compressed and stored directly in Firestore. No backend upload needed — works even without Firebase Storage CORS setup. Ideal for quick portals.</div>' +
+        '</div>' +
+        '<div id="cpModeCheckLocal" style="display:none;font-size:1.1rem;margin-top:1px">✅</div>' +
+      '</div>' +
+
+      '<div id="cpModeCardBackend" onclick="cpSelectUploadModeCard(\'backend\')" style="cursor:pointer;border:2px solid var(--fog);border-radius:12px;padding:14px 16px;display:flex;align-items:flex-start;gap:12px;transition:border .15s,background .15s;background:var(--surface)">' +
+        '<div style="font-size:1.5rem;margin-top:1px;line-height:1">☁️</div>' +
+        '<div style="flex:1">' +
+          '<div style="font-weight:700;color:var(--ink);font-size:.9rem">NOVA Backend <span style="font-size:.72rem;font-weight:500;color:var(--mist)">(Drive + Storage)</span></div>' +
+          '<div style="font-size:.75rem;color:var(--mist);margin-top:4px;line-height:1.55">Compress then upload to Firebase Storage and back up to NOVA Drive. Best for large portals. Requires Firebase Storage CORS to be configured.</div>' +
+        '</div>' +
+        '<div id="cpModeCheckBackend" style="display:none;font-size:1.1rem;margin-top:1px">✅</div>' +
+      '</div>' +
+
+    '</div>' +
+    '<div id="cpUploadModeHint" style="display:none;margin-top:8px;font-size:.72rem;font-weight:600;color:#16a34a;background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:8px;padding:6px 10px"></div>';
+
+  step1.appendChild(modeSection);
+
+  // Re-apply saved mode if restoring from draft
+  if (CP.uploadMode) cpSelectUploadModeCard(CP.uploadMode, true);
+}
+
+// ── Upload Mode Card Selection (Step 1) ───────────────────────────
+function cpSelectUploadModeCard(mode, silent) {
+  CP.uploadMode = mode;
+  var cardLocal   = document.getElementById('cpModeCardLocal');
+  var cardBackend = document.getElementById('cpModeCardBackend');
+  var checkLocal  = document.getElementById('cpModeCheckLocal');
+  var checkBack   = document.getElementById('cpModeCheckBackend');
+  var hint        = document.getElementById('cpUploadModeHint');
+
+  if (cardLocal) {
+    cardLocal.style.border     = (mode === 'local')   ? '2px solid var(--accent,#4f46e5)' : '2px solid var(--fog)';
+    cardLocal.style.background = (mode === 'local')   ? 'var(--accent-soft,#eef2ff)' : 'var(--surface)';
+  }
+  if (cardBackend) {
+    cardBackend.style.border     = (mode === 'backend') ? '2px solid var(--accent,#4f46e5)' : '2px solid var(--fog)';
+    cardBackend.style.background = (mode === 'backend') ? 'var(--accent-soft,#eef2ff)' : 'var(--surface)';
+  }
+  if (checkLocal)  checkLocal.style.display  = (mode === 'local')   ? 'block' : 'none';
+  if (checkBack)   checkBack.style.display   = (mode === 'backend') ? 'block' : 'none';
+
+  if (hint) {
+    hint.style.display = 'block';
+    hint.textContent = mode === 'local'
+      ? '📦 Local mode selected — template will be compressed & stored in Firestore. No Storage upload needed.'
+      : '☁️ Backend mode selected — template will be compressed then uploaded to Firebase Storage + NOVA Drive.';
+  }
+
+  if (!silent) cpSaveDraft();
+}
+
 function cpInit() {
-  cpEnsureAdminLayout();
   cpLoadPortalList();
 
   // Restore any unsaved wizard draft from before the page refresh
@@ -400,6 +480,7 @@ function cpRenderStep(n) {
   var nextBtn = document.getElementById('cpBtnNext');
   if (backBtn) backBtn.style.visibility = (n > 1) ? 'visible' : 'hidden';
   if (nextBtn) nextBtn.style.display    = (n === 5) ? 'none' : 'inline-flex';
+  if (n === 1) cpEnsureUploadModeSection();
   if (n === 3 && CP.templateImg) cpDrawNameCanvas();
   if (n === 4) { cpRenderStudentTable(); cpVerifyFilter(); }
   if (n === 5) cpRenderPortalLink();
@@ -469,6 +550,17 @@ function cpValidateStep(n) {
     var slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
     document.getElementById('cpSlugPreview').textContent = slug;
     CP.currentSlug = slug;
+    if (!CP.uploadMode) {
+      cpToast('Please select a template storage mode before continuing.', 'err');
+      // Flash the cards to draw attention
+      var section = document.getElementById('cpUploadModeSection');
+      if (section) {
+        section.style.outline = '2px solid #ef4444';
+        section.style.borderRadius = '10px';
+        setTimeout(function() { section.style.outline = ''; }, 1800);
+      }
+      return false;
+    }
     return true;
   }
   if (n === 2) {
@@ -547,87 +639,25 @@ async function cpSetLoadedTemplateDataUrl(dataUrl, label) {
 //   A) Local only  — compress + store as Firestore base64 (no backend needed)
 //   B) NOVA Backend — compress + upload to Firebase Storage + Google Drive
 // Then proceeds automatically after choice.
+// ── cpShowUploadChoiceModal: now replaced by Step 1 inline cards.
+// Kept as a thin wrapper that calls cpProcessTemplateDataUrl directly.
 function cpShowUploadChoiceModal(dataUrl, fileName, onChoice) {
-  var old = document.getElementById('cpUploadChoiceModal');
-  if (old) old.remove();
-  var bytes = cpDataUrlBytes(dataUrl);
-  var needsCompress = bytes > CP.templateTargetBytes;
-  var sizeLabel = cpFormatBytes(bytes);
-
-  var modal = document.createElement('div');
-  modal.id = 'cpUploadChoiceModal';
-  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;font-family:Inter,system-ui,sans-serif';
-  modal.innerHTML =
-    '<div style="width:min(480px,96vw);background:#fff;border-radius:18px;padding:28px 24px 22px;box-shadow:0 24px 70px rgba(0,0,0,.3)">' +
-      '<div style="font-size:1.05rem;font-weight:800;color:#111827;margin-bottom:6px">📄 Certificate Template Loaded</div>' +
-      '<div style="font-size:.82rem;color:#6b7280;margin-bottom:18px">' +
-        '<b>' + fileName + '</b> &nbsp;·&nbsp; ' + sizeLabel +
-        (needsCompress ? ' &nbsp;<span style="color:#d97706;font-weight:700">⚠ Needs compression (target ≤ ' + cpFormatBytes(CP.templateTargetBytes) + ')</span>' : ' &nbsp;<span style="color:#16a34a;font-weight:700">✓ Size OK</span>') +
-      '</div>' +
-
-      '<div style="font-size:.8rem;font-weight:700;color:#374151;margin-bottom:10px;text-transform:uppercase;letter-spacing:.04em">Choose how to store this template:</div>' +
-
-      '<div style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px">' +
-
-        // Option A — Local only
-        '<div id="cpChoiceA" onclick="cpSelectUploadChoice('local')" style="cursor:pointer;border:2px solid #e5e7eb;border-radius:12px;padding:14px 16px;display:flex;align-items:flex-start;gap:12px;transition:border .15s">' +
-          '<div style="font-size:1.4rem;margin-top:1px">📦</div>' +
-          '<div>' +
-            '<div style="font-weight:700;color:#111827;font-size:.92rem">Store Locally (Firestore)</div>' +
-            '<div style="font-size:.78rem;color:#6b7280;margin-top:3px">No backend upload needed. Template is compressed and stored directly. Works even if Firebase Storage CORS is not configured. Ideal for quick portals.</div>' +
-          '</div>' +
-        '</div>' +
-
-        // Option B — NOVA Backend
-        '<div id="cpChoiceB" onclick="cpSelectUploadChoice('backend')" style="cursor:pointer;border:2px solid #e5e7eb;border-radius:12px;padding:14px 16px;display:flex;align-items:flex-start;gap:12px;transition:border .15s">' +
-          '<div style="font-size:1.4rem;margin-top:1px">☁️</div>' +
-          '<div>' +
-            '<div style="font-weight:700;color:#111827;font-size:.92rem">Upload to NOVA Backend (Drive + Storage)</div>' +
-            '<div style="font-size:.78rem;color:#6b7280;margin-top:3px">Compress then upload to Firebase Storage and back up to NOVA Drive. Best for large portals. Requires Firebase Storage CORS to be configured.</div>' +
-          '</div>' +
-        '</div>' +
-
-      '</div>' +
-
-      '<div style="display:flex;gap:10px;justify-content:flex-end">' +
-        '<button onclick="document.getElementById('cpUploadChoiceModal').remove()" style="padding:9px 16px;border:1px solid #e5e7eb;background:#f9fafb;border-radius:8px;font-weight:700;font-size:.85rem;cursor:pointer;color:#374151">Cancel</button>' +
-        '<button id="cpChoiceProceedBtn" onclick="cpProceedWithUploadChoice()" disabled style="padding:9px 18px;border:0;background:#4f46e5;color:#fff;border-radius:8px;font-weight:800;font-size:.85rem;cursor:not-allowed;opacity:.45">Proceed →</button>' +
-      '</div>' +
-    '</div>';
-
-  document.body.appendChild(modal);
-  // Store callback and raw data on modal element for access by proceed fn
-  modal._onChoice = onChoice;
-  modal._dataUrl  = dataUrl;
-  modal._fileName = fileName;
-  modal._choice   = null;
+  // Mode is already selected in Step 1 — just process immediately.
+  // Fallback: if somehow called without a mode, default to 'local'.
+  if (!CP.uploadMode) CP.uploadMode = 'local';
+  cpProcessTemplateDataUrl(dataUrl, fileName);
 }
 
-function cpSelectUploadChoice(mode) {
-  var modal = document.getElementById('cpUploadChoiceModal');
-  if (!modal) return;
-  modal._choice = mode;
-  // Highlight selected card
-  var a = document.getElementById('cpChoiceA');
-  var b = document.getElementById('cpChoiceB');
-  if (a) a.style.border = (mode === 'local')   ? '2px solid #4f46e5' : '2px solid #e5e7eb';
-  if (b) b.style.border = (mode === 'backend') ? '2px solid #4f46e5' : '2px solid #e5e7eb';
-  // Highlight card background
-  if (a) a.style.background = (mode === 'local')   ? '#eef2ff' : '#fff';
-  if (b) b.style.background = (mode === 'backend') ? '#eef2ff' : '#fff';
-  // Enable proceed button
-  var btn = document.getElementById('cpChoiceProceedBtn');
-  if (btn) { btn.disabled = false; btn.style.cursor = 'pointer'; btn.style.opacity = '1'; }
-}
+// cpSelectUploadChoice / cpProceedWithUploadChoice kept for compatibility
+function cpSelectUploadChoice(mode) { CP.uploadMode = mode; }
 
 async function cpProceedWithUploadChoice() {
-  var modal = document.getElementById('cpUploadChoiceModal');
-  if (!modal || !modal._choice) return;
-  var choice   = modal._choice;
-  var dataUrl  = modal._dataUrl;
-  var fileName = modal._fileName;
-  modal.remove();
+  // No-op — processing now happens in cpProcessTemplateDataUrl
+}
 
+// ── Core template processor — uses CP.uploadMode set in Step 1 ────
+async function cpProcessTemplateDataUrl(dataUrl, fileName) {
+  var choice   = CP.uploadMode || 'local';
   var badge    = document.getElementById('cpTemplateBadge');
   var wrap     = document.getElementById('cpTemplateBadgeWrap');
   var statusEl = document.getElementById('cpTemplateLoadStatus');
@@ -635,7 +665,7 @@ async function cpProceedWithUploadChoice() {
   if (statusEl) statusEl.textContent = '⏳';
 
   try {
-    // ── Step 1: Always compress first ──
+    // ── Always auto-compress first ──
     var originalBytes = cpDataUrlBytes(dataUrl);
     var needsCompress = originalBytes > CP.templateTargetBytes;
     var finalDataUrl  = dataUrl;
@@ -648,7 +678,7 @@ async function cpProceedWithUploadChoice() {
       cpToast('Auto-compressed to ' + cpFormatBytes(adaptive.bytes) + ' ✓', 'ok');
     }
 
-    // ── Step 2: Load into CP state ──
+    // ── Load into CP state ──
     await cpSetLoadedTemplateDataUrl(finalDataUrl, fileName);
     CP.templateNeedsCompression = false;
 
@@ -760,10 +790,10 @@ async function cpHandleTemplateFileInput(input) {
     previewImg.src = dataUrl;
 
     if (statusEl) statusEl.textContent = '📄';
-    if (badge) badge.textContent = file.name + ' (' + cpFormatBytes(cpDataUrlBytes(dataUrl)) + ') — choose storage option…';
+    if (badge) badge.textContent = file.name + ' (' + cpFormatBytes(cpDataUrlBytes(dataUrl)) + ') — processing…';
 
-    // Show the choice modal; processing happens after user picks
-    cpShowUploadChoiceModal(dataUrl, file.name || 'template', null);
+    // Process immediately using the storage mode chosen in Step 1
+    cpProcessTemplateDataUrl(dataUrl, file.name || 'template');
 
   } catch(err) {
     if (statusEl) statusEl.textContent = '❌';
@@ -814,10 +844,10 @@ async function cpFetchTemplateFromUrl() {
         r.onerror = rej;
         r.readAsDataURL(blob);
       });
-      // Show the same upload-choice modal as the file picker — user picks local or backend
-      if (badge) badge.textContent = 'Image loaded — choose storage option…';
+      // Process immediately using the storage mode chosen in Step 1
+      if (badge) badge.textContent = 'Image loaded — processing…';
       if (statusEl) statusEl.textContent = '📄';
-      cpShowUploadChoiceModal(dataUrl, 'Template from link', null);
+      cpProcessTemplateDataUrl(dataUrl, 'Template from link');
       return;
     } catch(e) {
       lastErr = e.message;
@@ -2065,7 +2095,7 @@ function cpUpdateDistrictOptions() {
 function cpNewPortal() {
   cpSetPortalView('create');
   cpClearDraft();
-  CP.currentSlug = ''; CP.templateImg = null; CP.templateUrl = ''; CP.storageUrl = ''; CP.csvDriveUrl = ''; CP.students = [];
+  CP.currentSlug = ''; CP.templateImg = null; CP.templateUrl = ''; CP.storageUrl = ''; CP.csvDriveUrl = ''; CP.students = []; CP.uploadMode = '';
   CP.namePos   = { xPct: 50, yPct: 62 };
   CP.nameStyle = { fontSize: 60, fontFamily: 'Georgia', color: '#1a1a1a', bold: false, italic: false, align: 'center' };
   function _set(id, prop, val) { var el = document.getElementById(id); if (el) el[prop] = val; }
@@ -2075,6 +2105,10 @@ function cpNewPortal() {
   _set('cpState','value',''); _set('cpDistrict','value','');
   _set('cpTemplateDriveUrl','value',''); _set('cpCsvDriveUrl','value','');
   ['cpTemplateBadgeWrap','cpCsvBadgeWrap','cpPublishedSuccess'].forEach(function(id){ var el=document.getElementById(id); if(el) el.style.display='none'; });
+  // Reset upload mode card visuals
+  ['cpModeCardLocal','cpModeCardBackend'].forEach(function(id){ var el=document.getElementById(id); if(el){ el.style.border='2px solid var(--fog)'; el.style.background='var(--surface)'; } });
+  ['cpModeCheckLocal','cpModeCheckBackend'].forEach(function(id){ var el=document.getElementById(id); if(el) el.style.display='none'; });
+  var hint=document.getElementById('cpUploadModeHint'); if(hint) hint.style.display='none';
   var wiz = document.getElementById('cpWizard'); if (wiz) wiz.style.display = 'block';
   cpRenderStudentTable();
   cpRenderStep(1);
