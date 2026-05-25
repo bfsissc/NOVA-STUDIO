@@ -487,56 +487,69 @@ function cpRenderStep(n) {
 }
 
 async function cpNextStep() {
-  // If on Step 2 and template still needs compression (e.g. loaded from Drive URL),
-  // auto-compress it now before advancing — same as the file-picker path.
+  // ── Step 2 → 3: compress if still needed (Drive URL path) ────────
   if (CP.step === 2 && CP.templateNeedsCompression) {
-    var btn = document.getElementById('cpBtnNext');
-    if (btn) { btn.disabled = true; btn.textContent = 'Compressing…'; }
+    var btn2 = document.getElementById('cpBtnNext');
+    if (btn2) { btn2.disabled = true; btn2.textContent = 'Compressing…'; }
     try {
       var adaptive = await cpAdaptiveCompressTemplate(CP.templateUrl, CP.templateTargetBytes);
       CP.templateUrl   = adaptive.dataUrl;
       CP.templateBytes = adaptive.bytes;
       CP.templateQuality = adaptive;
       CP.templateNeedsCompression = adaptive.bytes > CP.templateTargetBytes;
-      var img = new Image();
+      var img2 = new Image();
       await new Promise(function(resolve, reject) {
-        img.onload = resolve;
-        img.onerror = function() { reject(new Error('Compressed image decode failed')); };
-        img.src = adaptive.dataUrl;
+        img2.onload = resolve;
+        img2.onerror = function() { reject(new Error('Compressed image decode failed')); };
+        img2.src = adaptive.dataUrl;
       });
-      CP.templateImg = img;
-      CP.templateWidth  = img.naturalWidth;
-      CP.templateHeight = img.naturalHeight;
-      var thumb = document.getElementById('cpTemplateThumb');
-      if (thumb) thumb.src = adaptive.dataUrl;
-      var badge = document.getElementById('cpTemplateBadge');
-      if (badge) badge.textContent = 'Auto-compressed (' + adaptive.width + 'x' + adaptive.height + ', ' + cpFormatBytes(adaptive.bytes) + ') — ready ✓';
+      CP.templateImg = img2;
+      CP.templateWidth  = img2.naturalWidth;
+      CP.templateHeight = img2.naturalHeight;
+      var thumb2 = document.getElementById('cpTemplateThumb');
+      if (thumb2) thumb2.src = adaptive.dataUrl;
+      var badge2 = document.getElementById('cpTemplateBadge');
+      if (badge2) badge2.textContent = 'Auto-compressed (' + adaptive.width + 'x' + adaptive.height + ', ' + cpFormatBytes(adaptive.bytes) + ') — ready ✓';
       cpSaveDraft();
-
-      // Also upload the freshly-compressed blob to Firebase Storage now
-      if (typeof fbStorage !== 'undefined') {
-        try {
-          var uid = (typeof U !== 'undefined' && U && U.uid) ? U.uid : 'anon';
-          var path = 'portal-templates/' + uid + '/template_' + Date.now() + '.jpg';
-          var sRef = fbStorage.ref(path);
-          var blob = cpDataUrlToBlob(adaptive.dataUrl);
-          if (btn) btn.textContent = 'Uploading…';
-          await sRef.put(blob, { contentType: 'image/jpeg' });
-          CP.storageUrl  = await sRef.getDownloadURL();
-          CP.templateUrl = CP.storageUrl;
-        } catch(storageErr) {
-          console.warn('[CP] Storage upload after compress failed (non-fatal):', storageErr.message);
-          CP.storageUrl = '';
-        }
-      }
-
-      cpToast('Template compressed & ready ✓', 'ok');
+      cpToast('Template compressed ✓', 'ok');
     } catch(e) {
       cpToast('Auto-compress failed: ' + e.message, 'err');
-      if (btn) { btn.disabled = false; btn.textContent = 'Next →'; }
+      if (btn2) { btn2.disabled = false; btn2.textContent = 'Next →'; }
       return;
     }
-    if (btn) { btn.disabled = false; btn.textContent = 'Next →'; }
+    if (btn2) { btn2.disabled = false; btn2.textContent = 'Next →'; }
+  }
+
+  // ── Step 4 → 5: do ALL heavy lifting here so Publish is instant ──
+  if (CP.step === 4) {
+    var btn4 = document.getElementById('cpBtnNext');
+    if (!cpValidateStep(4)) return;
+
+    // Backend mode: upload to Storage now, before the user sees Step 5
+    if (CP.uploadMode === 'backend' && CP.templateUrl && CP.templateUrl.startsWith('data:') && !CP.storageUrl) {
+      if (btn4) { btn4.disabled = true; btn4.textContent = 'Uploading template…'; }
+      try {
+        var uid4  = (typeof U !== 'undefined' && U && U.uid) ? U.uid : 'anon';
+        var path4 = 'portal-templates/' + uid4 + '/' + CP.currentSlug + '_' + Date.now() + '.jpg';
+        var sRef4 = fbStorage.ref(path4);
+        var blob4 = cpDataUrlToBlob(CP.templateUrl);
+        await sRef4.put(blob4, { contentType: 'image/jpeg' });
+        CP.storageUrl  = await sRef4.getDownloadURL();
+        CP.templateUrl = CP.storageUrl;
+        cpSaveDraft();
+        cpToast('Template uploaded to storage ✓', 'ok');
+      } catch(storageErr4) {
+        // Non-fatal: fall back to base64 in Firestore (local mode behaviour)
+        console.warn('[CP] Pre-publish Storage upload failed, using local base64:', storageErr4.message);
+        CP.storageUrl = '';
+        cpToast('Storage upload failed — will store locally instead.', 'warn');
+      }
+      if (btn4) { btn4.disabled = false; btn4.textContent = 'Next →'; }
+    }
+
+    cpSaveDraft();
+    cpRenderStep(5);
+    return;
   }
 
   if (cpValidateStep(CP.step)) { cpSaveDraft(); cpRenderStep(CP.step + 1); }
@@ -1445,50 +1458,12 @@ async function cpPublishPortal() {
     if (!CP.currentSlug || !collegeName) { cpToast('Missing college name.', 'err'); btn.disabled = false; btn.textContent = '🚀 Publish Portal'; return; }
     if (!CP.templateUrl) { cpToast('No template — go back to Step 2 and load a template.', 'err'); btn.disabled = false; btn.textContent = '🚀 Publish Portal'; return; }
 
-    // Prefer Firebase Storage. If CORS is not applied yet, fall back to a
-    // compressed data URL so portal deployment still works.
-    var templateUrlToStore = '';
-
-    if (CP.storageUrl && !CP.storageUrl.startsWith('data:')) {
-      // File was uploaded via the file picker — Storage URL already exists
-      templateUrlToStore = CP.storageUrl;
-
-    } else if (CP.templateUrl && CP.templateUrl.startsWith('data:')) {
-      // Template came from a Drive URL (base64 only) — compress then upload to Storage
-      try {
-        // Step 1: Always compress first to keep Storage upload small and fast
-        btn.textContent = 'Compressing template…';
-        var compressedDataUrl = await cpCompressForFirestore(CP.templateUrl, CP.templateTargetBytes);
-
-        // Step 2: Convert base64 data-URL → Blob without using fetch() (works even offline / CORS)
-        btn.textContent = 'Uploading template to storage…';
-        var imgBlob = cpDataUrlToBlob(compressedDataUrl);
-        var uid  = (typeof U !== 'undefined' && U && U.uid) ? U.uid : 'anon';
-        var path = 'portal-templates/' + uid + '/' + CP.currentSlug + '_' + Date.now() + '.jpg';
-        var sRef = fbStorage.ref(path);
-        await sRef.put(imgBlob, { contentType: 'image/jpeg' });
-        CP.storageUrl      = await sRef.getDownloadURL();
-        templateUrlToStore = CP.storageUrl;
-        cpToast('Template uploaded to storage ✓', 'ok');
-      } catch (storageErr) {
-        console.warn('Storage upload failed, falling back to compressed Firestore embed:', storageErr);
-        // Last resort: store a heavily-compressed base64 directly in Firestore
-        btn.textContent = 'Compressing (storage unavailable)…';
-        templateUrlToStore = await cpCompressForFirestore(CP.templateUrl, CP.templateTargetBytes);
-        if (!templateUrlToStore || templateUrlToStore.length * 0.75 > CP.templateTargetBytes) {
-          throw new Error('Template too large for storage and Firestore. Please upload a smaller image (under 2 MB). Storage error: ' + storageErr.message);
-        }
-      }
-
-    } else if (CP.templateUrl) {
-      // Already a plain URL (not base64) — use as-is
-      templateUrlToStore = CP.templateUrl;
-    }
-
-    if (!templateUrlToStore) {
-      cpToast('Template not ready — please re-upload the certificate image.', 'err');
-      btn.disabled = false; btn.textContent = 'Publish Portal'; return;
-    }
+    // Template is already fully resolved by Step 4→5 transition:
+    //   - Local mode  → CP.templateUrl is a compressed base64 data URL
+    //   - Backend mode → CP.templateUrl is a Firebase Storage https:// URL
+    // Nothing to upload here — just write to Firestore.
+    btn.textContent = 'Saving…';
+    var templateUrlToStore = CP.templateUrl;
 
     var portalData = {
       collegeName:    collegeName,
@@ -1553,6 +1528,58 @@ function cpRenderPortalLink() {
   if (el) el.value = link;
   var qr = document.getElementById('cpQrWrap');
   if (qr) qr.innerHTML = '<img src="https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=' + encodeURIComponent(link) + '" alt="QR" style="border-radius:8px">';
+
+  // ── Auto-inject pre-flight panel above the publish button if not in HTML ──
+  if (!document.getElementById('cpPreflightPanel')) {
+    var step5 = document.getElementById('cpStep5');
+    var publishBtn = document.getElementById('cpPublishBtn');
+    if (step5 && publishBtn) {
+      var pf = document.createElement('div');
+      pf.id = 'cpPreflightPanel';
+      pf.style.cssText = 'margin-bottom:16px;border:1.5px solid var(--fog);border-radius:12px;padding:12px 16px;background:var(--surface)';
+      // Insert before the button's parent div
+      var btnWrap = publishBtn.parentNode;
+      step5.insertBefore(pf, btnWrap);
+    }
+  }
+
+  var pf = document.getElementById('cpPreflightPanel');
+  if (!pf) return;
+
+  var templateReady  = !!CP.templateUrl;
+  var isStorageUrl   = templateReady && !CP.templateUrl.startsWith('data:');
+  var templateSizeOk = !CP.templateUrl || CP.templateBytes <= CP.templateTargetBytes || isStorageUrl;
+  var studentsReady  = CP.students.length > 0;
+  var slugReady      = !!CP.currentSlug;
+
+  function row(ok, label) {
+    return '<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--fog)">' +
+      '<span style="font-size:1rem;width:20px;text-align:center">' + (ok ? '✅' : '⚠️') + '</span>' +
+      '<span style="font-size:.8rem;color:var(--ink)">' + label + '</span>' +
+      '</div>';
+  }
+
+  var templateLabel = isStorageUrl
+    ? 'Template uploaded to Firebase Storage ✓'
+    : (templateReady
+        ? 'Template compressed & ready — ' + cpFormatBytes(CP.templateBytes)
+        : 'No template — go back to Step 2');
+
+  pf.innerHTML =
+    '<div style="font-size:.75rem;font-weight:700;color:var(--mist);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">✅ Ready to publish</div>' +
+    row(slugReady,      'College: <b>' + (CP.currentSlug || '—') + '</b>') +
+    row(templateReady && templateSizeOk, templateLabel) +
+    row(studentsReady,  '<b>' + CP.students.length + '</b> students loaded') +
+    row(true,           'Storage mode: <b>' + (CP.uploadMode === 'backend' ? '☁️ NOVA Backend' : '📦 Local (Firestore)') + '</b>');
+
+  // Enable/disable publish button based on readiness
+  var publishBtnEl = document.getElementById('cpPublishBtn');
+  var allReady = slugReady && templateReady && templateSizeOk;
+  if (publishBtnEl) {
+    publishBtnEl.disabled = !allReady;
+    publishBtnEl.style.opacity = allReady ? '1' : '0.5';
+    publishBtnEl.style.cursor  = allReady ? 'pointer' : 'not-allowed';
+  }
 }
 
 function cpCopyLink() {
