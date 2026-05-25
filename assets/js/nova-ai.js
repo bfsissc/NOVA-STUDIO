@@ -33,29 +33,6 @@
   let _scannedFuncs  = {};   // { fnName: { file, line, snippet } }
   let _currentView   = '';
 
-  // ── Motivational quotes pool ─────────────────────────────────────────────
-  const MOTIVATIONS = [
-    { emoji: '🚀', text: 'You\'re building something amazing!' },
-    { emoji: '⚡', text: 'Every line of code is a step forward.' },
-    { emoji: '🌟', text: 'Great work — keep the momentum going!' },
-    { emoji: '🎯', text: 'Focus. You\'ve got this.' },
-    { emoji: '💡', text: 'Brilliant minds build great products.' },
-    { emoji: '🔥', text: 'You\'re on fire today!' },
-    { emoji: '✨', text: 'Small steps lead to big wins.' },
-    { emoji: '🏆', text: 'Champions ship on Fridays too.' },
-    { emoji: '🌈', text: 'Every bug fixed is a victory.' },
-    { emoji: '💪', text: 'You\'re making NOVA stronger every day.' },
-    { emoji: '🎨', text: 'Code is art — and yours is beautiful.' },
-    { emoji: '🧠', text: 'Your creativity is your superpower.' },
-    { emoji: '🌍', text: 'The tools you build change lives.' },
-    { emoji: '🎵', text: 'Find your flow and ride it.' },
-    { emoji: '🦋', text: 'Growth happens outside the comfort zone.' },
-    { emoji: '🔮', text: 'The future you\'re building looks bright.' },
-    { emoji: '🌊', text: 'Ride the wave — you\'re in the zone.' },
-    { emoji: '🏄', text: 'Stay curious. Stay building.' },
-    { emoji: '💎', text: 'Quality over speed — always.' },
-    { emoji: '🌱', text: 'Every great app started where you are now.' },
-  ];
 
   // ── Action executor ──────────────────────────────────────────────────────
   const ACTIONS = {
@@ -514,13 +491,6 @@
       return { text: reply, action: null };
     }
 
-    // 8. Motivational request
-    if (q.includes('motivat') || q.includes('inspire') || q.includes('encourage') || q.includes('cheer')) {
-      const m = MOTIVATIONS[Math.floor(Math.random() * MOTIVATIONS.length)];
-      reply = `${m.emoji} **${m.text}**\n\nYou\'re doing great work on NOVA Studio. Every feature you build helps the teams using it. Keep going! 💪`;
-      chatHistory.push({ role: 'assistant', content: reply });
-      return { text: reply, action: null };
-    }
 
     // 9. Fallback with suggestions
     reply = buildFallback(userMessage);
@@ -623,114 +593,6 @@
     return resp;
   }
 
-  // ── Motivational Popup System ────────────────────────────────────────────
-  // Floating text bubbles that drift upward and fade — fully CSS animated
-
-  let _motivTimer = null;
-  let _motivCount = 0;
-  const MOTIV_INTERVAL_MIN = 90000;  // 90 seconds minimum
-  const MOTIV_INTERVAL_MAX = 180000; // 3 minutes maximum
-
-  function spawnMotivationPopup(force) {
-    const quote = MOTIVATIONS[Math.floor(Math.random() * MOTIVATIONS.length)];
-    const popup = document.createElement('div');
-    popup.className = 'nova-motiv-popup';
-
-    // Random horizontal position (20–80% of viewport)
-    const leftPct = 20 + Math.random() * 60;
-    popup.style.cssText = `
-      position: fixed !important;
-      bottom: 90px !important;
-      left: ${leftPct}% !important;
-      transform: translateX(-50%) !important;
-      z-index: 999997 !important;
-      pointer-events: none !important;
-      animation: novaMotivFloat 4.2s cubic-bezier(.22,.61,.36,1) forwards !important;
-    `;
-
-    popup.innerHTML = `
-      <div class="nova-motiv-inner">
-        <span class="nova-motiv-emoji">${quote.emoji}</span>
-        <span class="nova-motiv-text">${quote.text}</span>
-      </div>
-    `;
-
-    document.body.appendChild(popup);
-    setTimeout(() => popup.remove(), 4400);
-
-    _motivCount++;
-    scheduleNextMotiv();
-  }
-
-  function scheduleNextMotiv() {
-    clearTimeout(_motivTimer);
-    const delay = MOTIV_INTERVAL_MIN + Math.random() * (MOTIV_INTERVAL_MAX - MOTIV_INTERVAL_MIN);
-    _motivTimer = setTimeout(spawnMotivationPopup, delay);
-  }
-
-  function startMotivations() {
-    // First popup after 30 seconds
-    _motivTimer = setTimeout(spawnMotivationPopup, 30000);
-  }
-
-  function injectMotivStyles() {
-    const s = document.createElement('style');
-    s.id = 'nova-motiv-styles';
-    s.textContent = `
-      @keyframes novaMotivFloat {
-        0%   { opacity: 0; transform: translateX(-50%) translateY(0px) scale(.85); }
-        12%  { opacity: 1; transform: translateX(-50%) translateY(-10px) scale(1); }
-        75%  { opacity: 1; transform: translateX(-50%) translateY(-60px) scale(1); }
-        100% { opacity: 0; transform: translateX(-50%) translateY(-100px) scale(.95); }
-      }
-      .nova-motiv-inner {
-        display: inline-flex !important;
-        align-items: center !important;
-        gap: 8px !important;
-        background: linear-gradient(135deg,
-          rgba(200,241,53,.92) 0%,
-          rgba(15,217,180,.88) 100%) !important;
-        backdrop-filter: blur(12px) !important;
-        -webkit-backdrop-filter: blur(12px) !important;
-        border-radius: 30px !important;
-        padding: 10px 18px !important;
-        box-shadow:
-          0 8px 32px rgba(200,241,53,.35),
-          0 2px 8px rgba(0,0,0,.15),
-          inset 0 1px 0 rgba(255,255,255,.4) !important;
-        font-family: 'Bricolage Grotesque', -apple-system, sans-serif !important;
-        font-size: .82rem !important;
-        font-weight: 700 !important;
-        color: #0d1a00 !important;
-        white-space: nowrap !important;
-        max-width: 320px !important;
-        letter-spacing: -.01em !important;
-      }
-      .nova-motiv-emoji {
-        font-size: 1.1rem !important;
-        line-height: 1 !important;
-        flex-shrink: 0 !important;
-        filter: drop-shadow(0 1px 2px rgba(0,0,0,.15)) !important;
-      }
-      .nova-motiv-text {
-        overflow: hidden !important;
-        text-overflow: ellipsis !important;
-        white-space: nowrap !important;
-      }
-
-      /* Shimmer variant for every 5th popup */
-      .nova-motiv-popup:nth-child(5n) .nova-motiv-inner {
-        background: linear-gradient(135deg,
-          rgba(255,200,80,.92) 0%,
-          rgba(255,100,150,.88) 100%) !important;
-        box-shadow:
-          0 8px 32px rgba(255,150,80,.35),
-          0 2px 8px rgba(0,0,0,.15),
-          inset 0 1px 0 rgba(255,255,255,.4) !important;
-      }
-    `;
-    document.head.appendChild(s);
-  }
 
   // ── Styles ───────────────────────────────────────────────────────────────
   function injectStyles() {
@@ -1537,9 +1399,7 @@
   // ── Init ─────────────────────────────────────────────────────────────────
   function init() {
     injectStyles();
-    injectMotivStyles();
     buildPanel();
-    startMotivations();
 
     window.addEventListener('resize', function() {
       var fab = document.getElementById('nova-ai-fab');
@@ -1551,7 +1411,6 @@
 
     // Expose public API
     window._novaAiWelcomeReset = function() { _welcomeShown = false; };
-    window._novaAiSpawnMotiv   = spawnMotivationPopup;
     window._novaAiScan         = scanCodebase;
     window._novaAiOpen         = openPanel;
     window._novaAiClose        = closePanel;
