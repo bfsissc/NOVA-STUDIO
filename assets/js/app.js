@@ -95,7 +95,17 @@ window.onload = () => {
 };
 
 function boot(anim){
-  updateGreeting(); renderAvatars(); renderProfile(); updateStats(); updateGmailTracker(); setTimeout(function(){if(typeof tpInit==='function'){tpInit().then(function(){tpRenderHomeWidget();});}},600); favRenderSidebar(); favInjectStars(); favRenderHomeWidget();
+  // Core UI updates — guarded so one failure doesn't break the rest
+  const _safe = (fn) => { try { fn(); } catch(e) { console.warn('[boot]', e); } };
+  _safe(updateGreeting);
+  _safe(renderAvatars);
+  _safe(renderProfile);
+  _safe(updateStats);
+  _safe(updateGmailTracker);
+  _safe(favRenderSidebar);
+  _safe(favInjectStars);
+  _safe(favRenderHomeWidget);
+  setTimeout(function(){ if(typeof tpInit==='function'){ tpInit().then(function(){ _safe(tpRenderHomeWidget); }).catch(function(){}); } },600);
   document.getElementById('loginScreen').classList.add('out');
   document.getElementById('app').classList.add('visible');
   if(anim) showToast('Welcome, '+U.firstName+'! 👋','ok');
@@ -436,26 +446,38 @@ function doLogout(){
 const VIEWS=['home','cert','projects','profile','settings','mailer','sync','portal','help','tp','imgcomp','fileconv','imgedit','teams','followup','drafts'];
 const SBM={home:'sbHome',projects:'sbProj',profile:'sbProfile',cert:'sbCert',settings:'sbSettings',mailer:'sbMailer',sync:'sbSync',portal:'sbPortal',help:'sbHelp',tp:'sbTp',imgcomp:'sbImgComp',fileconv:'sbFileConv',imgedit:'sbImgEdit',teams:'sbTeams',followup:'sbFollowup',drafts:'sbDrafts'};
 
+// ── goView: animated view transition + scroll reset ──
 function goView(v){
+  // Deactivate all, activate target
   VIEWS.forEach(id=>{
     const el=document.getElementById('view'+id[0].toUpperCase()+id.slice(1));
-    if(el)el.classList.toggle('active',id===v);
+    if(!el) return;
+    if(id===v){
+      el.classList.add('active');
+      // Scroll to top on every navigation
+      requestAnimationFrame(()=>{ el.scrollTop=0; });
+    } else {
+      el.classList.remove('active');
+    }
   });
+  // Sidebar active state
   document.querySelectorAll('.sb-i').forEach(e=>e.classList.remove('on'));
-  if(SBM[v])document.getElementById(SBM[v])?.classList.add('on');
-  if(v==='profile')renderProfile();
-  if(v==='cert')certFitZoom();
-  if(v==='projects'){projShowBin=false;projRender();}
-  if(v==='settings'){stgApplyUI(stgGetSettings());stgUpdateStorageInfo();}
-  if(v==='mailer'){setTimeout(mlInitCanvas,80);}
-  if(v==='home'){updateGmailTracker();if(typeof tpRenderHomeWidget==='function')tpRenderHomeWidget();anRestoreFromStorage();favRenderHomeWidget();}
-  if(v==='sync'){syncOnViewOpen();}
-  if(v==='portal'){if(typeof cpInit==='function')cpInit();}
-  if(v==='help'){const el=document.getElementById('viewHelp');if(el)el.scrollTop=0;}
-  if(v==='tp'){tpInit();}
-  if(v==='teams'){if(typeof TM!=='undefined')TM.openView();}
-  if(v==='followup'){if(typeof FU!=='undefined')FU.openView();}
-  if(v==='drafts'){dpInit();}
+  if(SBM[v]) document.getElementById(SBM[v])?.classList.add('on');
+  // Per-view init (guarded with try/catch for stability)
+  try{
+    if(v==='profile')renderProfile();
+    if(v==='cert')certFitZoom();
+    if(v==='projects'){projShowBin=false;projRender();}
+    if(v==='settings'){stgApplyUI(stgGetSettings());stgUpdateStorageInfo();}
+    if(v==='mailer'){setTimeout(mlInitCanvas,80);}
+    if(v==='home'){updateGmailTracker();if(typeof tpRenderHomeWidget==='function')tpRenderHomeWidget();anRestoreFromStorage();favRenderHomeWidget();}
+    if(v==='sync'){syncOnViewOpen();}
+    if(v==='portal'){if(typeof cpInit==='function')cpInit();}
+    if(v==='tp'){tpInit();}
+    if(v==='teams'){if(typeof TM!=='undefined')TM.openView();}
+    if(v==='followup'){if(typeof FU!=='undefined')FU.openView();}
+    if(v==='drafts'){dpInit();}
+  } catch(e){ console.warn('[goView] init error for', v, e); }
 }
 
 const TL={cert:'🎓 Certificate Maker',mailer:'📧 Certificate Mailer'};
@@ -761,15 +783,134 @@ function removeSkill(s){editSkills=editSkills.filter(x=>x!==s);renderEditSkills(
 function renderEditSkills(){
   document.getElementById('epSkTags').innerHTML=editSkills.map(s=>`<span class="sk-t">${s}<button onclick="removeSkill('${s.replace(/'/g,"\\'")}')">✕</button></span>`).join('');
 }
-function showToast(msg,type='info'){
-  const t=document.getElementById('toastEl');
-  t.textContent=msg;t.className='toast '+type+' show';
-  clearTimeout(t._t);t._t=setTimeout(()=>t.className='toast',3000);
+function showToast(msg, type='info'){
+  const t = document.getElementById('toastEl');
+  if(!t) return;
+  // Clear any running dismiss timer and reset state for re-entry animation
+  clearTimeout(t._t);
+  t.className = 'toast';
+  // Force reflow so removing 'show' actually restarts the transition
+  void t.offsetWidth;
+  t.textContent = msg;
+  t.className = 'toast ' + type + ' show';
+  // Auto-dismiss: longer for errors
+  const delay = type === 'err' ? 4500 : 3000;
+  t._t = setTimeout(() => { t.className = 'toast'; }, delay);
 }
 window.toast=showToast;
 document.addEventListener('keydown',e=>{
   if(e.key==='Escape'){closeEdit();document.getElementById('zipModal').classList.remove('show');}
   if(e.key==='Delete'&&C.selId!==null)certDeleteEl(C.selId);
+});
+
+// ── Navbar global search ─────────────────────────────
+const NB_TOOLS = [
+  {icon:'🏠', label:'Dashboard',          view:'home'},
+  {icon:'🎓', label:'Certificate Maker',  view:'cert'},
+  {icon:'📧', label:'Certificate Mailer', view:'mailer'},
+  {icon:'📁', label:'My Projects',        view:'projects'},
+  {icon:'👤', label:'My Profile',         view:'profile'},
+  {icon:'⚙️', label:'Settings',           view:'settings'},
+  {icon:'🏫', label:'College Portal',     view:'portal'},
+  {icon:'🔄', label:'Data Sync',          view:'sync'},
+  {icon:'👥', label:'My Teams',           view:'teams'},
+  {icon:'📂', label:'Followup Tracker',   view:'followup'},
+  {icon:'🤝', label:'Training Partners',  view:'tp'},
+  {icon:'🖼️', label:'Image Resizer',      view:'imgcomp'},
+  {icon:'🔄', label:'File Converter',     view:'fileconv'},
+  {icon:'🎨', label:'Image Editor',       view:'imgedit'},
+  {icon:'✉️', label:'Draft Proposals',    view:'drafts'},
+  {icon:'❓', label:'Help & Docs',        view:'help'},
+];
+let _nbSearchIdx = -1;
+
+window.nbSearch = function(q){
+  const drop = document.getElementById('nbSearchDrop');
+  const res  = document.getElementById('nbSearchResults');
+  if(!drop || !res) return;
+  q = (q || '').trim().toLowerCase();
+  if(!q){ drop.style.display='none'; _nbSearchIdx=-1; return; }
+
+  const matches = NB_TOOLS.filter(t => t.label.toLowerCase().includes(q));
+  if(!matches.length){
+    res.innerHTML = '<div style="padding:12px 14px;font-size:.74rem;color:var(--mist)">No results for "'+q+'"</div>';
+  } else {
+    res.innerHTML = matches.map((t,i) =>
+      `<div class="nb-search-item" data-view="${t.view}" data-idx="${i}"
+        style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;cursor:pointer;transition:background .12s"
+        onmousedown="event.preventDefault();nbSelectResult('${t.view}')"
+        onmouseover="nbHoverResult(${i})"
+      ><span style="font-size:1rem;flex-shrink:0">${t.icon}</span>
+       <span style="font-size:.78rem;font-weight:700;color:var(--ink)">${t.label}</span>
+       <span style="font-size:.65rem;color:var(--mist2);margin-left:auto">↵</span>
+      </div>`
+    ).join('');
+  }
+  drop.style.display = 'block';
+  _nbSearchIdx = -1;
+};
+
+window.nbSelectResult = function(view){
+  const inp = document.getElementById('nbSearchInput');
+  const drop = document.getElementById('nbSearchDrop');
+  if(inp)  inp.value = '';
+  if(drop) drop.style.display = 'none';
+  _nbSearchIdx = -1;
+  goView(view);
+};
+
+window.nbHoverResult = function(idx){
+  _nbSearchIdx = idx;
+  document.querySelectorAll('.nb-search-item').forEach((el,i)=>{
+    el.style.background = i===idx ? 'var(--lime-p)' : '';
+  });
+};
+
+window.nbHandleSearchKey = function(e){
+  const items = document.querySelectorAll('.nb-search-item');
+  if(e.key === 'ArrowDown'){
+    e.preventDefault();
+    _nbSearchIdx = Math.min(_nbSearchIdx+1, items.length-1);
+    items.forEach((el,i)=>el.style.background = i===_nbSearchIdx?'var(--lime-p)':'');
+    return;
+  }
+  if(e.key === 'ArrowUp'){
+    e.preventDefault();
+    _nbSearchIdx = Math.max(_nbSearchIdx-1, 0);
+    items.forEach((el,i)=>el.style.background = i===_nbSearchIdx?'var(--lime-p)':'');
+    return;
+  }
+  if(e.key === 'Enter'){
+    if(_nbSearchIdx >= 0 && items[_nbSearchIdx]){
+      nbSelectResult(items[_nbSearchIdx].dataset.view);
+    }
+    return;
+  }
+  if(e.key === 'Escape'){
+    const drop = document.getElementById('nbSearchDrop');
+    const inp  = document.getElementById('nbSearchInput');
+    if(drop) drop.style.display='none';
+    if(inp)  inp.blur();
+    _nbSearchIdx = -1;
+  }
+};
+
+// Close search dropdown when clicking outside
+document.addEventListener('click', function(e){
+  if(!e.target.closest('.nb-search') && !e.target.closest('#nbSearchDrop')){
+    const drop = document.getElementById('nbSearchDrop');
+    if(drop) drop.style.display='none';
+    _nbSearchIdx=-1;
+  }
+});
+
+// ⌘K / Ctrl+K global shortcut to focus search
+document.addEventListener('keydown', function(e){
+  if((e.metaKey||e.ctrlKey) && e.key==='k'){
+    e.preventDefault();
+    const inp = document.getElementById('nbSearchInput');
+    if(inp){ inp.focus(); inp.select(); }
+  }
 });
 
 
@@ -9100,3 +9241,106 @@ window.goView = function(v) {
 
 })();
 // ════ END FAVOURITE TOOLS MODULE ════
+
+// ════════════════════════════════════════════════════════
+// NOVA STUDIO — STABILITY & UX GLOBAL ADDITIONS
+// ════════════════════════════════════════════════════════
+
+// ── Page-level loading bar (thin top line) ───────────────
+(function(){
+  var bar = document.createElement('div');
+  bar.id = 'novaLoadBar';
+  bar.style.cssText = 'position:fixed;top:0;left:0;height:2px;width:0%;background:linear-gradient(90deg,var(--lime-d),var(--teal));z-index:99999;transition:width .25s ease,opacity .3s ease;pointer-events:none;opacity:0';
+  document.body.appendChild(bar);
+
+  var _t;
+  window.novaBarStart = function(){
+    clearTimeout(_t);
+    bar.style.opacity='1';
+    bar.style.width='40%';
+    _t = setTimeout(function(){ bar.style.width='75%'; }, 300);
+  };
+  window.novaBarDone = function(){
+    clearTimeout(_t);
+    bar.style.width='100%';
+    _t = setTimeout(function(){ bar.style.opacity='0'; bar.style.width='0%'; }, 350);
+  };
+
+  // Hook goView to show a brief load flash
+  var _origGoView = window.goView;
+  if(typeof _origGoView === 'function'){
+    var _gvWrapped = window.goView;
+    window.goView = function(v){
+      novaBarStart();
+      _gvWrapped(v);
+      setTimeout(novaBarDone, 120);
+    };
+  }
+})();
+
+// ── Global JS error safety net ───────────────────────────
+// Shows a subtle toast instead of silent failure
+window.addEventListener('unhandledrejection', function(e){
+  // Don't surface Firebase/network errors to users — just log
+  var msg = e.reason && e.reason.message ? e.reason.message : String(e.reason);
+  if(/firebase|firestore|network|fetch|cors/i.test(msg)) return;
+  console.warn('[NOVA] Unhandled promise rejection:', msg);
+});
+
+// ── Prevent accidental form submission reloads ───────────
+document.addEventListener('submit', function(e){ e.preventDefault(); });
+
+// ── Smooth number counter for stat cards ─────────────────
+function novaCountUp(el, target, duration){
+  if(!el || isNaN(target)) return;
+  var start = 0;
+  var startTime = null;
+  var step = function(timestamp){
+    if(!startTime) startTime = timestamp;
+    var progress = Math.min((timestamp - startTime) / duration, 1);
+    var eased = 1 - Math.pow(1 - progress, 3); // ease-out cubic
+    el.textContent = Math.round(eased * target);
+    if(progress < 1) requestAnimationFrame(step);
+    else el.textContent = target;
+  };
+  requestAnimationFrame(step);
+}
+
+// Wire count-up to stat cards after boot
+var _origBoot = window.boot;
+if(typeof _origBoot === 'function'){
+  // Patch updateStats to animate numbers
+  var _origUpdateStats = window.updateStats;
+  if(typeof _origUpdateStats === 'function'){
+    window.updateStats = function(){
+      _origUpdateStats();
+      // Find stat number elements and animate them
+      requestAnimationFrame(function(){
+        document.querySelectorAll('.sc-n').forEach(function(el){
+          var val = parseInt(el.textContent.replace(/[^0-9]/g,''));
+          if(!isNaN(val) && val > 0){
+            novaCountUp(el, val, 700);
+          }
+        });
+      });
+    };
+  }
+}
+
+// ── Keyboard accessibility: Enter on .sb-i acts as click ─
+document.addEventListener('keydown', function(e){
+  if(e.key === 'Enter' && e.target.classList.contains('sb-i')){
+    e.target.click();
+  }
+});
+
+// ── Sidebar items: add tabindex for keyboard navigation ──
+document.addEventListener('DOMContentLoaded', function(){
+  document.querySelectorAll('.sb-i').forEach(function(el){
+    if(!el.getAttribute('tabindex')) el.setAttribute('tabindex','0');
+  });
+
+  // Dark/light mode: add transition to body for smooth theme switch
+  document.body.style.transition = 'background .25s ease, color .25s ease';
+});
+

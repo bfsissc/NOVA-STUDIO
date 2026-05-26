@@ -272,7 +272,10 @@
   <div class="navbar">
     <div class="nb-logo"><div class="nb-gem">N</div><div class="nb-name">NOVA <em>Studio</em></div></div>
     <div class="nb-mid">
-      <div class="nb-search"><span style="font-size:.78rem;color:var(--mist2)">🔍</span><input type="text" placeholder="Search tools, projects…"></div>
+      <div class="nb-search"><span style="font-size:.78rem;color:var(--mist2)">🔍</span><input type="text" id="nbSearchInput" placeholder="Search tools…" autocomplete="off" onkeydown="nbHandleSearchKey(event)" oninput="nbSearch(this.value)"><span id="nbSearchShortcut" style="font-size:.6rem;color:var(--mist2);white-space:nowrap;font-family:'DM Mono',monospace;opacity:.7">⌘K</span></div>
+    <div id="nbSearchDrop" style="display:none;position:absolute;top:calc(var(--nav) - 6px);left:50%;transform:translateX(-50%);width:320px;background:#fff;border:1.5px solid var(--fog);border-radius:12px;box-shadow:0 12px 36px rgba(0,0,0,.14);z-index:9000;overflow:hidden;max-height:320px;overflow-y:auto">
+        <div id="nbSearchResults" style="padding:6px"></div>
+      </div>
     </div>
     <div class="nb-right">
       <button class="nb-ic" id="nvBellBtn" onclick="NV.openPanel()">🔔<div class="nb-dot" style="display:none;"></div></button>
