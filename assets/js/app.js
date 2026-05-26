@@ -91,44 +91,6 @@ window.onload = () => {
       // require request.auth, so cached profiles would cause permission-denied.
       U = null;
       try { localStorage.removeItem(SS); } catch(e) {}
-
-      // ── Guest join-link intercept ─────────────────────────────────────────
-      // If the URL contains ?session=ROOMID the visitor is a guest arriving via
-      // a shared session link. Skip the Nova Studio login wall entirely and
-      // hand off directly to the LC guest overlay, which shows a clean
-      // "Sign in with Google to join" screen with no mention of Nova Studio.
-      var _guestSessionId = new URLSearchParams(window.location.search).get('session');
-      if (_guestSessionId) {
-        // Keep loginScreen hidden; wait for live-classes.js to be ready, then
-        // delegate to its standalone guest overlay.
-        var _tryGuestOverlay = function(attempts) {
-          if (typeof LC !== 'undefined' && typeof LC._guestGoogleSignIn === 'function') {
-            // Reuse the existing guest overlay logic directly
-            (function() {
-              var roomId = _guestSessionId.toUpperCase();
-              // Remove the param from URL so it doesn't persist
-              window.history.replaceState({}, '', window.location.pathname);
-              // Call internal overlay builder via the public openView path
-              // LC.openView() calls _checkJoinLink(), but the param is already
-              // gone — so we trigger the overlay directly.
-              var _fireOverlay = LC._showGuestOverlayById || null;
-              if (_fireOverlay) {
-                _fireOverlay(roomId);
-              } else {
-                // Fallback: rebuild URL param so _checkJoinLink picks it up
-                window.history.replaceState({}, '', window.location.pathname + '?session=' + roomId);
-                LC.openView();
-              }
-            })();
-          } else if (attempts > 0) {
-            setTimeout(function() { _tryGuestOverlay(attempts - 1); }, 150);
-          }
-        };
-        _tryGuestOverlay(20); // up to 3 s wait for LC to load
-        return; // ← do NOT show the Nova login screen
-      }
-      // ─────────────────────────────────────────────────────────────────────
-
       var login = document.getElementById('loginScreen');
       var app = document.getElementById('app');
       if (login) login.classList.remove('out');

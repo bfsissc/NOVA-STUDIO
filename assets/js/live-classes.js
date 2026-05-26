@@ -979,7 +979,116 @@ const LC = (function () {
     openShareModal, closeShareModal, copyShareLink,
     // exposed so onclick can reach it
     _guestGoogleSignIn,
-    // exposed for the app.js guest-link intercept (skips Nova login wall)
+    // exposed for the self-booting guest interceptor below
     _showGuestOverlayById: _showGuestJoinOverlay,
   };
+})();
+
+// ── Guest Join-Link Boot (runs immediately when script loads) ─────────────────
+// If the URL has ?session=ROOMID this visitor is a guest arriving via a shared
+// link. We intercept RIGHT HERE — before Firebase onAuthStateChanged has a
+// chance to show the Nova Studio login screen — and show a clean, branded-
+// neutral "Sign in with Google to join" overlay instead.
+//
+// Strategy:
+//   1. Detect ?session= param immediately on script load.
+//   2. Hide the Nova loginScreen element so it never flashes.
+//   3. Show our guest overlay, which has no mention of "Nova Studio".
+//   4. On successful Google sign-in, enter the room normally.
+//   5. If the user is ALREADY signed in (Firebase restored session), skip
+//      straight to entering the room.
+// ─────────────────────────────────────────────────────────────────────────────
+(function _guestBoot() {
+  var sessionId = new URLSearchParams(window.location.search).get('session');
+  if (!sessionId) return; // normal Nova user — do nothing
+
+  sessionId = sessionId.toUpperCase();
+
+  // Scrub the param from the URL immediately so it doesn't linger
+  window.history.replaceState({}, '', window.location.pathname);
+
+  // ── Step 1: Hide Nova's login screen before it can render ────────────────
+  // We inject a <style> tag that keeps #loginScreen invisible. The Nova auth
+  // flow will still run in the background — if it resolves to a logged-in
+  // user, the guest overlay handles the join anyway.
+  var styleBlock = document.createElement('style');
+  styleBlock.id = 'lcGuestHideLogin';
+  styleBlock.textContent = [
+    '#loginScreen { display: none !important; }',
+    '#app { visibility: hidden !important; }',   // hide app shell too (not the body)
+  ].join(' ');
+  document.head.appendChild(styleBlock);
+
+  // ── Step 2: Show the guest overlay ───────────────────────────────────────
+  // _showGuestJoinOverlay is defined inside the LC IIFE above. Because this
+  // code runs in the same script file (after the IIFE), LC is already defined.
+  LC._showGuestOverlayById
+    ? LC._showGuestOverlayById(sessionId)
+    : _bootOverlayDirect(sessionId);
+
+  // ── Step 3: Watch for Firebase auth resolution ───────────────────────────
+  // If the user already has an active Firebase session (returning user),
+  // skip the sign-in prompt and join directly.
+  if (typeof fbAuth !== 'undefined') {
+    var _unsubscribe = fbAuth.onAuthStateChanged(function(user) {
+      _unsubscribe(); // one-shot — unsubscribe after first call
+      var overlay = document.getElementById('lcGuestOverlay');
+      if (user && overlay) {
+        // Already signed in — join immediately
+        var name = user.displayName || user.email.split('@')[0] || 'Guest';
+        var status = document.getElementById('lcGuestStatus');
+        if (status) status.textContent = 'Welcome back, ' + name + '! Joining\u2026';
+        setTimeout(function() {
+          if (overlay) overlay.remove();
+          // LC._enterRoom is internal; trigger via the same path _guestGoogleSignIn uses
+          LC._guestGoogleSignIn && LC._guestGoogleSignIn(sessionId);
+        }, 400);
+      }
+      // If not signed in — the overlay is already showing, nothing else to do
+    });
+  }
+
+  // ── Fallback overlay builder (in case LC._showGuestOverlayById isn't set) ─
+  function _bootOverlayDirect(roomId) {
+    var overlay = document.createElement('div');
+    overlay.id = 'lcGuestOverlay';
+    overlay.style.cssText = [
+      'position:fixed;inset:0;z-index:99999;',
+      'background:linear-gradient(135deg,#0f172a 0%,#1e293b 100%);',
+      'display:flex;align-items:center;justify-content:center;',
+      'font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;',
+    ].join('');
+    overlay.innerHTML = [
+      '<div style="background:rgba(255,255,255,.06);backdrop-filter:blur(16px);',
+        'border:1px solid rgba(255,255,255,.12);border-radius:20px;',
+        'padding:40px 36px;max-width:420px;width:90%;text-align:center;',
+        'box-shadow:0 24px 80px rgba(0,0,0,.5);">',
+        '<div style="font-size:2.2rem;margin-bottom:12px">\uD83D\uDCE1</div>',
+        '<div style="color:#fff;font-size:1.2rem;font-weight:700;margin-bottom:24px">',
+          'You\'ve been invited to a session',
+        '</div>',
+        '<div id="lcGuestStatus" style="color:#94a3b8;font-size:.85rem;margin-bottom:18px">',
+          'Sign in to join',
+        '</div>',
+        '<button id="lcGuestGoogleBtn" ',
+          'onclick="LC._guestGoogleSignIn(\'' + roomId + '\')" ',
+          'style="display:flex;align-items:center;justify-content:center;gap:10px;',
+          'width:100%;padding:13px 20px;background:#fff;color:#1f2937;',
+          'border:none;border-radius:12px;font-size:.95rem;font-weight:600;cursor:pointer;',
+          'box-shadow:0 2px 12px rgba(0,0,0,.25);">',
+          '<svg width="18" height="18" viewBox="0 0 48 48">',
+            '<path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>',
+            '<path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>',
+            '<path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>',
+            '<path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.35-8.16 2.35-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>',
+          '</svg>',
+          'Continue with Google',
+        '</button>',
+        '<div style="color:#475569;font-size:.72rem;margin-top:16px">',
+          'Your Google name will be shown to other participants',
+        '</div>',
+      '</div>',
+    ].join('');
+    document.body.appendChild(overlay);
+  }
 })();
