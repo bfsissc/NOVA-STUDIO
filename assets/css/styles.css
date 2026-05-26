@@ -2204,3 +2204,132 @@ textarea:focus {
   position: relative;
 }
 
+
+/* ══════════════════════════════════════════════════════════════
+   NOVA STUDIO — STABILITY OVERRIDES v4
+   Replaces expensive transition:all on hot-path elements with
+   explicit property lists to eliminate layout-recalc jank.
+   These rules load last so they win specificity.
+   ══════════════════════════════════════════════════════════════ */
+
+/* Stat cards — drop transition:all */
+.sc {
+  transition:
+    transform      .18s cubic-bezier(0.34,1.56,0.64,1),
+    box-shadow     .18s cubic-bezier(0.34,1.56,0.64,1),
+    border-color   .15s ease,
+    background     .18s ease !important;
+  will-change: transform;
+  contain: layout style;
+}
+
+/* Tool cards — drop transition:all */
+.tc {
+  transition:
+    transform      .18s cubic-bezier(0.34,1.56,0.64,1),
+    box-shadow     .18s cubic-bezier(0.34,1.56,0.64,1),
+    border-color   .15s ease,
+    background     .18s ease !important;
+  will-change: transform;
+  contain: layout style;
+}
+
+/* Login/primary buttons */
+.btn-pri, .btn-sec, .btn-google {
+  transition:
+    background   .17s ease,
+    border-color .17s ease,
+    color        .17s ease,
+    box-shadow   .17s ease,
+    transform    .17s cubic-bezier(0.34,1.56,0.64,1) !important;
+  will-change: transform;
+}
+
+/* Generic .btn */
+.btn {
+  transition:
+    background   .14s ease,
+    border-color .14s ease,
+    color        .14s ease,
+    box-shadow   .14s ease,
+    transform    .14s cubic-bezier(0.34,1.56,0.64,1) !important;
+  will-change: transform;
+}
+
+/* Sidebar items */
+.sb-i {
+  transition:
+    background .12s ease,
+    color      .12s ease,
+    transform  .18s cubic-bezier(0.34,1.56,0.64,1),
+    box-shadow .18s ease !important;
+}
+
+/* Navbar icon buttons */
+.nb-ic {
+  transition:
+    background   .14s ease,
+    border-color .14s ease,
+    box-shadow   .14s ease,
+    transform    .14s cubic-bezier(0.34,1.56,0.64,1) !important;
+  will-change: transform;
+}
+
+/* Workbook tab — only color/background changes */
+.wb-tab, .wb-tab-x, .wb-tab-add {
+  transition:
+    background   .14s ease,
+    color        .14s ease,
+    border-color .14s ease !important;
+}
+
+/* Workbook buttons */
+.wb-fmt-btn, .wb-fmt-color-btn, .wb-del-btn,
+.wb-add-row-btn, .wb-col-menu-btn {
+  transition:
+    background   .12s ease,
+    border-color .12s ease,
+    color        .12s ease,
+    opacity      .12s ease,
+    transform    .12s cubic-bezier(0.34,1.56,0.64,1) !important;
+}
+
+/* Sync room items */
+.sync-room-item, .sync-create-room,
+.sync-upload-zone-mini, .sync-key-badge {
+  transition:
+    background   .14s ease,
+    border-color .14s ease,
+    color        .14s ease,
+    transform    .14s ease !important;
+}
+
+/* Sync toast — only compositable properties */
+.sync-toast {
+  transition:
+    transform .3s cubic-bezier(0.34,1.56,0.64,1),
+    opacity   .3s ease !important;
+  will-change: transform, opacity;
+}
+
+/* Workbook import zone */
+.wb-import-zone {
+  transition:
+    background   .14s ease,
+    border-color .14s ease,
+    color        .14s ease !important;
+}
+
+/* ── App-level stacking isolation ── */
+#app {
+  isolation: isolate;
+}
+
+/* ── Subpixel text stability during GPU transforms ── */
+.btn, .btn-pri, .sc, .tc, .sb-i, .nb-ic, .nb-av,
+.proj-card, .pdc, .stg-card, .ml-stat-card {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* EOF stability overrides */

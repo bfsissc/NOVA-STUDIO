@@ -156,10 +156,10 @@ body {
   50%       { transform: scale(1.4); opacity: 0.7; }
 }
 
-/* Intro stagger */
+/* Intro stagger — filter:blur removed (triggers full repaint on every frame) */
 @keyframes cardReveal {
-  from { opacity: 0; transform: translateY(20px) scale(0.97); filter: blur(4px); }
-  to   { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+  from { opacity: 0; transform: translateY(20px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -173,6 +173,8 @@ body::after {
   pointer-events: none;
   z-index: 0;
   animation: orbFloat 8s ease-in-out infinite;
+  will-change: transform;
+  backface-visibility: hidden;
 }
 body::before {
   width: 420px; height: 420px;
@@ -209,6 +211,8 @@ body::after {
   position: relative;
   z-index: 200;
   animation: slideInLeft var(--dur-slow) var(--ease-glass) both;
+  will-change: transform, opacity;
+  backface-visibility: hidden;
 }
 
 [data-theme="dark"] .navbar {
@@ -298,6 +302,8 @@ body::after {
   animation-delay: 60ms;
   position: relative;
   z-index: 100;
+  will-change: transform, opacity;
+  backface-visibility: hidden;
 }
 
 [data-theme="dark"] .sidebar {
@@ -322,7 +328,10 @@ body::after {
   padding: 8px 12px !important;
   font-size: 0.78rem !important;
   font-weight: 500 !important;
-  transition: all var(--dur-med) var(--ease-glass) !important;
+  transition: background var(--dur-fast) var(--ease-smooth),
+              color var(--dur-fast) var(--ease-smooth),
+              transform var(--dur-med) var(--ease-spring),
+              box-shadow var(--dur-med) var(--ease-spring) !important;
   position: relative !important;
   overflow: hidden !important;
 }
@@ -358,6 +367,7 @@ body::after {
     0 1px 0 rgba(255,255,255,0.6) inset !important;
   animation: glowPulse 3s ease-in-out infinite !important;
   transform: translateX(2px) !important;
+  will-change: box-shadow;
 }
 .sb-i.on::before { opacity: 1 !important; }
 
@@ -384,7 +394,7 @@ body::after {
   border-top: 1px solid rgba(255,255,255,0.55) !important;
   border-radius: 0 0 0 0 !important;
   margin: 0 !important;
-  transition: all var(--dur-med) var(--ease-glass) !important;
+  transition: background var(--dur-med) var(--ease-glass), box-shadow var(--dur-med) var(--ease-glass) !important;
 }
 .sb-foot:hover {
   background: rgba(255,255,255,0.75) !important;
@@ -411,16 +421,17 @@ body::after {
   border: 1px solid var(--glass-border) !important;
   border-radius: var(--r-lg) !important;
   box-shadow: var(--glass-shadow), 0 1px 0 rgba(255,255,255,0.85) inset !important;
-  transition: all var(--dur-med) var(--ease-spring) !important;
+  transition: transform var(--dur-med) var(--ease-spring),
+              box-shadow var(--dur-med) var(--ease-spring),
+              border-color var(--dur-fast) var(--ease-smooth) !important;
   position: relative !important;
   overflow: hidden !important;
   animation: cardReveal var(--dur-slow) var(--ease-glass) both;
+  will-change: transform;
+  contain: layout style;
 }
 
-.sc:nth-child(1) { animation-delay: 80ms; }
-.sc:nth-child(2) { animation-delay: 140ms; }
-.sc:nth-child(3) { animation-delay: 200ms; }
-.sc:nth-child(4) { animation-delay: 260ms; }
+/* Animation delays for .sc are handled in Section C below (novaSlideUp stagger) */
 
 /* Glass glare top edge */
 .sc::before {
@@ -512,18 +523,17 @@ body::after {
   border: 1px solid var(--glass-border) !important;
   border-radius: var(--r-lg) !important;
   box-shadow: var(--glass-shadow), 0 1px 0 rgba(255,255,255,0.85) inset !important;
-  transition: all var(--dur-med) var(--ease-spring) !important;
+  transition: transform var(--dur-med) var(--ease-spring),
+              box-shadow var(--dur-med) var(--ease-spring),
+              border-color var(--dur-fast) var(--ease-smooth) !important;
   position: relative !important;
   overflow: hidden !important;
   animation: cardReveal var(--dur-slow) var(--ease-glass) both;
+  will-change: transform;
+  contain: layout style;
 }
 
-.tc-grid .tc:nth-child(1) { animation-delay: 100ms; }
-.tc-grid .tc:nth-child(2) { animation-delay: 160ms; }
-.tc-grid .tc:nth-child(3) { animation-delay: 220ms; }
-.tc-grid .tc:nth-child(4) { animation-delay: 280ms; }
-.tc-grid .tc:nth-child(5) { animation-delay: 340ms; }
-.tc-grid .tc:nth-child(6) { animation-delay: 400ms; }
+/* Animation delays for .tc handled in Section C below (novaFadeIn stagger) */
 
 /* Color-tinted top bar — enhanced */
 .tc::before {
@@ -1435,8 +1445,8 @@ body.no-animations * {
 
 /* ── Extra keyframes ── */
 @keyframes novaFadeIn {
-  from { opacity: 0; transform: translateY(12px) scale(0.97); filter: blur(2px); }
-  to   { opacity: 1; transform: translateY(0)  scale(1);    filter: blur(0); }
+  from { opacity: 0; transform: translateY(12px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0)  scale(1); }
 }
 @keyframes novaSlideUp {
   from { opacity: 0; transform: translateY(20px); }
@@ -1451,8 +1461,8 @@ body.no-animations * {
   to   { opacity: 1; transform: translateX(0); }
 }
 @keyframes novaZoomIn {
-  from { opacity: 0; transform: scale(0.92); filter: blur(4px); }
-  to   { opacity: 1; transform: scale(1);    filter: blur(0); }
+  from { opacity: 0; transform: scale(0.92); }
+  to   { opacity: 1; transform: scale(1); }
 }
 @keyframes novaPopIn {
   0%   { opacity: 0; transform: scale(0.80) translateY(10px); }
@@ -1946,3 +1956,106 @@ body.no-animations *::after {
 /* ══════════════════════════════════════════════════════════════
    EOF — NOVA STUDIO SMOOTH ANIMATIONS PATCH v3
    ══════════════════════════════════════════════════════════════ */
+
+/* ══════════════════════════════════════════════════════════════
+   STABILITY PATCH v4 — GPU COMPOSITING & LAYOUT CONTAINMENT
+   Eliminates paint storms, layout thrash, and animation jank
+   ══════════════════════════════════════════════════════════════ */
+
+/* ── View containers: promote to compositor layer on entrance ── */
+.view {
+  will-change: opacity, transform;
+  backface-visibility: hidden;
+  /* Contain layout changes within each view so off-screen views
+     can't trigger whole-page reflows */
+  contain: layout;
+}
+/* Release will-change once animation has finished — prevents
+   permanent GPU memory allocation on idle views */
+.view:not(.active) {
+  will-change: auto;
+}
+
+/* ── Modal/drawer surfaces ── */
+.zip-box,
+.prog-box,
+.psm-box,
+.sync-modal-box,
+#editPanel {
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+}
+
+/* ── Login screen: promoted layer for the exit scale animation ── */
+#loginScreen {
+  will-change: opacity, transform;
+  backface-visibility: hidden;
+}
+
+/* ── Animated badges/chips: tiny elements re-composited often ── */
+.ml-badge, .vfy-row-badge, .badge-match, .badge-miss,
+.sk-chip, .wb-master-tag, .sync-room-badge,
+.cert-el, .cert-col-chip {
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+}
+
+/* ── Prevent layout thrash from transition:all on btn variants ── */
+/* styles.css sets transition:all on .sc and .tc — override here */
+.sc, .tc {
+  transition:
+    transform      var(--dur-med)  var(--ease-spring),
+    box-shadow     var(--dur-med)  var(--ease-spring),
+    border-color   var(--dur-fast) var(--ease-smooth),
+    background     var(--dur-med)  var(--ease-smooth) !important;
+}
+
+/* ── Shimmer pseudo-element: use transform instead of
+   background-position to stay on compositor thread ── */
+.sc::after, .tc::after {
+  transform: translateX(-100%);
+  transition: transform 0s !important;
+  background: linear-gradient(105deg,
+    transparent 30%,
+    rgba(255,255,255,0.30) 50%,
+    transparent 70%) !important;
+  background-size: 100% 100% !important;
+}
+.sc:hover::after, .tc:hover::after {
+  transform: translateX(100%) !important;
+  transition: transform 0.6s var(--ease-smooth) !important;
+}
+
+/* ── Prevent invisible views from painting ── */
+.view:not(.active) {
+  visibility: hidden;
+  pointer-events: none;
+}
+.view.active {
+  visibility: visible;
+  pointer-events: auto;
+}
+
+/* ── Smooth toggle knobs: use transform instead of `left` ── */
+.stg-toggle-knob,
+.ml-toggle-k {
+  will-change: transform;
+}
+
+/* ── App root: stable stacking context ── */
+#app {
+  isolation: isolate;
+  transform: translateZ(0);
+}
+
+/* ── Global: prevent subpixel text jitter during transforms ── */
+.sb-i, .btn, .sc, .tc, .proj-card, .stg-card,
+.pdc, .ml-stat-card, .help-section {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   EOF — NOVA STUDIO STABILITY PATCH v4
+   ══════════════════════════════════════════════════════════════ */
+
