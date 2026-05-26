@@ -449,8 +449,8 @@ function doLogout(){
   showToast('Signed out','ok');
 }
 
-const VIEWS=['home','cert','projects','profile','settings','mailer','sync','portal','help','tp','imgcomp','fileconv','imgedit','teams','followup','drafts'];
-const SBM={home:'sbHome',projects:'sbProj',profile:'sbProfile',cert:'sbCert',settings:'sbSettings',mailer:'sbMailer',sync:'sbSync',portal:'sbPortal',help:'sbHelp',tp:'sbTp',imgcomp:'sbImgComp',fileconv:'sbFileConv',imgedit:'sbImgEdit',teams:'sbTeams',followup:'sbFollowup',drafts:'sbDrafts'};
+const VIEWS=['home','cert','projects','profile','settings','mailer','sync','portal','help','tp','imgcomp','fileconv','imgedit','teams','followup','drafts','liveclasses'];
+const SBM={home:'sbHome',projects:'sbProj',profile:'sbProfile',cert:'sbCert',settings:'sbSettings',mailer:'sbMailer',sync:'sbSync',portal:'sbPortal',help:'sbHelp',tp:'sbTp',imgcomp:'sbImgComp',fileconv:'sbFileConv',imgedit:'sbImgEdit',teams:'sbTeams',followup:'sbFollowup',drafts:'sbDrafts',liveclasses:'sbLiveClasses'};
 
 // ── goView: animated view transition + scroll reset ──
 function goView(v){
@@ -483,6 +483,7 @@ function goView(v){
     if(v==='teams'){if(typeof TM!=='undefined')TM.openView();}
     if(v==='followup'){if(typeof FU!=='undefined')FU.openView();}
     if(v==='drafts'){dpInit();}
+    if(v==='liveclasses'){if(typeof LC!=='undefined')LC.openView();}
   } catch(e){ console.warn('[goView] init error for', v, e); }
 }
 
@@ -9024,6 +9025,7 @@ window.goView = function(v) {
     { key:'portal',   icon:'🏫', label:'College Portal',    desc:'Create and manage college portals',          action:function(){ goView('portal'); } },
     { key:'sync',     icon:'🔄', label:'Data Sync',         desc:'Real-time collaborative workbook rooms',     action:function(){ goView('sync'); } },
     { key:'teams',    icon:'👥', label:'My Teams',           desc:'Manage team members and roles',              action:function(){ goView('teams'); } },
+    { key:'liveclasses', icon:'📡', label:'Sessions',    desc:'Create and join video sessions, meetings & more',        action:function(){ goView('liveclasses'); } },
     { key:'followup', icon:'📂', label:'Followup Tracker',  desc:'Track college data collection progress',     action:function(){ goView('followup'); } },
     { key:'tp',       icon:'🤝', label:'Training Partners', desc:'Find and connect with training partners',    action:function(){ goView('tp'); } },
     { key:'imgcomp',  icon:'🖼️', label:'Image Resizer',     desc:'Resize & compress images in bulk',           action:function(){ goView('imgcomp'); } },

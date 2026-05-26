@@ -313,6 +313,7 @@
         <div class="sb-i" id="sbSync" onclick="goView('sync')"><span class="sb-ic">🔄</span>Data Sync<span class="sb-bx" style="background:var(--teal)" id="syncLiveDot" style="display:none">Live</span></div>
 
         <div class="sb-i" id="sbTeams" onclick="goView('teams')"><span class="sb-ic">👥</span>My Teams<span class="sb-bx" style="background:#6d8400">New</span></div>
+        <div class="sb-i" id="sbLiveClasses" onclick="goView('liveclasses')"><span class="sb-ic">📡</span>Sessions<span class="sb-bx" style="background:#dc2626">Live</span></div>
         <div class="sb-i" id="sbFollowup" onclick="goView('followup')"><span class="sb-ic">📂</span>Followup Tracker<span class="sb-bx" style="background:#0ea5e9">New</span></div>
         <div class="sb-i" id="sbTp" onclick="goView('tp')"><span class="sb-ic">🤝</span>Training Partners<span class="sb-bx" style="background:#f59e0b">TP</span></div>
         <div class="sb-i" id="sbImgComp" onclick="goView('imgcomp')"><span class="sb-ic">🖼️</span>Image Resizer</div>
@@ -4222,6 +4223,11 @@ function doGet(){return out({ok:true,status:'Nova Drive Relay running'});}</pre>
     </div>
   </div>
 </div>
+
+<!-- ══ SESSIONS VIEW ══ -->
+<div class="view" id="viewLiveclasses" style="flex-direction:column;overflow-y:auto;background:var(--bg)">
+  <div id="lcWrap" style="flex:1;display:flex;flex-direction:column;min-height:0"></div>
+</div>
 <script src="assets/js/app.js"></script>
 <script src="assets/js/tp.js"></script>
 <script src="assets/js/college-portal-admin.js"></script>
@@ -4268,6 +4274,7 @@ function doGet(){return out({ok:true,status:'Nova Drive Relay running'});}</pre>
   <script src="assets/js/drive-manager.js"></script>
   <script src="assets/js/teams.js"></script>
   <script src="assets/js/followup.js"></script>
+  <script src="assets/js/live-classes.js"></script>
 
   <!-- ══ NOVA DRIVE MANAGER PANEL ══ -->
   <div id="dmPanel">
@@ -4374,5 +4381,8 @@ function doGet(){return out({ok:true,status:'Nova Drive Relay running'});}</pre>
 
 <!-- ✦ NOVA AI Assistant — drop nova-ai.js to remove -->
 <script src="assets/js/nova-ai.js"></script>
+
+<!-- ── Live Classes Modal Portal (outside .view so position:fixed works) ── -->
+<div id="lcModalPortal" style="position:relative;z-index:5000"></div>
 </body>
 </html>
