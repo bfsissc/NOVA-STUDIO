@@ -78,7 +78,7 @@ const LC = (function () {
   // sign-in prompt — no Nova Studio branding or login wall.
   function _joinLink(roomId) {
     // Works whether the app is served from nova-studio.com, college-portal.com, etc.
-    const base = window.location.origin + window.location.pathname;
+    const base = window.location.origin + '/session.html';
     return base + '?session=' + roomId;
   }
 
