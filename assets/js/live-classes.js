@@ -979,5 +979,7 @@ const LC = (function () {
     openShareModal, closeShareModal, copyShareLink,
     // exposed so onclick can reach it
     _guestGoogleSignIn,
+    // exposed for the app.js guest-link intercept (skips Nova login wall)
+    _showGuestOverlayById: _showGuestJoinOverlay,
   };
 })();
