@@ -12,7 +12,13 @@ window.onload = () => {
     var banner = document.createElement('div');
     banner.id = 'fileProtocolBanner';
     banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#1e1e1e;color:#fff;font-size:.78rem;font-weight:600;padding:9px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px;font-family:inherit;box-shadow:0 2px 12px rgba(0,0,0,.25)';
-    banner.innerHTML = '<span>⚡ Running locally — Google login is disabled. You're in <b>Demo Mode</b>. For full login, open via a local server (e.g. VS Code Live Server, <code style="background:rgba(255,255,255,.12);padding:1px 6px;border-radius:4px">npx serve .</code>).</span><button onclick="document.getElementById('fileProtocolBanner').remove()" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:6px;padding:4px 12px;cursor:pointer;font-size:.74rem;font-weight:700;flex-shrink:0">Dismiss</button>';
+    banner.innerHTML = [
+      '<span>⚡ Running locally — Google login is disabled. ',
+      "You're in <b>Demo Mode</b>. For full login, open via a local server ",
+      '(VS Code Live Server or <code style="background:rgba(255,255,255,.12);padding:1px 6px;border-radius:4px">npx serve .</code>).</span>',
+      '<button onclick="document.getElementById(\'fileProtocolBanner\').remove()" ',
+      'style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:6px;padding:4px 12px;cursor:pointer;font-size:.74rem;font-weight:700;flex-shrink:0">Dismiss</button>'
+    ].join('');
     document.body.appendChild(banner);
     // Auto-boot into demo mode
     demoLogin();
@@ -8178,7 +8184,7 @@ window.goView = function(v) {
   // ── Pick destination folder (called once, reused for all) ─
   window.fcPickZipFolder = async function(){
     if(!window.showDirectoryPicker){
-      fcToast('⚠️ Your browser doesn't support folder picker. Use Chrome or Edge.');
+      fcToast('⚠️ Your browser does not support folder picker. Use Chrome or Edge.');
       return;
     }
     try{
