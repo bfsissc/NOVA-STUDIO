@@ -5,6 +5,20 @@ const SK='nova_users', SS='nova_sess';
 
 // ── Firebase Auth state listener — replaces window.onload session restore ──
 window.onload = () => {
+  // ── file:// protocol: auto-launch demo so app works when opened directly ──
+  if (window.location.protocol === 'file:') {
+    updateGreeting();
+    // Show a one-time banner so the user knows Google login won't work here
+    var banner = document.createElement('div');
+    banner.id = 'fileProtocolBanner';
+    banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#1e1e1e;color:#fff;font-size:.78rem;font-weight:600;padding:9px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px;font-family:inherit;box-shadow:0 2px 12px rgba(0,0,0,.25)';
+    banner.innerHTML = '<span>⚡ Running locally — Google login is disabled. You're in <b>Demo Mode</b>. For full login, open via a local server (e.g. VS Code Live Server, <code style="background:rgba(255,255,255,.12);padding:1px 6px;border-radius:4px">npx serve .</code>).</span><button onclick="document.getElementById('fileProtocolBanner').remove()" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:6px;padding:4px 12px;cursor:pointer;font-size:.74rem;font-weight:700;flex-shrink:0">Dismiss</button>';
+    document.body.appendChild(banner);
+    // Auto-boot into demo mode
+    demoLogin();
+    return;
+  }
+
   // Restore Drive token from sessionStorage if available (survives page refresh)
   try {
     var storedToken = sessionStorage.getItem('nova_drive_token');
@@ -185,6 +199,10 @@ var NOVA_DRIVE_FOLDER_ID = null;  // "NOVA Backend" folder ID — auto-created o
 
 // ── Trigger Google login via Firebase popup ──
 function triggerGoogleLogin() {
+  if (window.location.protocol === 'file:') {
+    showToast('Google login requires a server. You\'re in Demo Mode — all tools still work!', 'ok');
+    return;
+  }
   var provider = new firebase.auth.GoogleAuthProvider();
   provider.addScope('profile');
   provider.addScope('email');
@@ -7760,6 +7778,10 @@ window.goView = function(v) {
   // ── Supported conversion matrix ──────────────────────────
   // key = input MIME or extension group, value = array of output formats
   const FC_MATRIX = {
+    // ZIP extraction (special handling — no output format selector, uses folder picker)
+    'zip': [
+      { label:'Extract to folder', ext:'folder', mime:'' },
+    ],
     // Images
     'image': [
       { label:'JPEG (.jpg)',   ext:'jpg',  mime:'image/jpeg' },
@@ -7794,6 +7816,10 @@ window.goView = function(v) {
   let fcNextId = 1;
   let fcSelId  = null;
 
+  // ── ZIP extraction state ─────────────────────────────────
+  // Shared output folder handle (chosen once, reused for all ZIP extractions)
+  let fcZipFolderHandle = null; // FileSystemDirectoryHandle | null
+
   // ── Helpers ──────────────────────────────────────────────
   const $ = id => document.getElementById(id);
 
@@ -7801,6 +7827,7 @@ window.goView = function(v) {
     const mime = file.type || '';
     const name = file.name || '';
     const ext  = name.includes('.') ? name.split('.').pop().toLowerCase() : '';
+    if(ext === 'zip' || mime === 'application/zip' || mime === 'application/x-zip-compressed' || mime === 'application/x-zip') return 'zip';
     if(mime.startsWith('image/')) return 'image';
     if(mime === 'application/pdf' || ext === 'pdf') return 'pdf';
     if(mime === 'application/json' || ext === 'json') return 'json';
@@ -7872,13 +7899,23 @@ window.goView = function(v) {
     $('fcDetailSize').textContent = fcFmtSize(fc.file.size);
     $('fcDetailType').textContent = fc.group.toUpperCase();
 
-    // populate output format selector
-    const fmts = fcOutputFormats(fc.group);
-    const sel = $('fcOutFmt');
-    sel.innerHTML = fmts.map((f,i)=>`<option value="${i}">${f.label}</option>`).join('');
-
-    // restore previously chosen format for this file
-    if(fc._fmtIdx !== undefined) sel.value = fc._fmtIdx;
+    // ZIP group: hide format selector row, show extract panel
+    const fmtRow = $('fcFmtRow');
+    const zipPanel = $('fcZipPanel');
+    if(fc.group === 'zip'){
+      if(fmtRow) fmtRow.style.display = 'none';
+      if(zipPanel) zipPanel.style.display = 'block';
+      fcUpdateZipPanel();
+    } else {
+      if(fmtRow) fmtRow.style.display = '';
+      if(zipPanel) zipPanel.style.display = 'none';
+      // populate output format selector
+      const fmts = fcOutputFormats(fc.group);
+      const sel = $('fcOutFmt');
+      sel.innerHTML = fmts.map((f,i)=>`<option value="${i}">${f.label}</option>`).join('');
+      // restore previously chosen format for this file
+      if(fc._fmtIdx !== undefined) sel.value = fc._fmtIdx;
+    }
 
     // show preview
     fcShowPreview(fc);
@@ -7910,11 +7947,33 @@ window.goView = function(v) {
       div.style.cssText='font-size:.8rem;color:var(--mist2);padding:20px;text-align:center';
       div.innerHTML='📄 PDF preview not available<br><span style="font-size:.68rem">Convert to see output</span>';
       wrap.appendChild(div);
+    } else if(fc.group==='zip'){
+      // Show file listing from ZIP
+      const div=document.createElement('div');
+      div.style.cssText='font-size:.72rem;color:var(--mist2);padding:10px;text-align:center';
+      div.textContent='⏳ Reading ZIP…';
+      wrap.appendChild(div);
+      fc.file.arrayBuffer().then(ab=>{
+        try{
+          const names = fcZipListFiles(ab);
+          const count = names.length;
+          div.innerHTML = `<div style="font-size:.72rem;color:var(--lime-d);font-weight:700;margin-bottom:6px">📦 ${count} file${count===1?'':'s'} inside</div>`;
+          const pre=document.createElement('pre');
+          pre.style.cssText='font-size:.62rem;line-height:1.5;background:var(--surface);border:1.5px solid var(--fog);border-radius:10px;padding:10px;overflow:auto;max-height:180px;white-space:pre-wrap;word-break:break-all;color:var(--ink);text-align:left;width:100%;box-sizing:border-box;margin:0';
+          pre.textContent=names.slice(0,80).join('\n')+(names.length>80?'\n…and '+(names.length-80)+' more':'');
+          div.appendChild(pre);
+        } catch(e){ div.textContent='⚠️ Could not read ZIP contents'; }
+      }).catch(()=>{ div.textContent='⚠️ Could not read ZIP contents'; });
     }
   }
 
   function fcShowResult(fc){
     const btn=$('fcDownloadBtn');
+    if(fc.group==='zip'){
+      // ZIP files use the extract panel buttons, not the download button
+      btn.style.display='none';
+      return;
+    }
     if(fc.status==='done'&&fc.resultBlob){
       btn.style.display='block';
       btn.onclick=()=>fcDownloadOne(fc);
@@ -7930,7 +7989,143 @@ window.goView = function(v) {
   }
 
   // ── Convert selected file ────────────────────────────────
-  window.fcConvertSelected = async function(){
+  // ── ZIP list helper (reads central directory) ────────────
+  function fcZipListFiles(arrayBuffer){
+    const view = new DataView(arrayBuffer);
+    const bytes = new Uint8Array(arrayBuffer);
+    const len = bytes.length;
+    // Find End-of-Central-Directory record (last occurrence of PK\x05\x06)
+    let eocd = -1;
+    for(let i = len - 22; i >= Math.max(0, len - 65558); i--){
+      if(view.getUint32(i, true) === 0x06054b50){ eocd = i; break; }
+    }
+    if(eocd === -1) throw new Error('Not a valid ZIP file');
+    const cdCount  = view.getUint16(eocd + 10, true);
+    const cdOffset = view.getUint32(eocd + 16, true);
+    const dec = new TextDecoder('utf-8');
+    const names = [];
+    let pos = cdOffset;
+    for(let i = 0; i < cdCount; i++){
+      if(view.getUint32(pos, true) !== 0x02014b50) break; // central dir signature
+      const flags    = view.getUint16(pos + 8,  true);
+      const nameLen  = view.getUint16(pos + 28, true);
+      const extraLen = view.getUint16(pos + 30, true);
+      const cmtLen   = view.getUint16(pos + 32, true);
+      const useUTF8  = !!(flags & 0x800);
+      const nameBytes = bytes.slice(pos + 46, pos + 46 + nameLen);
+      const name = useUTF8 ? dec.decode(nameBytes) : new TextDecoder('windows-1252').decode(nameBytes);
+      if(!name.endsWith('/')) names.push(name); // skip directory entries
+      pos += 46 + nameLen + extraLen + cmtLen;
+    }
+    return names;
+  }
+
+  // ── ZIP folder panel UI helpers ──────────────────────────
+  function fcUpdateZipPanel(){
+    const info = $('fcZipFolderInfo');
+    const extractBtn = $('fcZipExtractBtn');
+    if(!info) return;
+    if(fcZipFolderHandle){
+      info.innerHTML = `<span style="color:var(--lime-d);font-weight:700">📁 ${fcZipFolderHandle.name}</span> <span style="font-size:.65rem;color:var(--mist2)">(shared for all ZIPs)</span>`;
+      if(extractBtn) extractBtn.disabled = false;
+    } else {
+      info.innerHTML = '<span style="color:var(--mist2);font-size:.72rem">No folder chosen yet</span>';
+      if(extractBtn) extractBtn.disabled = true;
+    }
+  }
+
+  // ── Pick destination folder (called once, reused for all) ─
+  window.fcPickZipFolder = async function(){
+    if(!window.showDirectoryPicker){
+      fcToast('⚠️ Your browser doesn't support folder picker. Use Chrome or Edge.');
+      return;
+    }
+    try{
+      const handle = await window.showDirectoryPicker({ mode: 'readwrite' });
+      fcZipFolderHandle = handle;
+      fcUpdateZipPanel();
+      fcToast('✅ Folder chosen: ' + handle.name);
+    } catch(e){
+      if(e.name !== 'AbortError') fcToast('⚠️ Could not pick folder: ' + e.message);
+    }
+  };
+
+  // ── Extract a single ZIP into the chosen folder ───────────
+  async function fcExtractOneZip(fc){
+    if(!fcZipFolderHandle) throw new Error('No destination folder selected');
+    if(!window.JSZip) await fcLoadScript('https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js');
+    const ab = await fc.file.arrayBuffer();
+    const zip = await window.JSZip.loadAsync(ab);
+    // Create a sub-folder named after the ZIP (without extension)
+    const subFolderName = fc.name.replace(/\.zip$/i, '');
+    const subDir = await fcZipFolderHandle.getDirectoryHandle(subFolderName, { create: true });
+    // Write all files
+    const fileEntries = [];
+    zip.forEach((relativePath, entry) => {
+      if(!entry.dir) fileEntries.push({ relativePath, entry });
+    });
+    for(const { relativePath, entry } of fileEntries){
+      const parts = relativePath.split('/').filter(Boolean);
+      // Recursively ensure directories exist
+      let dirHandle = subDir;
+      for(let i = 0; i < parts.length - 1; i++){
+        dirHandle = await dirHandle.getDirectoryHandle(parts[i], { create: true });
+      }
+      const fileName = parts[parts.length - 1];
+      const fileHandle = await dirHandle.getFileHandle(fileName, { create: true });
+      const writable = await fileHandle.createWritable();
+      const blob = await entry.async('blob');
+      await writable.write(blob);
+      await writable.close();
+    }
+    fc.status = 'done';
+    fc.resultBlob = null; // no blob — written to disk
+    fc.resultName = subFolderName + '/ (' + fileEntries.length + ' files)';
+  }
+
+  // ── Extract selected ZIP ──────────────────────────────────
+  window.fcExtractSelected = async function(){
+    const fc = fcFiles.find(f => f.id === fcSelId);
+    if(!fc || fc.group !== 'zip') return;
+    if(!fcZipFolderHandle){ fcToast('⚠️ Choose a destination folder first'); return; }
+    fc.status = 'converting'; fcRenderList();
+    const btn = $('fcZipExtractBtn');
+    if(btn){ btn.disabled = true; btn.textContent = '⏳ Extracting…'; }
+    try{
+      await fcExtractOneZip(fc);
+      fcToast('✅ Extracted: ' + fc.name);
+    } catch(e){
+      fc.status = 'error';
+      fcToast('❌ Extraction failed: ' + e.message);
+    }
+    fcRenderList();
+    if(btn){ btn.disabled = false; btn.textContent = '📂 Extract'; }
+  };
+
+  // ── Extract all ZIPs at once ──────────────────────────────
+  window.fcExtractAllZips = async function(){
+    const zips = fcFiles.filter(f => f.group === 'zip' && f.status !== 'done');
+    if(!zips.length){ fcToast('No pending ZIP files'); return; }
+    if(!fcZipFolderHandle){ fcToast('⚠️ Choose a destination folder first'); return; }
+    const btn = $('fcZipExtractAllBtn');
+    if(btn){ btn.disabled = true; btn.textContent = '⏳ Extracting all…'; }
+    let ok = 0, fail = 0;
+    for(const fc of zips){
+      fc.status = 'converting'; fcRenderList();
+      try{
+        await fcExtractOneZip(fc);
+        ok++;
+      } catch(e){
+        fc.status = 'error'; fail++;
+        console.warn('[FC] ZIP extract failed:', fc.name, e.message);
+      }
+      fcRenderList();
+    }
+    if(btn){ btn.disabled = false; btn.textContent = '📦 Extract All ZIPs'; }
+    fcToast(ok + ' ZIP' + (ok===1?'':'s') + ' extracted' + (fail?' | '+fail+' failed':'') + ' → ' + fcZipFolderHandle.name);
+  };
+
+    window.fcConvertSelected = async function(){
     const fc = fcFiles.find(f=>f.id===fcSelId);
     if(!fc) return;
     const fmts = fcOutputFormats(fc.group);
@@ -8083,6 +8278,7 @@ window.goView = function(v) {
     btn.disabled=true; btn.textContent='⏳ Converting all…';
     for(const fc of fcFiles){
       if(fc.status==='done') continue;
+      if(fc.group==='zip') continue; // ZIP files use fcExtractAllZips instead
       const fmts=fcOutputFormats(fc.group);
       const idx=fc._fmtIdx||0;
       const fmt=fmts[idx];

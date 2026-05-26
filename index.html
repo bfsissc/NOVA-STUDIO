@@ -3456,11 +3456,30 @@ function doGet(){return out({ok:true,status:'Nova Drive Relay running'});}</pre>
                   </div>
                 </div>
               </div>
-              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+              <!-- Format selector row (hidden for ZIP files) -->
+              <div id="fcFmtRow" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
                 <span style="font-size:.71rem;font-weight:700;color:var(--mist2);white-space:nowrap">Convert to:</span>
                 <select id="fcOutFmt" style="flex:1;min-width:160px;padding:7px 10px;border:1.5px solid var(--fog);border-radius:8px;background:var(--surface);color:var(--ink);font-size:.8rem;font-weight:600"></select>
                 <button id="fcConvertBtn" onclick="fcConvertSelected()" class="btn bl btn-sm" style="font-size:.78rem;font-weight:800;white-space:nowrap">⚡ Convert</button>
                 <button id="fcDownloadBtn" class="btn btn-sm" style="display:none;background:var(--teal);color:#fff;border:none;border-radius:8px;padding:6px 13px;font-size:.78rem;font-weight:800;cursor:pointer;white-space:nowrap">⬇ Download</button>
+              </div>
+
+              <!-- ZIP extraction panel (shown only when a ZIP is selected) -->
+              <div id="fcZipPanel" style="display:none;flex-direction:column;gap:9px">
+                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                  <span style="font-size:.71rem;font-weight:700;color:var(--mist2);white-space:nowrap">Extract to:</span>
+                  <div id="fcZipFolderInfo" style="flex:1;font-size:.75rem;padding:6px 10px;background:var(--surface);border:1.5px solid var(--fog);border-radius:8px;min-height:32px;display:flex;align-items:center">
+                    <span style="color:var(--mist2);font-size:.72rem">No folder chosen yet</span>
+                  </div>
+                  <button onclick="fcPickZipFolder()" class="btn btn-sm" style="background:var(--ink);color:var(--bg);border:none;border-radius:8px;padding:6px 13px;font-size:.76rem;font-weight:800;cursor:pointer;white-space:nowrap">📁 Choose Folder</button>
+                </div>
+                <div style="display:flex;gap:8px;flex-wrap:wrap">
+                  <button id="fcZipExtractBtn" onclick="fcExtractSelected()" class="btn bl btn-sm" style="font-size:.78rem;font-weight:800;white-space:nowrap" disabled>📂 Extract This ZIP</button>
+                  <button id="fcZipExtractAllBtn" onclick="fcExtractAllZips()" class="btn btn-sm" style="background:var(--teal);color:#fff;border:none;border-radius:8px;padding:6px 13px;font-size:.76rem;font-weight:800;cursor:pointer;white-space:nowrap">📦 Extract All ZIPs</button>
+                </div>
+                <div style="font-size:.64rem;color:var(--mist2);line-height:1.5">
+                  💡 <b>Choose folder once</b> — all ZIPs extract to the same destination. Each ZIP gets its own sub-folder.
+                </div>
               </div>
             </div>
 
