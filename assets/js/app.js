@@ -3208,6 +3208,10 @@ const STG_DEFAULTS = {
   theme: 'light',
   uiStyle: 'default',
   accent: 'lime',
+  customAccent: '#c8f135',
+  workspaceStyle: 'studio',
+  cornerRadius: 10,
+  interfaceScale: 100,
   sidebar: 'full',
   animations: true,
   dense: false,
@@ -3263,6 +3267,31 @@ function stgSetAccent(a) {
   showToast('Accent color updated ✓', 'ok');
 }
 
+function stgSetCustomAccent(value) {
+  if (!/^#[0-9a-f]{6}$/i.test(value || '')) return;
+  const s = stgGetSettings();
+  s.accent = 'custom';
+  s.customAccent = value;
+  try { localStorage.setItem(STG_KEY, JSON.stringify(s)); } catch(e) {}
+  stgApplyUI(s);
+}
+
+function stgSetWorkspaceStyle(style) {
+  stgSaveKey('workspaceStyle', style);
+  stgApplyUI(stgGetSettings());
+  showToast('Workspace style updated', 'ok');
+}
+
+function stgSetCornerRadius(value) {
+  stgSaveKey('cornerRadius', Math.max(4, Math.min(18, Number(value) || 10)));
+  stgApplyUI(stgGetSettings());
+}
+
+function stgSetInterfaceScale(value) {
+  stgSaveKey('interfaceScale', Math.max(90, Math.min(110, Number(value) || 100)));
+  stgApplyUI(stgGetSettings());
+}
+
 function stgSetSidebar(v) {
   stgSaveKey('sidebar', v);
   stgApplyUI(stgGetSettings());
@@ -3303,10 +3332,44 @@ function stgApplyUI(s) {
   });
 
   // ── Accent color — set data-accent on <html>, CSS handles the rest ──
-  ['lime','teal','violet','blue','coral'].forEach(a => {
+  ['lime','teal','violet','blue','coral','custom'].forEach(a => {
     document.getElementById('ac'+a[0].toUpperCase()+a.slice(1))?.classList.toggle('active', s.accent===a);
   });
   document.documentElement.setAttribute('data-accent', s.accent || 'lime');
+  if (s.accent === 'custom') {
+    const custom = /^#[0-9a-f]{6}$/i.test(s.customAccent || '') ? s.customAccent : '#c8f135';
+    document.documentElement.style.setProperty('--lime', custom);
+    document.documentElement.style.setProperty('--lime-d', custom);
+    document.documentElement.style.setProperty('--lime-p', custom + '1f');
+  } else {
+    document.documentElement.style.removeProperty('--lime');
+    document.documentElement.style.removeProperty('--lime-d');
+    document.documentElement.style.removeProperty('--lime-p');
+  }
+
+  // ── Workspace personality ──
+  const workspaceStyle = ['studio','mono','soft'].includes(s.workspaceStyle) ? s.workspaceStyle : 'studio';
+  document.documentElement.setAttribute('data-workspace-style', workspaceStyle);
+  ['studio','mono','soft'].forEach(style => {
+    document.getElementById('stgStyle'+style[0].toUpperCase()+style.slice(1))?.classList.toggle('active', workspaceStyle === style);
+  });
+
+  const radius = Math.max(4, Math.min(18, Number(s.cornerRadius) || 10));
+  const scale = Math.max(90, Math.min(110, Number(s.interfaceScale) || 100));
+  document.documentElement.style.setProperty('--rd', (radius + 4) + 'px');
+  document.documentElement.style.setProperty('--rd-s', radius + 'px');
+  document.documentElement.style.setProperty('--rd-x', Math.max(4, radius - 3) + 'px');
+  document.documentElement.style.fontSize = scale + '%';
+  const radiusInput = document.getElementById('stgCornerRadius');
+  const radiusValue = document.getElementById('stgCornerRadiusValue');
+  const scaleInput = document.getElementById('stgInterfaceScale');
+  const scaleValue = document.getElementById('stgInterfaceScaleValue');
+  const customAccent = document.getElementById('stgCustomAccent');
+  if (radiusInput) radiusInput.value = radius;
+  if (radiusValue) radiusValue.textContent = radius + ' px';
+  if (scaleInput) scaleInput.value = scale;
+  if (scaleValue) scaleValue.textContent = scale + '%';
+  if (customAccent) customAccent.value = s.customAccent || '#c8f135';
 
   // ── Sidebar ──
   document.getElementById('stgSbCompact')?.classList.toggle('active', s.sidebar==='compact');
@@ -3380,6 +3443,102 @@ function stgTab(tab) {
   if (tab === 'dataupload') { anUpdateStgIndicator(); stgUpdateStandaloneIndicator(); }
   if (tab === 'developer') devRenderPanel();
 }
+
+// ============================================================
+// PROFESSIONAL UI ENHANCEMENTS
+// ============================================================
+(function enhanceNovaInterface() {
+  function enhanceLogin() {
+    const login = document.getElementById('loginScreen');
+    const panel = login?.querySelector('.ll');
+    if (!login || !panel || login.dataset.enhanced === 'true') return;
+    login.dataset.enhanced = 'true';
+
+    panel.innerHTML = [
+      '<div class="nova-login-grid" aria-hidden="true"></div>',
+      '<div class="nova-login-rail rail-a" aria-hidden="true"></div>',
+      '<div class="nova-login-rail rail-b" aria-hidden="true"></div>',
+      '<div class="ll-logo">',
+        '<div class="ll-gem">N</div>',
+        '<div class="ll-brand">NOVA <em>Studio</em></div>',
+        '<div class="nova-login-status"><span></span> Creative workspace</div>',
+      '</div>',
+      '<div class="nova-login-stage">',
+        '<div class="nova-login-kicker">One workspace. Every idea.</div>',
+        '<div class="nova-login-wordmark" aria-label="NOVA">NOVA<span class="nova-type-caret"></span></div>',
+        '<div class="nova-login-rule"><span></span></div>',
+        '<div class="nova-login-subtitle">STUDIO / CREATIVE OPERATING SYSTEM</div>',
+      '</div>',
+      '<div class="nova-login-footer">',
+        '<div class="nova-login-chips">',
+          '<span>Certificates</span><span>Mailer</span><span>Portals</span><span>Analytics</span>',
+        '</div>',
+        '<div class="nova-login-caption">Build, manage and deliver without switching tools.</div>',
+      '</div>'
+    ].join('');
+
+    login.querySelectorAll('.fg .fi[type="password"]').forEach(function(input) {
+      if (input.parentElement?.classList.contains('nova-password-field')) return;
+      const wrap = document.createElement('div');
+      wrap.className = 'nova-password-field';
+      input.parentNode.insertBefore(wrap, input);
+      wrap.appendChild(input);
+      const toggle = document.createElement('button');
+      toggle.type = 'button';
+      toggle.className = 'nova-password-toggle';
+      toggle.setAttribute('aria-label', 'Show password');
+      toggle.textContent = 'Show';
+      toggle.addEventListener('click', function() {
+        const showing = input.type === 'text';
+        input.type = showing ? 'password' : 'text';
+        toggle.textContent = showing ? 'Show' : 'Hide';
+        toggle.setAttribute('aria-label', showing ? 'Show password' : 'Hide password');
+      });
+      wrap.appendChild(toggle);
+    });
+  }
+
+  function injectPersonalizationControls() {
+    const panel = document.getElementById('stpAppearance');
+    if (!panel || document.getElementById('novaPersonalizationCard')) return;
+    const card = document.createElement('div');
+    card.className = 'stg-card nova-personalization-card';
+    card.id = 'novaPersonalizationCard';
+    card.innerHTML = [
+      '<div class="stg-card-h">Workspace personality</div>',
+      '<div class="nova-style-picker" role="group" aria-label="Workspace style">',
+        '<button class="nova-style-option" id="stgStyleStudio" onclick="stgSetWorkspaceStyle(\'studio\')"><span class="nova-style-preview preview-studio"></span><b>Studio</b><small>Sharp and focused</small></button>',
+        '<button class="nova-style-option" id="stgStyleMono" onclick="stgSetWorkspaceStyle(\'mono\')"><span class="nova-style-preview preview-mono"></span><b>Mono</b><small>Quiet and technical</small></button>',
+        '<button class="nova-style-option" id="stgStyleSoft" onclick="stgSetWorkspaceStyle(\'soft\')"><span class="nova-style-preview preview-soft"></span><b>Soft</b><small>Calm and spacious</small></button>',
+      '</div>',
+      '<div class="stg-row">',
+        '<div class="stg-row-l"><div class="stg-row-t">Custom accent</div><div class="stg-row-s">Choose any brand color for highlights</div></div>',
+        '<div class="nova-color-control"><div class="stg-color-dot" id="acCustom" title="Custom color"></div><input id="stgCustomAccent" type="color" value="#c8f135" oninput="stgSetCustomAccent(this.value)" aria-label="Custom accent color"></div>',
+      '</div>',
+      '<div class="stg-row">',
+        '<div class="stg-row-l"><div class="stg-row-t">Corner radius</div><div class="stg-row-s">Adjust how crisp or soft surfaces feel</div></div>',
+        '<div class="nova-range-control"><input id="stgCornerRadius" type="range" min="4" max="18" value="10" oninput="stgSetCornerRadius(this.value)"><output id="stgCornerRadiusValue">10 px</output></div>',
+      '</div>',
+      '<div class="stg-row">',
+        '<div class="stg-row-l"><div class="stg-row-t">Interface scale</div><div class="stg-row-s">Make controls more compact or comfortable</div></div>',
+        '<div class="nova-range-control"><input id="stgInterfaceScale" type="range" min="90" max="110" step="5" value="100" oninput="stgSetInterfaceScale(this.value)"><output id="stgInterfaceScaleValue">100%</output></div>',
+      '</div>'
+    ].join('');
+    panel.appendChild(card);
+  }
+
+  function init() {
+    enhanceLogin();
+    injectPersonalizationControls();
+    stgApplyUI(stgGetSettings());
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init, { once: true });
+  } else {
+    init();
+  }
+})();
 
 // ── Brevo Template Defaults ──
 var BREVO_DEFAULT_SUBJECT = 'Your Certificate — {{college}}';
@@ -9351,4 +9510,3 @@ document.addEventListener('DOMContentLoaded', function(){
   // Dark/light mode: add transition to body for smooth theme switch
   document.body.style.transition = 'background .25s ease, color .25s ease';
 });
-
