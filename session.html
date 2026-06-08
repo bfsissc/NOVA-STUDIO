@@ -32,7 +32,9 @@
     }
 
     html, body {
+      width: 100%;
       height: 100%;
+      min-height: 100%;
       background: var(--bg);
       color: var(--text);
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -40,7 +42,15 @@
     }
 
     /* ── SCREENS ─────────────────────────────────────────── */
-    .screen { display:none; width:100%; height:100%; }
+    .screen {
+      display:none;
+      width:100%;
+      height:100vh;
+      height:100dvh;
+      min-height:100vh;
+      min-height:100dvh;
+      overflow:hidden;
+    }
     .screen.active { display:flex; }
 
     /* ── LOADING SCREEN ──────────────────────────────────── */
@@ -248,7 +258,10 @@
     /* ── ROOM SCREEN ─────────────────────────────────────── */
     #screenRoom {
       flex-direction: column;
-      height: 100%;
+      height: 100vh;
+      height: 100dvh;
+      min-height: 100vh;
+      min-height: 100dvh;
       background: #070c1a;
     }
 
@@ -315,10 +328,12 @@
       flex: 1;
       display: grid;
       grid-template-columns: repeat(1, 1fr);
+      grid-auto-rows: minmax(0, 1fr);
       gap: 4px;
       padding: 8px;
       overflow: hidden;
       min-height: 0;
+      min-width: 0;
     }
     .video-tile {
       position: relative;
@@ -326,10 +341,13 @@
       overflow: hidden;
       background: #111827;
       border: 1px solid var(--border);
+      min-width: 0;
+      min-height: 0;
     }
     .video-tile video {
       width: 100%; height: 100%;
-      object-fit: cover; display: block;
+      object-fit: contain; display: block;
+      background: #05070d;
     }
     .tile-label {
       position: absolute;
@@ -382,7 +400,7 @@
     }
     .chat-panel.open { display:flex; }
     .room-body {
-      display:flex; flex:1; min-height:0; overflow:hidden;
+      position:relative; display:flex; flex:1; min-height:0; min-width:0; overflow:hidden;
     }
     .chat-head {
       padding: 14px 16px;
@@ -505,6 +523,12 @@
     @media (max-width:600px) {
       .join-card, .lobby-card { padding:32px 24px; }
       .room-bar-session { max-width:100px; }
+      .room-bar { padding:10px 12px; align-items:flex-start; }
+      .room-bar-left, .room-bar-right { flex-wrap:wrap; }
+      .room-bar-code { display:none; }
+      .video-area { grid-template-columns:1fr !important; }
+      .chat-panel { position:absolute; inset:52px 0 74px auto; width:min(88vw, 320px); z-index:20; }
+      .room-controls { padding:10px 8px; gap:6px; }
       .ctrl-btn { padding:8px 12px; min-width:56px; font-size:.65rem; }
     }
   </style>
@@ -687,6 +711,7 @@ const S = (function() {
 
   let _peersUnsub = null;
   let _chatUnsub  = null;
+  let _roomUnsub  = null;
 
   // Lobby cam state
   let _lobbyCamOn = true;
@@ -742,6 +767,7 @@ const S = (function() {
       if (!snap.exists) { _err('Session Not Found', 'This session link is invalid or has expired.'); return; }
       _roomData = snap.data();
       if (_roomData.status !== 'live') { _err('Session Ended', 'This session has already ended. Ask the host to start a new one.'); return; }
+      if (_roomData.hostActive === false) { _err('Session Not Live', 'This session is not live right now. Ask the host for a fresh invite link.'); return; }
     } catch(e) {
       _err('Connection Error', 'Could not reach the session. Check your internet connection and try again.');
       return;
@@ -858,6 +884,7 @@ const S = (function() {
 
     _show('screenRoom');
     _setupRoomUI();
+    _listenRoomStatus();
     await _startMedia();
     _setupPeer();
     _listenPeers();
@@ -865,6 +892,27 @@ const S = (function() {
   }
 
   // ── Room UI ───────────────────────────────────────────────────────────────
+  function _listenRoomStatus() {
+    if (_roomUnsub) { _roomUnsub(); _roomUnsub = null; }
+    if (!_roomId) return;
+    _roomUnsub = _roomRef(_roomId).onSnapshot(snap => {
+      if (!snap.exists) {
+        _cleanup();
+        _el('errTitle').textContent = 'Session unavailable';
+        _el('errMsg').textContent = 'This session is no longer available.';
+        _show('screenError');
+        return;
+      }
+      const data = snap.data() || {};
+      if (data.status && data.status !== 'live') {
+        _cleanup();
+        _el('errTitle').textContent = 'Session ended';
+        _el('errMsg').textContent = 'The host has ended this session.';
+        _show('screenError');
+      }
+    }, () => {});
+  }
+
   function _setupRoomUI() {
     _el('barTitle').textContent = _roomData.title || 'Live Session';
     _el('barCode').textContent = 'Code: ' + _roomId;
@@ -929,6 +977,9 @@ const S = (function() {
         name: _myName, role: _myRole, joinedAt: _ts(), active: true,
         micOn: _micOn, camOn: _camOn, handRaised: false
       });
+      if (_myRole === 'host') {
+        _roomRef(_roomId).update({ status: 'live', hostActive: true, hostPeerId: id }).catch(()=>{});
+      }
       _peer.on('call', call => {
         call.answer(_localStream);
         call.on('stream', stream => {
@@ -1180,6 +1231,11 @@ const S = (function() {
 
   // ── Leave / End ───────────────────────────────────────────────────────────
   async function leaveSession() {
+    const isHost = _myRole === 'host';
+    const roomId = _roomId;
+    if (isHost && roomId) {
+      await _roomRef(roomId).update({ status: 'ended', endedAt: _ts(), hostActive: false }).catch(()=>{});
+    }
     _cleanup();
     // Redirect back to a neutral "session ended" page
     _el('barTitle').textContent = '';
@@ -1191,7 +1247,7 @@ const S = (function() {
   async function endSession() {
     if (!confirm('End this session for all participants?')) return;
     try {
-      await _roomRef(_roomId).update({ status: 'ended' });
+      await _roomRef(_roomId).update({ status: 'ended', endedAt: _ts(), hostActive: false });
       _cleanup();
       _el('errTitle').textContent = 'Session ended';
       _el('errMsg').textContent   = 'You ended the session. This window can be closed.';
@@ -1200,12 +1256,20 @@ const S = (function() {
   }
 
   function _cleanup() {
+    closeInvite();
     if (_localStream)  { _localStream.getTracks().forEach(t=>t.stop());  _localStream=null;  }
     if (_screenStream) { _screenStream.getTracks().forEach(t=>t.stop()); _screenStream=null; }
-    if (_myPeerId) _peersRef(_roomId).doc(_myPeerId).update({ active: false }).catch(()=>{});
+    if (_myPeerId && _roomId) _peersRef(_roomId).doc(_myPeerId).update({ active: false }).catch(()=>{});
+    if (_myRole === 'host' && _roomId) _roomRef(_roomId).update({ hostActive: false }).catch(()=>{});
     if (_peer) { try { _peer.destroy(); } catch(e){} _peer=null; }
+    if (_roomUnsub)  { _roomUnsub();  _roomUnsub=null;  }
     if (_peersUnsub) { _peersUnsub(); _peersUnsub=null; }
     if (_chatUnsub)  { _chatUnsub();  _chatUnsub=null;  }
+    _myPeerId = null;
+    _peers = {};
+    _isScreen = false;
+    _chatOpen = false;
+    _unread = 0;
   }
 
   // ── Init ──────────────────────────────────────────────────────────────────
@@ -1215,7 +1279,14 @@ const S = (function() {
   });
 
   window.addEventListener('DOMContentLoaded', _boot);
-  window.addEventListener('beforeunload', () => { try { _cleanup(); } catch(e){} });
+  window.addEventListener('beforeunload', () => {
+    try {
+      if (_myRole === 'host' && _roomId) {
+        _roomRef(_roomId).update({ status: 'ended', endedAt: _ts(), hostActive: false }).catch(()=>{});
+      }
+      _cleanup();
+    } catch(e){}
+  });
 
   return {
     googleSignIn,
