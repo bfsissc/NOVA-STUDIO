@@ -2411,6 +2411,7 @@ body:has(#loginScreen:not(.out)) #nova-ai-panel {
   .nova-login-wordmark { font-size: clamp(4rem, 8vw, 6.8rem); }
 }
 
+<<<<<<< HEAD
 /* ================================================================
    PRIVATE DEVELOPER CONTROL CENTER
    ================================================================ */
@@ -2671,6 +2672,8 @@ body.nova-dev-control-open { overflow: hidden !important; }
   .nova-dev-page-tools select { max-width: 120px; }
 }
 
+=======
+>>>>>>> 9d8ab948981de88d0b7afc660c0c84fa76543876
 /* ── Animated badges/chips: tiny elements re-composited often ── */
 .ml-badge, .vfy-row-badge, .badge-match, .badge-miss,
 .sk-chip, .wb-master-tag, .sync-room-badge,
