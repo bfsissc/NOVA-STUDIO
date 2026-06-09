@@ -1010,6 +1010,119 @@
         background: #22c55e !important;
         border: 2px solid #fff !important;
       }
+
+      /* ── Tab bar ── */
+      #nova-ai-panel .nai-tabs {
+        display: flex !important;
+        gap: 0 !important;
+        padding: 0 14px !important;
+        border-bottom: 1px solid rgba(0,0,0,.06) !important;
+        flex-shrink: 0 !important;
+        background: var(--card, #fff) !important;
+      }
+      #nova-ai-panel .nai-tab {
+        flex: 1 !important;
+        border: none !important;
+        background: none !important;
+        padding: 9px 6px !important;
+        font-family: inherit !important;
+        font-size: .72rem !important;
+        font-weight: 600 !important;
+        color: var(--mist, #8b94a3) !important;
+        cursor: pointer !important;
+        border-bottom: 2.5px solid transparent !important;
+        margin-bottom: -1px !important;
+        transition: color .15s, border-color .15s !important;
+      }
+      #nova-ai-panel .nai-tab.active {
+        color: var(--lime-d, #9ec000) !important;
+        border-bottom-color: var(--lime-d, #9ec000) !important;
+      }
+      #nova-ai-panel .nai-tab:hover:not(.active) {
+        color: var(--ink, #0d0f12) !important;
+      }
+
+      /* ── Features panel ── */
+      #nova-ai-panel .nai-features-panel {
+        flex: 1 !important;
+        overflow-y: auto !important;
+        min-height: 0 !important;
+      }
+      #nova-ai-panel .nai-feat-header {
+        padding: 14px 16px 8px !important;
+        border-bottom: 1px solid rgba(0,0,0,.05) !important;
+      }
+      #nova-ai-panel .nai-feat-title {
+        font-size: .85rem !important;
+        font-weight: 700 !important;
+        color: var(--ink, #0d0f12) !important;
+      }
+      #nova-ai-panel .nai-feat-sub {
+        font-size: .68rem !important;
+        color: var(--mist, #8b94a3) !important;
+        margin-top: 2px !important;
+      }
+      #nova-ai-panel .nai-feat-list {
+        padding: 6px 8px 12px !important;
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 2px !important;
+      }
+      #nova-ai-panel .nai-feat-item {
+        display: flex !important;
+        align-items: center !important;
+        gap: 10px !important;
+        padding: 10px 10px !important;
+        border-radius: 12px !important;
+        border: none !important;
+        background: none !important;
+        cursor: pointer !important;
+        text-align: left !important;
+        width: 100% !important;
+        font-family: inherit !important;
+        transition: background .15s !important;
+        color: var(--ink, #0d0f12) !important;
+      }
+      #nova-ai-panel .nai-feat-item:hover {
+        background: var(--surface, rgba(0,0,0,.04)) !important;
+      }
+      #nova-ai-panel .nai-feat-icon {
+        font-size: 1.1rem !important;
+        width: 28px !important;
+        text-align: center !important;
+        flex-shrink: 0 !important;
+      }
+      #nova-ai-panel .nai-feat-info {
+        flex: 1 !important;
+        min-width: 0 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 1px !important;
+      }
+      #nova-ai-panel .nai-feat-name {
+        font-size: .78rem !important;
+        font-weight: 700 !important;
+        color: var(--ink, #0d0f12) !important;
+        display: block !important;
+      }
+      #nova-ai-panel .nai-feat-desc {
+        font-size: .65rem !important;
+        color: var(--mist, #8b94a3) !important;
+        display: block !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+      }
+      #nova-ai-panel .nai-feat-arrow {
+        font-size: .75rem !important;
+        color: var(--mist, #8b94a3) !important;
+        flex-shrink: 0 !important;
+        transition: transform .15s, color .15s !important;
+      }
+      #nova-ai-panel .nai-feat-item:hover .nai-feat-arrow {
+        transform: translateX(3px) !important;
+        color: var(--lime-d, #9ec000) !important;
+      }
     `;
     document.head.appendChild(style);
   }
@@ -1037,11 +1150,16 @@
           <button class="nai-close" id="naiClose" title="Close">✕</button>
         </div>
       </div>
+      <div class="nai-tabs" id="naiTabs">
+        <button class="nai-tab active" id="naiTabChat" data-tab="chat">💬 Chat</button>
+        <button class="nai-tab" id="naiTabFeatures" data-tab="features">✦ Features</button>
+      </div>
       <div class="nai-scan-bar" id="naiScanBar">
         <div class="nai-scan-bar-dot"></div>
         <span id="naiScanBarText">Scanning project files…</span>
       </div>
       <div class="nai-messages" id="naiMessages"></div>
+      <div class="nai-features-panel" id="naiFeaturesPanel" style="display:none"></div>
       <div class="nai-suggestions" id="naiSuggestions"></div>
       <div class="nai-input-row">
         <textarea class="nai-input" id="naiInput" placeholder="Ask anything about NOVA…" rows="1"></textarea>
@@ -1056,6 +1174,10 @@
     document.getElementById('naiSend').addEventListener('click', handleSend);
     document.getElementById('naiScanBtn').addEventListener('click', triggerScan);
 
+    // Tab switching
+    document.getElementById('naiTabChat').addEventListener('click', function () { switchTab('chat'); });
+    document.getElementById('naiTabFeatures').addEventListener('click', function () { switchTab('features'); buildFeaturesPanel(); });
+
     const inp = document.getElementById('naiInput');
     inp.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }
@@ -1068,6 +1190,99 @@
     renderSuggestions(INITIAL_SUGGESTIONS);
     _initDrag(panel, document.getElementById('naiDragHandle'));
     _initFabDrag(fab, panel);
+  }
+
+  // ── Tab switching ────────────────────────────────────────────────────────
+  function switchTab(tab) {
+    const chat     = document.getElementById('naiMessages');
+    const features = document.getElementById('naiFeaturesPanel');
+    const sugg     = document.getElementById('naiSuggestions');
+    const inputRow = document.querySelector('#nova-ai-panel .nai-input-row');
+    const tabChat  = document.getElementById('naiTabChat');
+    const tabFeat  = document.getElementById('naiTabFeatures');
+
+    if (tab === 'chat') {
+      if (chat)     chat.style.display     = '';
+      if (features) features.style.display = 'none';
+      if (sugg)     sugg.style.display     = '';
+      if (inputRow) inputRow.style.display = '';
+      tabChat.classList.add('active');
+      tabFeat.classList.remove('active');
+    } else {
+      if (chat)     chat.style.display     = 'none';
+      if (features) features.style.display = '';
+      if (sugg)     sugg.style.display     = 'none';
+      if (inputRow) inputRow.style.display = 'none';
+      tabChat.classList.remove('active');
+      tabFeat.classList.add('active');
+    }
+  }
+
+  // ── Features panel ───────────────────────────────────────────────────────
+  const FEATURE_LIST = [
+    { key: 'cert',      icon: '🎓', name: 'Certificate Maker',   desc: 'Design & bulk-export certificates' },
+    { key: 'mailer',    icon: '📧', name: 'Certificate Mailer',  desc: 'Send certs via email (Brevo)' },
+    { key: 'portal',    icon: '🏫', name: 'College Portal',      desc: 'Shareable data portals' },
+    { key: 'sync',      icon: '🔄', name: 'Data Sync',           desc: 'Real-time collaborative workspace' },
+    { key: 'teams',     icon: '👥', name: 'My Teams',            desc: 'Role-based team management' },
+    { key: 'followup',  icon: '📂', name: 'Followup Tracker',    desc: 'Track college data status' },
+    { key: 'tp',        icon: '🤝', name: 'Training Partners',   desc: 'Browse & apply to partnerships' },
+    { key: 'imgcomp',   icon: '🖼️', name: 'Image Resizer',       desc: 'Compress & resize images in bulk' },
+    { key: 'imgedit',   icon: '🎨', name: 'Image Editor',        desc: 'Crop, filter & overlay images' },
+    { key: 'fileconv',  icon: '🔄', name: 'File Converter',      desc: 'Convert between file formats' },
+    { key: 'drafts',    icon: '✉️',  name: 'Draft Proposals',     desc: 'Write & manage proposals' },
+    { key: 'analytics', icon: '📊', name: 'Analytics',           desc: 'Charts & KPIs from your data' },
+    { key: 'settings',  icon: '⚙️', name: 'Settings',            desc: 'Appearance, integrations & more' },
+  ];
+
+  let _featuresBuilt = false;
+
+  function buildFeaturesPanel() {
+    if (_featuresBuilt) return;
+    _featuresBuilt = true;
+    const panel = document.getElementById('naiFeaturesPanel');
+    if (!panel) return;
+
+    panel.innerHTML = `
+      <div class="nai-feat-header">
+        <div class="nai-feat-title">All Features</div>
+        <div class="nai-feat-sub">Click any feature for a guided walkthrough</div>
+      </div>
+      <div class="nai-feat-list" id="naiFeatList"></div>`;
+
+    const list = document.getElementById('naiFeatList');
+    FEATURE_LIST.forEach(function (feat) {
+      const item = document.createElement('button');
+      item.className = 'nai-feat-item';
+      item.innerHTML = `
+        <span class="nai-feat-icon">${feat.icon}</span>
+        <span class="nai-feat-info">
+          <span class="nai-feat-name">${feat.name}</span>
+          <span class="nai-feat-desc">${feat.desc}</span>
+        </span>
+        <span class="nai-feat-arrow">→</span>`;
+      item.addEventListener('click', function () {
+        // Switch to chat tab and inject how-to
+        switchTab('chat');
+        triggerFeatureHelp(feat.key, feat.name);
+      });
+      list.appendChild(item);
+    });
+  }
+
+  function triggerFeatureHelp(moduleKey, moduleName) {
+    // Send the how-to as a user message (populates chat)
+    const inp = document.getElementById('naiInput');
+    if (inp) {
+      inp.value = 'How do I use ' + moduleName + '?';
+      handleSend();
+    }
+    // Also start the visual spotlight tour
+    setTimeout(function () {
+      if (window.NovaTour && typeof window.NovaTour.startModule === 'function') {
+        window.NovaTour.startModule(moduleKey);
+      }
+    }, 600);
   }
 
   // ── Scan trigger from button ─────────────────────────────────────────────
