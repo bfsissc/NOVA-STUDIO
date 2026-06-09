@@ -4498,7 +4498,7 @@ function devShowLockDialog(label, key) {
 
 // ══════════════════════════════════════════════════════════════
 //  PRIVATE NOVA DEVELOPER CONTROL CENTER
-//  Open with Ctrl + Shift + Alt + D
+//  Open / Close with Ctrl + Shift + Alt + D
 // ══════════════════════════════════════════════════════════════
 (function novaDeveloperControlCenter() {
   var DEV_ID_HASH = '8d1cfb8ddcb916235d00ea11fc2bcfb71e0b3ad27fddba4ff7a0e0cad7cd64e5';
@@ -4523,6 +4523,7 @@ function devShowLockDialog(label, key) {
     ['verify.html', 'Verify']
   ];
 
+  // ── Utilities ─────────────────────────────────────────────────
   function devControlHash(value) {
     return crypto.subtle.digest('SHA-256', new TextEncoder().encode(value)).then(function(buf) {
       return Array.from(new Uint8Array(buf)).map(function(b){ return b.toString(16).padStart(2, '0'); }).join('');
@@ -4538,85 +4539,55 @@ function devShowLockDialog(label, key) {
   }
 
   function devControlPageKey(pathname) {
-    var name = (pathname || window.location.pathname).split('/').pop() || 'index.html';
-    return name.toLowerCase();
+    var p = pathname || window.location.pathname;
+    return p.replace(/^.*\//, '') || 'index.html';
   }
 
   function devControlCssEscape(value) {
-    if (window.CSS && CSS.escape) return CSS.escape(value);
-    return String(value).replace(/([^a-zA-Z0-9_-])/g, '\\$1');
+    return value.replace(/([!"#$%&'()*+,.\/:;<=>?@[\\\]^`{|}~])/g, '\\$1');
   }
 
   function devControlSelector(el) {
-    if (!el || el.nodeType !== 1) return '';
     if (el.id) return '#' + devControlCssEscape(el.id);
-    var parts = [];
+    var parts = [el.tagName.toLowerCase() + (el.className ? '.' + Array.from(el.classList).join('.') : '')];
     var node = el;
-    while (node && node.nodeType === 1 && node !== document.body) {
-      if (node.id) {
-        parts.unshift('#' + devControlCssEscape(node.id));
-        break;
-      }
-      var part = node.tagName.toLowerCase();
-      var parent = node.parentElement;
-      if (parent) {
-        var same = Array.from(parent.children).filter(function(child){ return child.tagName === node.tagName; });
-        if (same.length > 1) part += ':nth-of-type(' + (same.indexOf(node) + 1) + ')';
-      }
-      parts.unshift(part);
-      node = parent;
+    while (node.parentElement && node.parentElement !== node.ownerDocument.body) {
+      node = node.parentElement;
+      if (node.id) { parts.unshift('#' + devControlCssEscape(node.id)); break; }
     }
     return parts.join(' > ');
   }
 
   function devControlApplyRule(el, rule) {
     if (!el || !rule) return;
-    el.dataset.novaDevEdited = 'true';
-    if (rule.hidden) el.style.setProperty('display', 'none', 'important');
-    if (Number.isFinite(Number(rule.x)) || Number.isFinite(Number(rule.y))) {
-      el.style.translate = (Number(rule.x) || 0) + 'px ' + (Number(rule.y) || 0) + 'px';
-    }
-    if (rule.width) el.style.setProperty('width', rule.width, 'important');
-    if (rule.height) el.style.setProperty('height', rule.height, 'important');
-    if (rule.opacity !== undefined && rule.opacity !== '') el.style.opacity = String(rule.opacity);
-    if (rule.zIndex !== undefined && rule.zIndex !== '') el.style.zIndex = String(rule.zIndex);
-    if (rule.text !== undefined && el.children.length === 0) el.textContent = rule.text;
-    if (rule.css) {
-      rule.css.split(';').forEach(function(declaration) {
-        var split = declaration.indexOf(':');
-        if (split < 1) return;
-        var prop = declaration.slice(0, split).trim();
-        var value = declaration.slice(split + 1).trim();
-        if (prop && value) el.style.setProperty(prop, value);
-      });
-    }
+    if (rule.hidden) { el.style.visibility = 'hidden'; return; }
+    if (rule.hidden === false) el.style.visibility = '';
+    if (rule.x != null) el.style.left = rule.x + 'px';
+    if (rule.y != null) el.style.top = rule.y + 'px';
+    if (rule.w != null) el.style.width = rule.w;
+    if (rule.h != null) el.style.height = rule.h;
+    if (rule.opacity != null) el.style.opacity = rule.opacity;
+    if (rule.z != null) el.style.zIndex = rule.z;
+    if (rule.text != null && el.childElementCount === 0) el.textContent = rule.text;
+    if (rule.css) { rule.css.split(';').forEach(function(decl) { var kv = decl.split(':'); if (kv.length === 2) { try { el.style[kv[0].trim()] = kv[1].trim(); } catch(e){} } }); }
   }
 
   function devControlApplyOverrides(doc, pageKey) {
     var rules = (devControlReadOverrides()[pageKey] || {});
     Object.keys(rules).forEach(function(selector) {
-      try {
-        doc.querySelectorAll(selector).forEach(function(el){ devControlApplyRule(el, rules[selector]); });
-      } catch(e) {}
+      doc.querySelectorAll(selector).forEach(function(el){ devControlApplyRule(el, rules[selector]); });
     });
   }
 
   function devControlRemoveLegacyPanels(doc) {
-    doc.querySelectorAll('#stnDeveloper, #stpDeveloper').forEach(function(el){ el.remove(); });
+    doc.querySelectorAll('[id^="novaDevControl"]:not(#novaDevControl)').forEach(function(el){ el.remove(); });
   }
 
   function devControlInitPreview() {
-    document.documentElement.classList.add('nova-dev-preview-document');
     devControlRemoveLegacyPanels(document);
-    var login = document.getElementById('loginScreen');
-    var app = document.getElementById('app');
-    if (login) login.classList.add('out');
-    if (app) app.classList.add('visible');
     devControlApplyOverrides(document, devControlPageKey());
-    window.addEventListener('load', function() {
-      if (login) login.classList.add('out');
-      if (app) app.classList.add('visible');
-      devControlApplyOverrides(document, devControlPageKey());
+    window.addEventListener('message', function(e) {
+      if (e.data && e.data.type === 'nova-dev-override') devControlApplyOverrides(document, devControlPageKey());
     });
   }
 
@@ -4624,6 +4595,7 @@ function devShowLockDialog(label, key) {
     try { return sessionStorage.getItem(DEV_SESSION_KEY) === 'active'; } catch(e) { return false; }
   }
 
+  // ── Shell HTML ────────────────────────────────────────────────
   function devControlShell() {
     var existing = document.getElementById('novaDevControl');
     if (existing) return existing;
@@ -4632,6 +4604,7 @@ function devShowLockDialog(label, key) {
     shell.className = 'nova-dev-control';
     shell.setAttribute('aria-hidden', 'true');
     shell.innerHTML =
+      // ── Login screen ──
       '<div class="nova-dev-login" id="novaDevLogin">' +
         '<div class="nova-dev-login-box">' +
           '<div class="nova-dev-login-mark">N</div>' +
@@ -4643,59 +4616,269 @@ function devShowLockDialog(label, key) {
           '<button type="button" class="nova-dev-login-cancel" id="novaDevCancelBtn">Cancel</button>' +
         '</div>' +
       '</div>' +
+      // ── Workspace ──
       '<div class="nova-dev-workspace" id="novaDevWorkspace">' +
         '<header class="nova-dev-header">' +
-          '<div class="nova-dev-brand"><span>N</span><div><b>Developer Control</b><small>Live UI inspector</small></div></div>' +
+          '<div class="nova-dev-brand"><span>N</span><div><b>Developer Control Center</b><small>Ctrl+Shift+Alt+D to toggle</small></div></div>' +
+          '<nav class="nova-dev-tabs" id="novaDevTabs">' +
+            '<button type="button" class="nova-dev-tab active" data-tab="inspector">🔍 UI Inspector</button>' +
+            '<button type="button" class="nova-dev-tab" data-tab="locks">🔒 Function Locks</button>' +
+            '<button type="button" class="nova-dev-tab" data-tab="directives">🎯 AI Directives</button>' +
+            '<button type="button" class="nova-dev-tab" data-tab="info">⚙️ System</button>' +
+          '</nav>' +
           '<div class="nova-dev-page-tools">' +
-            '<select id="novaDevPageSelect" aria-label="Preview page"></select>' +
-            '<button type="button" id="novaDevReloadBtn" title="Reload preview">↻</button>' +
-            '<button type="button" id="novaDevLogoutBtn">Lock</button>' +
-            '<button type="button" id="novaDevCloseBtn" title="Close">×</button>' +
+            '<button type="button" id="novaDevLogoutBtn" title="Lock session">🔒 Lock</button>' +
+            '<button type="button" id="novaDevCloseBtn" title="Close (Esc)">×</button>' +
           '</div>' +
         '</header>' +
-        '<div class="nova-dev-main">' +
-          '<aside class="nova-dev-sidebar">' +
-            '<div class="nova-dev-sidebar-head"><b>Element inspector</b><small>Click any item in the live page</small></div>' +
-            '<div class="nova-dev-empty" id="novaDevEmpty">Select an element in the preview to edit it.</div>' +
-            '<div class="nova-dev-inspector" id="novaDevInspector">' +
-              '<div class="nova-dev-element-name" id="novaDevElementName"></div>' +
-              '<code id="novaDevSelector"></code>' +
-              '<div class="nova-dev-field-grid">' +
-                '<label>X position<input id="novaDevX" type="number" step="1"></label>' +
-                '<label>Y position<input id="novaDevY" type="number" step="1"></label>' +
-                '<label>Width<input id="novaDevWidth" placeholder="auto / 320px"></label>' +
-                '<label>Height<input id="novaDevHeight" placeholder="auto / 48px"></label>' +
-                '<label>Opacity<input id="novaDevOpacity" type="number" min="0" max="1" step=".05"></label>' +
-                '<label>Z-index<input id="novaDevZ" type="number" step="1"></label>' +
+
+        // ── Tab: UI Inspector ──
+        '<div class="nova-dev-tab-panel active" id="novaDevTab-inspector">' +
+          '<div class="nova-dev-main">' +
+            '<aside class="nova-dev-sidebar">' +
+              '<div class="nova-dev-sidebar-head">' +
+                '<div style="display:flex;align-items:center;justify-content:space-between">' +
+                  '<div><b>Element inspector</b><small>Click any element in the live page</small></div>' +
+                  '<div style="display:flex;gap:6px;align-items:center">' +
+                    '<select id="novaDevPageSelect" aria-label="Preview page" style="font-size:.65rem;padding:4px 8px;border-radius:6px;border:1px solid #2d312e;background:#171a18;color:#dce0dd;height:28px"></select>' +
+                    '<button type="button" id="novaDevReloadBtn" title="Reload preview" style="width:28px;height:28px;padding:0;border-radius:6px;border:1px solid #2d312e;background:#171a18;color:#dce0dd;font-size:.9rem">↻</button>' +
+                  '</div>' +
+                '</div>' +
               '</div>' +
-              '<label class="nova-dev-wide-field">Text<input id="novaDevText" type="text"></label>' +
-              '<label class="nova-dev-wide-field">Custom CSS<textarea id="novaDevCss" rows="5" placeholder="color: #fff; font-size: 14px;"></textarea></label>' +
-              '<div class="nova-dev-actions">' +
-                '<button type="button" id="novaDevApplyBtn" class="primary">Apply</button>' +
-                '<button type="button" id="novaDevHideBtn">Hide</button>' +
-                '<button type="button" id="novaDevResetBtn">Reset element</button>' +
+              '<div class="nova-dev-empty" id="novaDevEmpty">Select an element in the preview to edit it.</div>' +
+              '<div class="nova-dev-inspector" id="novaDevInspector">' +
+                '<div class="nova-dev-element-name" id="novaDevElementName"></div>' +
+                '<code id="novaDevSelector"></code>' +
+                '<div class="nova-dev-field-grid">' +
+                  '<label>X position<input id="novaDevX" type="number" step="1"></label>' +
+                  '<label>Y position<input id="novaDevY" type="number" step="1"></label>' +
+                  '<label>Width<input id="novaDevWidth" placeholder="auto / 320px"></label>' +
+                  '<label>Height<input id="novaDevHeight" placeholder="auto / 48px"></label>' +
+                  '<label>Opacity<input id="novaDevOpacity" type="number" min="0" max="1" step=".05"></label>' +
+                  '<label>Z-index<input id="novaDevZ" type="number" step="1"></label>' +
+                '</div>' +
+                '<label class="nova-dev-wide-field">Text<input id="novaDevText" type="text"></label>' +
+                '<label class="nova-dev-wide-field">Custom CSS<textarea id="novaDevCss" rows="5" placeholder="color: #fff; font-size: 14px;"></textarea></label>' +
+                '<div class="nova-dev-actions">' +
+                  '<button type="button" id="novaDevApplyBtn" class="primary">Apply</button>' +
+                  '<button type="button" id="novaDevHideBtn">Hide</button>' +
+                  '<button type="button" id="novaDevResetBtn">Reset element</button>' +
+                '</div>' +
+                '<div class="nova-dev-drag-note">Drag the selected element directly in the preview for precise placement.</div>' +
               '</div>' +
-              '<div class="nova-dev-drag-note">Drag the selected element directly in the preview for precise placement.</div>' +
-            '</div>' +
-            '<div class="nova-dev-changes">' +
-              '<div class="nova-dev-changes-head"><b>Saved changes</b><button type="button" id="novaDevResetPageBtn">Reset page</button></div>' +
-              '<div id="novaDevChangesList"></div>' +
-            '</div>' +
-          '</aside>' +
-          '<main class="nova-dev-canvas"><div class="nova-dev-canvas-bar"><span class="live-dot"></span> Live full-page preview <small id="novaDevPageLabel"></small></div><iframe id="novaDevFrame" title="NOVA live UI editor"></iframe></main>' +
+              '<div class="nova-dev-changes">' +
+                '<div class="nova-dev-changes-head"><b>Saved changes</b><button type="button" id="novaDevResetPageBtn">Reset page</button></div>' +
+                '<div id="novaDevChangesList"></div>' +
+              '</div>' +
+            '</aside>' +
+            '<main class="nova-dev-canvas">' +
+              '<div class="nova-dev-canvas-bar"><span class="live-dot"></span> Live full-page preview <small id="novaDevPageLabel"></small></div>' +
+              '<iframe id="novaDevFrame" title="NOVA live UI editor"></iframe>' +
+            '</main>' +
+          '</div>' +
         '</div>' +
-      '</div>';
+
+        // ── Tab: Function Locks ──
+        '<div class="nova-dev-tab-panel" id="novaDevTab-locks">' +
+          '<div class="nova-dev-tools-scroll">' +
+
+            // Password card
+            '<div class="ndcp-card">' +
+              '<div class="ndcp-card-header">' +
+                '<div style="display:flex;align-items:center;gap:10px">' +
+                  '<div class="ndcp-icon-box">🔑</div>' +
+                  '<div><div class="ndcp-card-title">Developer Password</div><div class="ndcp-card-sub">Protects all lock & focus operations</div></div>' +
+                '</div>' +
+                '<div id="ndcpPwdBadge" class="ndcp-badge ndcp-badge-red">NOT SET</div>' +
+              '</div>' +
+              '<div id="ndcpPwdNotSet">' +
+                '<div class="ndcp-hint">Set a master password to protect your locked functions. Stored as a secure SHA-256 hash — never plain text.</div>' +
+                '<div class="ndcp-field-row">' +
+                  '<div class="ndcp-field"><div class="ndcp-label">New Password <span style="font-weight:400;opacity:.6">(min 6 chars)</span></div>' +
+                    '<input class="ndcp-input" id="ndcpPwdNew" type="password" placeholder="Enter password…" oninput="ndcpPwdStrength(this.value)">' +
+                    '<div id="ndcpStrengthBar" style="height:3px;border-radius:2px;margin-top:5px;background:#1e2220;overflow:hidden"><div id="ndcpStrengthFill" style="height:100%;width:0%;border-radius:2px;transition:width .3s,background .3s"></div></div>' +
+                    '<div id="ndcpStrengthLabel" style="font-size:.6rem;color:#6f7571;margin-top:3px"></div>' +
+                  '</div>' +
+                  '<div class="ndcp-field"><div class="ndcp-label">Confirm Password</div>' +
+                    '<input class="ndcp-input" id="ndcpPwdConfirm" type="password" placeholder="Repeat password…" onkeydown="if(event.key===\'Enter\')ndcpSetPassword()">' +
+                  '</div>' +
+                '</div>' +
+                '<button class="ndcp-btn-primary" onclick="ndcpSetPassword()">🔑 Set Developer Password</button>' +
+              '</div>' +
+              '<div id="ndcpPwdIsSet" style="display:none">' +
+                '<div class="ndcp-success-row">' +
+                  '<span style="font-size:1.1rem">✅</span>' +
+                  '<div><div style="font-size:.78rem;font-weight:800;color:#15803d">Password is set</div><div style="font-size:.65rem;color:#166534;margin-top:1px">Your functions are protected</div></div>' +
+                  '<div style="margin-left:auto;font-family:\'DM Mono\',monospace;font-size:.6rem;color:#6f7571" id="ndcpPwdHashPreview">sha256:••••••••</div>' +
+                '</div>' +
+                '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">' +
+                  '<button class="ndcp-btn-ghost" onclick="ndcpShowChangePwd()">🔄 Change Password</button>' +
+                  '<button class="ndcp-btn-danger" onclick="ndcpRemovePassword()">🗑 Remove Password</button>' +
+                '</div>' +
+                '<div id="ndcpChangePwdForm" style="display:none;margin-top:12px;padding:12px;background:#0e100f;border-radius:9px;border:1px solid #252826">' +
+                  '<div style="font-size:.73rem;font-weight:700;margin-bottom:8px;color:#c8f135">Change Password</div>' +
+                  '<input class="ndcp-input" id="ndcpPwdCurrent" type="password" placeholder="Current password…" style="margin-bottom:6px">' +
+                  '<input class="ndcp-input" id="ndcpPwdChange" type="password" placeholder="New password…" style="margin-bottom:6px">' +
+                  '<input class="ndcp-input" id="ndcpPwdChangeConfirm" type="password" placeholder="Confirm new password…" style="margin-bottom:8px">' +
+                  '<div style="display:flex;gap:6px">' +
+                    '<button class="ndcp-btn-primary" style="flex:1" onclick="ndcpChangePassword()">✓ Update Password</button>' +
+                    '<button class="ndcp-btn-ghost" onclick="document.getElementById(\'ndcpChangePwdForm\').style.display=\'none\'">Cancel</button>' +
+                  '</div>' +
+                '</div>' +
+              '</div>' +
+              '<div id="ndcpPwdError" class="ndcp-error" style="display:none"></div>' +
+            '</div>' +
+
+            // Function lock card
+            '<div class="ndcp-card">' +
+              '<div class="ndcp-card-header">' +
+                '<div style="display:flex;align-items:center;gap:10px">' +
+                  '<div class="ndcp-icon-box">🔒</div>' +
+                  '<div><div class="ndcp-card-title">Function Lock</div><div class="ndcp-card-sub">Prevent AI / devs from editing locked functions</div></div>' +
+                '</div>' +
+                '<div style="display:flex;gap:6px">' +
+                  '<button class="ndcp-btn-danger-sm" onclick="ndcpLockAll()">🔒 Lock All</button>' +
+                  '<button class="ndcp-btn-ghost-sm" onclick="ndcpUnlockAll()">🔓 Unlock All</button>' +
+                '</div>' +
+              '</div>' +
+              '<div class="ndcp-legend">' +
+                '<span class="ndcp-legend-item"><span class="ndcp-legend-dot" style="background:#fff5f5;border-color:#fecaca">🔒</span>Lock — blocks AI edits</span>' +
+                '<span class="ndcp-legend-item"><span class="ndcp-legend-dot" style="background:#fefce8;border-color:#fef08a">🎯</span>Max Focus — AI focuses here</span>' +
+              '</div>' +
+              '<div id="ndcpFuncList"></div>' +
+              '<div id="ndcpNoPwdWarn" class="ndcp-warn-box" style="display:none">⚠️ Set a developer password first before locking functions.</div>' +
+            '</div>' +
+
+            // Verify unlock card
+            '<div class="ndcp-card">' +
+              '<div class="ndcp-card-header">' +
+                '<div style="display:flex;align-items:center;gap:10px">' +
+                  '<div class="ndcp-icon-box">🔓</div>' +
+                  '<div><div class="ndcp-card-title">Verify & Unlock</div><div class="ndcp-card-sub">Verify password and unlock a specific function</div></div>' +
+                '</div>' +
+              '</div>' +
+              '<div class="ndcp-field-row">' +
+                '<div class="ndcp-field" style="flex:1"><div class="ndcp-label">Function</div>' +
+                  '<select class="ndcp-input" id="ndcpVerifyFunc"><option value="">— choose a function —</option></select>' +
+                '</div>' +
+                '<div class="ndcp-field" style="flex:1"><div class="ndcp-label">Developer Password</div>' +
+                  '<input class="ndcp-input" id="ndcpVerifyPwd" type="password" placeholder="Enter password…" onkeydown="if(event.key===\'Enter\')ndcpVerifyUnlock()">' +
+                '</div>' +
+              '</div>' +
+              '<button class="ndcp-btn-primary" onclick="ndcpVerifyUnlock()">🔓 Verify &amp; Unlock</button>' +
+              '<div id="ndcpVerifyResult" style="display:none;margin-top:10px;padding:9px 12px;border-radius:8px;font-size:.72rem"></div>' +
+            '</div>' +
+
+          '</div>' +
+        '</div>' +
+
+        // ── Tab: AI Directives ──
+        '<div class="nova-dev-tab-panel" id="novaDevTab-directives">' +
+          '<div class="nova-dev-tools-scroll">' +
+
+            '<div class="ndcp-card">' +
+              '<div class="ndcp-card-header">' +
+                '<div style="display:flex;align-items:center;gap:10px">' +
+                  '<div class="ndcp-icon-box">🎯</div>' +
+                  '<div><div class="ndcp-card-title">Max Focus Directive</div><div class="ndcp-card-sub">Paste this at the top of your JS file before uploading to any AI</div></div>' +
+                '</div>' +
+              '</div>' +
+              '<div class="ndcp-hint">The AI will detect this block and focus <b>only</b> on the marked functions. Copy it and paste above your code.</div>' +
+              '<div id="ndcpFocusManifest" style="background:#060707;border-radius:10px;padding:13px 15px;font-family:\'DM Mono\',monospace;font-size:.6rem;color:#fbbf24;line-height:1.8;white-space:pre;overflow-x:auto;max-height:240px;overflow-y:auto;border:1px solid #1a1e1c;margin:10px 0"></div>' +
+              '<div id="ndcpNoFocusMsg" style="font-size:.72rem;color:#6f7571;padding:14px 0">No Max Focus functions set yet. Set focus on functions in the Function Locks tab.</div>' +
+              '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
+                '<button class="ndcp-btn-lime" onclick="ndcpCopyFocusBlock()">📋 Copy Focus Directive</button>' +
+                '<button class="ndcp-btn-primary" onclick="ndcpDownloadFullDirective()">⬇ Download Full File</button>' +
+              '</div>' +
+            '</div>' +
+
+            '<div class="ndcp-card">' +
+              '<div class="ndcp-card-header">' +
+                '<div style="display:flex;align-items:center;gap:10px">' +
+                  '<div class="ndcp-icon-box">📋</div>' +
+                  '<div><div class="ndcp-card-title">Lock Manifest</div><div class="ndcp-card-sub">Embed in your source to signal locked functions to any AI reader</div></div>' +
+                '</div>' +
+              '</div>' +
+              '<div id="ndcpLockManifest" style="background:#060707;border-radius:10px;padding:13px 15px;font-family:\'DM Mono\',monospace;font-size:.6rem;color:#86efac;line-height:1.8;white-space:pre;overflow-x:auto;max-height:200px;overflow-y:auto;border:1px solid #1a1e1c;margin:10px 0"></div>' +
+              '<div id="ndcpNoLocksMsg" style="font-size:.72rem;color:#6f7571;padding:14px 0">No locked functions yet. Lock functions in the Function Locks tab first.</div>' +
+              '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
+                '<button class="ndcp-btn-ghost" onclick="ndcpCopyManifest()">📋 Copy Manifest</button>' +
+                '<button class="ndcp-btn-primary" onclick="ndcpDownloadFullDirective()">⬇ Download Full File</button>' +
+              '</div>' +
+            '</div>' +
+
+          '</div>' +
+        '</div>' +
+
+        // ── Tab: System Info ──
+        '<div class="nova-dev-tab-panel" id="novaDevTab-info">' +
+          '<div class="nova-dev-tools-scroll">' +
+
+            '<div class="ndcp-card">' +
+              '<div class="ndcp-card-header">' +
+                '<div style="display:flex;align-items:center;gap:10px">' +
+                  '<div class="ndcp-icon-box">⚙️</div>' +
+                  '<div><div class="ndcp-card-title">NOVA Studio — System Info</div><div class="ndcp-card-sub">Environment & session details</div></div>' +
+                '</div>' +
+                '<div id="ndcpMasterBadge" class="ndcp-badge ndcp-badge-red">NOT SET UP</div>' +
+              '</div>' +
+              '<div class="ndcp-info-grid" id="ndcpSysInfo"></div>' +
+            '</div>' +
+
+            '<div class="ndcp-card">' +
+              '<div class="ndcp-card-header">' +
+                '<div style="display:flex;align-items:center;gap:10px">' +
+                  '<div class="ndcp-icon-box">🗑</div>' +
+                  '<div><div class="ndcp-card-title">UI Override Management</div><div class="ndcp-card-sub">Manage saved element overrides</div></div>' +
+                '</div>' +
+              '</div>' +
+              '<div id="ndcpOverrideStats" style="font-size:.72rem;color:#9fa59f;margin-bottom:12px"></div>' +
+              '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
+                '<button class="ndcp-btn-ghost" onclick="ndcpExportOverrides()">⬇ Export Overrides</button>' +
+                '<button class="ndcp-btn-danger" onclick="ndcpClearAllOverrides()">🗑 Clear All Overrides</button>' +
+              '</div>' +
+            '</div>' +
+
+            '<div class="ndcp-card">' +
+              '<div class="ndcp-card-header">' +
+                '<div style="display:flex;align-items:center;gap:10px">' +
+                  '<div class="ndcp-icon-box">🔑</div>' +
+                  '<div><div class="ndcp-card-title">Session</div><div class="ndcp-card-sub">Current DCP session details</div></div>' +
+                '</div>' +
+              '</div>' +
+              '<div class="ndcp-info-grid">' +
+                '<div class="ndcp-info-row"><span class="ndcp-info-key">Session storage</span><span class="ndcp-info-val">Active</span></div>' +
+                '<div class="ndcp-info-row"><span class="ndcp-info-key">Shortcut</span><span class="ndcp-info-val" style="font-family:\'DM Mono\',monospace;font-size:.6rem">Ctrl+Shift+Alt+D</span></div>' +
+                '<div class="ndcp-info-row"><span class="ndcp-info-key">Close</span><span class="ndcp-info-val" style="font-family:\'DM Mono\',monospace;font-size:.6rem">Esc or × button</span></div>' +
+              '</div>' +
+              '<div style="margin-top:14px;display:flex;gap:8px">' +
+                '<button class="ndcp-btn-danger" onclick="ndcpNukeSession()">🔒 End Session &amp; Lock</button>' +
+              '</div>' +
+            '</div>' +
+
+          '</div>' +
+        '</div>' +
+
+      '</div>'; // end nova-dev-workspace
+
     document.body.appendChild(shell);
     return shell;
   }
 
+  // ── Open / Close ──────────────────────────────────────────────
   function devControlOpen() {
     var shell = devControlShell();
+    // Toggle: if already open, close it
+    if (shell.classList.contains('open')) {
+      devControlClose();
+      return;
+    }
     shell.classList.add('open');
     shell.setAttribute('aria-hidden', 'false');
     document.body.classList.add('nova-dev-control-open');
-    if (devControlIsAuthenticated()) devControlShowWorkspace();
-    else {
+    if (devControlIsAuthenticated()) {
+      devControlShowWorkspace();
+    } else {
       shell.classList.remove('authenticated');
       setTimeout(function(){ document.getElementById('novaDevId')?.focus(); }, 40);
     }
@@ -4738,6 +4921,7 @@ function devShowLockDialog(label, key) {
       if (DEV_PAGES.some(function(page){ return page[0] === current; })) select.value = current;
     }
     devControlLoadPage();
+    ndcpRenderAll();
   }
 
   function devControlLoadPage() {
@@ -4760,7 +4944,6 @@ function devShowLockDialog(label, key) {
     if (!doc) return;
     var pageKey = devControlPageKey(previewFrame.contentWindow.location.pathname);
     devControlApplyOverrides(doc, pageKey);
-    doc.documentElement.classList.add('nova-dev-editing');
     doc.addEventListener('click', devControlFrameClick, true);
     doc.addEventListener('pointerdown', devControlDragStart, true);
     doc.addEventListener('pointermove', devControlDragMove, true);
@@ -4769,184 +4952,597 @@ function devShowLockDialog(label, key) {
   }
 
   function devControlSelectable(el) {
-    if (!el || el.nodeType !== 1) return false;
+    if (!el || el === el.ownerDocument.body || el === el.ownerDocument.documentElement) return false;
     return !['HTML','BODY','SCRIPT','STYLE','LINK','META'].includes(el.tagName) && !el.closest('#novaDevControl');
   }
 
   function devControlFrameClick(event) {
     var el = event.target;
     if (!devControlSelectable(el)) return;
-    event.preventDefault();
-    event.stopPropagation();
+    event.preventDefault(); event.stopPropagation();
     devControlSelect(el);
   }
 
   function devControlSelect(el) {
-    if (selected) selected.classList.remove('nova-dev-selected-element');
     selected = el;
     selectedSelector = devControlSelector(el);
-    selected.classList.add('nova-dev-selected-element');
     devControlRenderSelection();
   }
 
   function devControlCurrentRule() {
-    var page = document.getElementById('novaDevPageSelect')?.value || 'index.html';
+    if (!selectedSelector) return {};
     var all = devControlReadOverrides();
-    return ((all[page] || {})[selectedSelector] || {});
+    var pk = devControlPageKey(previewFrame?.contentWindow?.location?.pathname);
+    return (all[pk] || {})[selectedSelector] || {};
   }
 
   function devControlRenderSelection() {
     var empty = document.getElementById('novaDevEmpty');
     var inspector = document.getElementById('novaDevInspector');
-    if (!selected || !selectedSelector) {
+    if (!selected) {
       if (empty) empty.style.display = '';
       if (inspector) inspector.style.display = 'none';
       return;
     }
     if (empty) empty.style.display = 'none';
-    if (inspector) inspector.style.display = 'block';
+    if (inspector) inspector.style.display = '';
     var rule = devControlCurrentRule();
-    var visibleClasses = Array.from(selected.classList).filter(function(c){ return c !== 'nova-dev-selected-element'; }).slice(0,2);
-    document.getElementById('novaDevElementName').textContent =
-      selected.tagName.toLowerCase() + (selected.id ? '#' + selected.id : '') + (visibleClasses.length ? '.' + visibleClasses.join('.') : '');
-    document.getElementById('novaDevSelector').textContent = selectedSelector;
-    document.getElementById('novaDevX').value = Number(rule.x) || 0;
-    document.getElementById('novaDevY').value = Number(rule.y) || 0;
-    document.getElementById('novaDevWidth').value = rule.width || '';
-    document.getElementById('novaDevHeight').value = rule.height || '';
-    document.getElementById('novaDevOpacity').value = rule.opacity === undefined ? '' : rule.opacity;
-    document.getElementById('novaDevZ').value = rule.zIndex === undefined ? '' : rule.zIndex;
-    var textInput = document.getElementById('novaDevText');
-    textInput.disabled = selected.children.length > 0;
-    textInput.value = rule.text !== undefined ? rule.text : (selected.children.length ? '' : selected.textContent.trim());
-    textInput.placeholder = selected.children.length ? 'Text editing is available on leaf elements' : 'Element text';
-    document.getElementById('novaDevCss').value = rule.css || '';
-    document.getElementById('novaDevHideBtn').textContent = rule.hidden ? 'Show' : 'Hide';
+    var cs = selected ? (previewFrame?.contentWindow?.getComputedStyle(selected)) : null;
+    var nameEl = document.getElementById('novaDevElementName');
+    var selectorEl = document.getElementById('novaDevSelector');
+    if (nameEl) nameEl.textContent = selected.tagName.toLowerCase() + (selected.id ? '#'+selected.id : '');
+    if (selectorEl) selectorEl.textContent = selectedSelector;
+    var set = function(id, val){ var el = document.getElementById(id); if(el) el.value = val ?? ''; };
+    set('novaDevX', rule.x ?? (cs ? parseInt(cs.left) || '' : ''));
+    set('novaDevY', rule.y ?? (cs ? parseInt(cs.top) || '' : ''));
+    set('novaDevWidth', rule.w ?? (cs ? cs.width : ''));
+    set('novaDevHeight', rule.h ?? (cs ? cs.height : ''));
+    set('novaDevOpacity', rule.opacity ?? (cs ? cs.opacity : ''));
+    set('novaDevZ', rule.z ?? (cs ? cs.zIndex : ''));
+    set('novaDevText', rule.text ?? (selected.childElementCount === 0 ? selected.textContent : ''));
+    set('novaDevCss', rule.css ?? '');
   }
 
   function devControlSaveSelected(patch) {
-    if (!selected || !selectedSelector) return;
-    var page = document.getElementById('novaDevPageSelect')?.value || 'index.html';
+    if (!selectedSelector) return;
     var all = devControlReadOverrides();
-    all[page] = all[page] || {};
-    all[page][selectedSelector] = Object.assign({}, all[page][selectedSelector] || {}, patch);
+    var pk = devControlPageKey(previewFrame?.contentWindow?.location?.pathname);
+    if (!all[pk]) all[pk] = {};
+    if (!all[pk][selectedSelector]) all[pk][selectedSelector] = {};
+    Object.assign(all[pk][selectedSelector], patch);
     devControlWriteOverrides(all);
-    devControlApplyRule(selected, all[page][selectedSelector]);
-    devControlRenderSelection();
+    try { previewFrame?.contentWindow?.postMessage({ type: 'nova-dev-override' }, '*'); } catch(e) {}
+    devControlApplyRule(selected, all[pk][selectedSelector]);
     devControlRenderChanges();
   }
 
   function devControlApplyForm() {
-    if (!selected) return;
-    var patch = {
-      x: Number(document.getElementById('novaDevX').value) || 0,
-      y: Number(document.getElementById('novaDevY').value) || 0,
-      width: document.getElementById('novaDevWidth').value.trim(),
-      height: document.getElementById('novaDevHeight').value.trim(),
-      opacity: document.getElementById('novaDevOpacity').value,
-      zIndex: document.getElementById('novaDevZ').value,
-      css: document.getElementById('novaDevCss').value.trim()
-    };
-    var textInput = document.getElementById('novaDevText');
-    if (!textInput.disabled) patch.text = textInput.value;
+    var get = function(id){ return document.getElementById(id)?.value.trim(); };
+    var patch = {};
+    var x = get('novaDevX'); if (x !== '') patch.x = parseFloat(x);
+    var y = get('novaDevY'); if (y !== '') patch.y = parseFloat(y);
+    var w = get('novaDevWidth'); if (w) patch.w = w;
+    var h = get('novaDevHeight'); if (h) patch.h = h;
+    var op = get('novaDevOpacity'); if (op !== '') patch.opacity = parseFloat(op);
+    var z = get('novaDevZ'); if (z !== '') patch.z = parseInt(z);
+    var txt = get('novaDevText'); if (txt !== '') patch.text = txt;
+    var css = get('novaDevCss'); if (css) patch.css = css;
     devControlSaveSelected(patch);
   }
 
   function devControlToggleHidden() {
-    if (!selected) return;
     var rule = devControlCurrentRule();
     devControlSaveSelected({ hidden: !rule.hidden });
-    if (!rule.hidden) {
-      selected.classList.remove('nova-dev-selected-element');
-      selected = null; selectedSelector = '';
-      devControlRenderSelection();
-    } else {
-      selected.style.removeProperty('display');
-    }
   }
 
   function devControlResetElement(selector) {
-    var page = document.getElementById('novaDevPageSelect')?.value || 'index.html';
+    var sel = selector || selectedSelector;
+    if (!sel) return;
     var all = devControlReadOverrides();
-    if (all[page]) delete all[page][selector || selectedSelector];
-    devControlWriteOverrides(all);
-    devControlLoadPage();
+    var pk = devControlPageKey(previewFrame?.contentWindow?.location?.pathname);
+    if (all[pk]) { delete all[pk][sel]; devControlWriteOverrides(all); }
+    try { previewFrame?.contentWindow?.location.reload(); } catch(e) {}
+    if (!selector) { selected = null; selectedSelector = ''; devControlRenderSelection(); }
+    devControlRenderChanges();
   }
 
   function devControlResetPage() {
-    var page = document.getElementById('novaDevPageSelect')?.value || 'index.html';
-    if (!confirm('Reset every developer UI change on ' + page + '?')) return;
+    if (!confirm('Reset all saved changes for this page?')) return;
     var all = devControlReadOverrides();
-    delete all[page];
+    var pk = devControlPageKey(previewFrame?.contentWindow?.location?.pathname);
+    delete all[pk];
     devControlWriteOverrides(all);
-    devControlLoadPage();
+    try { previewFrame?.contentWindow?.location.reload(); } catch(e) {}
+    selected = null; selectedSelector = '';
+    devControlRenderSelection();
+    devControlRenderChanges();
   }
 
   function devControlRenderChanges() {
-    var page = document.getElementById('novaDevPageSelect')?.value || 'index.html';
-    var rules = devControlReadOverrides()[page] || {};
     var list = document.getElementById('novaDevChangesList');
     if (!list) return;
-    var selectors = Object.keys(rules);
-    if (!selectors.length) {
-      list.innerHTML = '<div class="nova-dev-no-changes">No saved overrides for this page.</div>';
-      return;
-    }
-    list.innerHTML = selectors.map(function(selector) {
-      var rule = rules[selector];
-      var flags = [];
-      if (rule.hidden) flags.push('hidden');
-      if (rule.x || rule.y) flags.push('moved');
-      if (rule.width || rule.height) flags.push('resized');
-      if (rule.text !== undefined) flags.push('text');
-      if (rule.css) flags.push('css');
-      return '<div class="nova-dev-change-row"><div><code>' + devControlEscapeHtml(selector) + '</code><small>' + (flags.join(' · ') || 'style') + '</small></div><button type="button" data-reset-selector="' + devControlEscapeHtml(selector) + '">Reset</button></div>';
+    var pk = devControlPageKey(previewFrame?.contentWindow?.location?.pathname);
+    var rules = (devControlReadOverrides()[pk] || {});
+    var keys = Object.keys(rules);
+    if (!keys.length) { list.innerHTML = '<div style="padding:12px 16px;font-size:.68rem;color:#4d524f">No saved changes for this page.</div>'; return; }
+    list.innerHTML = keys.map(function(sel) {
+      return '<div style="display:flex;align-items:center;gap:8px;padding:8px 16px;border-bottom:1px solid #1a1e1c">' +
+        '<code style="flex:1;font-size:.58rem;color:#7f8882;word-break:break-all">' + devControlEscapeHtml(sel) + '</code>' +
+        '<button data-reset-selector="' + devControlEscapeHtml(sel) + '" style="flex-shrink:0;padding:2px 8px;border-radius:5px;font-size:.6rem;border:1px solid #303431;background:#171a18;color:#9fa59f;cursor:pointer">×</button>' +
+      '</div>';
     }).join('');
   }
 
   function devControlEscapeHtml(value) {
-    return String(value).replace(/[&<>"']/g, function(char) {
-      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char];
-    });
+    return String(value).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
+  // ── Drag ──────────────────────────────────────────────────────
   function devControlDragStart(event) {
-    if (event.button !== 0 || event.target !== selected || !selectedSelector) return;
-    event.preventDefault();
-    event.stopPropagation();
-    var rule = devControlCurrentRule();
-    dragState = { startX:event.clientX, startY:event.clientY, baseX:Number(rule.x)||0, baseY:Number(rule.y)||0 };
-    selected.setPointerCapture?.(event.pointerId);
+    if (!selected || event.button !== 0) return;
+    var cs = previewFrame.contentWindow.getComputedStyle(selected);
+    if (cs.position === 'static') return;
+    event.preventDefault(); event.stopPropagation();
+    var r = selected.getBoundingClientRect();
+    var fr = previewFrame.getBoundingClientRect();
+    dragState = { startX: event.clientX, startY: event.clientY, origX: r.left - fr.left, origY: r.top - fr.top };
+    selected.style.cursor = 'grabbing';
   }
 
   function devControlDragMove(event) {
     if (!dragState || !selected) return;
-    event.preventDefault();
-    var x = Math.round(dragState.baseX + event.clientX - dragState.startX);
-    var y = Math.round(dragState.baseY + event.clientY - dragState.startY);
-    selected.style.translate = x + 'px ' + y + 'px';
-    document.getElementById('novaDevX').value = x;
-    document.getElementById('novaDevY').value = y;
+    var dx = event.clientX - dragState.startX;
+    var dy = event.clientY - dragState.startY;
+    selected.style.left = (dragState.origX + dx) + 'px';
+    selected.style.top  = (dragState.origY + dy) + 'px';
+    document.getElementById('novaDevX').value = Math.round(dragState.origX + dx);
+    document.getElementById('novaDevY').value = Math.round(dragState.origY + dy);
   }
 
   function devControlDragEnd(event) {
     if (!dragState || !selected) return;
-    var x = Number(document.getElementById('novaDevX').value) || 0;
-    var y = Number(document.getElementById('novaDevY').value) || 0;
+    var dx = event.clientX - dragState.startX;
+    var dy = event.clientY - dragState.startY;
+    devControlSaveSelected({ x: Math.round(dragState.origX + dx), y: Math.round(dragState.origY + dy) });
+    selected.style.cursor = '';
     dragState = null;
-    devControlSaveSelected({x:x, y:y});
   }
 
+  // ── Tab switching ─────────────────────────────────────────────
+  function devControlSwitchTab(tabId) {
+    document.querySelectorAll('#novaDevControl .nova-dev-tab').forEach(function(btn) {
+      btn.classList.toggle('active', btn.dataset.tab === tabId);
+    });
+    document.querySelectorAll('#novaDevControl .nova-dev-tab-panel').forEach(function(panel) {
+      panel.classList.toggle('active', panel.id === 'novaDevTab-' + tabId);
+    });
+    if (tabId === 'locks' || tabId === 'directives' || tabId === 'info') ndcpRenderAll();
+  }
+
+  // ═════════════════════════════════════════════════════════════
+  //  NDCP — Developer Lock / Focus functions (DCP-internal)
+  // ═════════════════════════════════════════════════════════════
+
+  function ndcpGetConfig() {
+    try { return JSON.parse(localStorage.getItem('nova_dev_lock_config') || '{}'); } catch(e) { return {}; }
+  }
+  function ndcpSaveConfig(cfg) {
+    try { localStorage.setItem('nova_dev_lock_config', JSON.stringify(cfg)); } catch(e) {}
+    // Sync to the settings panel if it exists
+    if (typeof devRenderPanel === 'function') { try { devRenderPanel(); } catch(e) {} }
+  }
+  function ndcpGetFocus() {
+    try { return JSON.parse(localStorage.getItem('nova_dev_focus_config') || '{}'); } catch(e) { return {}; }
+  }
+  function ndcpSaveFocus(cfg) {
+    try { localStorage.setItem('nova_dev_focus_config', JSON.stringify(cfg)); } catch(e) {}
+    if (typeof devRenderPanel === 'function') { try { devRenderPanel(); } catch(e) {} }
+  }
+  async function ndcpHash(str) {
+    var buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+    return Array.from(new Uint8Array(buf)).map(function(b){ return b.toString(16).padStart(2,'0'); }).join('');
+  }
+
+  function ndcpShowToast(msg, type) {
+    // Use app-level showToast if available, otherwise fallback
+    if (typeof showToast === 'function') { showToast(msg, type === 'ok' ? 'ok' : 'err'); return; }
+    var t = document.createElement('div');
+    t.textContent = msg;
+    t.style.cssText = 'position:fixed;bottom:28px;left:50%;transform:translateX(-50%);background:' + (type==='ok'?'#c8f135':'#ff7b70') + ';color:#080908;padding:9px 18px;border-radius:9px;font-size:.75rem;font-weight:700;z-index:200000;animation:fadeInUp .2s';
+    document.body.appendChild(t);
+    setTimeout(function(){ t.remove(); }, 2600);
+  }
+
+  function ndcpShowError(id, msg) {
+    var el = document.getElementById(id);
+    if (el) { el.textContent = msg; el.style.display = msg ? '' : 'none'; }
+  }
+
+  function ndcpPwdStrength(val) {
+    var fill = document.getElementById('ndcpStrengthFill');
+    var label = document.getElementById('ndcpStrengthLabel');
+    if (!fill || !label) return;
+    var score = 0;
+    if (val.length >= 6) score++;
+    if (val.length >= 10) score++;
+    if (/[A-Z]/.test(val)) score++;
+    if (/[0-9]/.test(val)) score++;
+    if (/[^A-Za-z0-9]/.test(val)) score++;
+    var colors = ['#ef4444','#f97316','#eab308','#22c55e','#22c55e'];
+    var labels = ['Very weak','Weak','Fair','Strong','Very strong'];
+    fill.style.width = (score * 20) + '%';
+    fill.style.background = colors[score-1] || '#ef4444';
+    label.textContent = val.length ? (labels[score-1] || 'Very weak') : '';
+  }
+
+  async function ndcpSetPassword() {
+    ndcpShowError('ndcpPwdError', '');
+    var np = document.getElementById('ndcpPwdNew')?.value || '';
+    var cf = document.getElementById('ndcpPwdConfirm')?.value || '';
+    if (np.length < 6) { ndcpShowError('ndcpPwdError', 'Password must be at least 6 characters.'); return; }
+    if (np !== cf) { ndcpShowError('ndcpPwdError', 'Passwords do not match.'); return; }
+    var hash = await ndcpHash(np);
+    var cfg = ndcpGetConfig();
+    cfg.passwordHash = hash;
+    ndcpSaveConfig(cfg);
+    ndcpShowToast('Developer password set ✓', 'ok');
+    ndcpRenderAll();
+  }
+
+  async function ndcpChangePassword() {
+    ndcpShowError('ndcpPwdError', '');
+    var cfg = ndcpGetConfig();
+    var cur = document.getElementById('ndcpPwdCurrent')?.value || '';
+    var np  = document.getElementById('ndcpPwdChange')?.value || '';
+    var cf  = document.getElementById('ndcpPwdChangeConfirm')?.value || '';
+    var curHash = await ndcpHash(cur);
+    if (curHash !== cfg.passwordHash) { ndcpShowError('ndcpPwdError', 'Current password is wrong.'); return; }
+    if (np.length < 6) { ndcpShowError('ndcpPwdError', 'New password must be at least 6 characters.'); return; }
+    if (np !== cf) { ndcpShowError('ndcpPwdError', 'New passwords do not match.'); return; }
+    cfg.passwordHash = await ndcpHash(np);
+    ndcpSaveConfig(cfg);
+    ndcpShowToast('Password updated ✓', 'ok');
+    ndcpRenderAll();
+  }
+
+  async function ndcpRemovePassword() {
+    if (!confirm('Remove the developer password? All locks will remain but cannot be managed until a new password is set.')) return;
+    var cfg = ndcpGetConfig();
+    delete cfg.passwordHash;
+    ndcpSaveConfig(cfg);
+    ndcpShowToast('Password removed', 'ok');
+    ndcpRenderAll();
+  }
+
+  function ndcpShowChangePwd() {
+    var f = document.getElementById('ndcpChangePwdForm');
+    if (f) f.style.display = f.style.display === 'none' ? '' : 'none';
+  }
+
+  async function ndcpLockAll() {
+    var cfg = ndcpGetConfig();
+    if (!cfg.passwordHash) { ndcpShowToast('Set a developer password first', 'err'); return; }
+    var pwd = prompt('Enter developer password to lock all functions:');
+    if (!pwd) return;
+    var hash = await ndcpHash(pwd);
+    if (hash !== cfg.passwordHash) { ndcpShowToast('Wrong password', 'err'); return; }
+    if (!cfg.locks) cfg.locks = {};
+    DEV_LOCK_FUNCTIONS.forEach(function(f){ cfg.locks[f.key] = { lockedAt: Date.now() }; });
+    ndcpSaveConfig(cfg);
+    ndcpShowToast('All ' + DEV_LOCK_FUNCTIONS.length + ' functions locked ✓', 'ok');
+    ndcpRenderAll();
+  }
+
+  async function ndcpUnlockAll() {
+    var cfg = ndcpGetConfig();
+    if (!cfg.passwordHash) { ndcpShowToast('No password set', 'err'); return; }
+    var pwd = prompt('Enter developer password to unlock all functions:');
+    if (!pwd) return;
+    var hash = await ndcpHash(pwd);
+    if (hash !== cfg.passwordHash) { ndcpShowToast('Wrong password', 'err'); return; }
+    cfg.locks = {};
+    ndcpSaveConfig(cfg);
+    ndcpShowToast('All functions unlocked ✓', 'ok');
+    ndcpRenderAll();
+  }
+
+  async function ndcpToggleLock(key) {
+    var cfg = ndcpGetConfig();
+    if (!cfg.passwordHash) { ndcpShowToast('Set a developer password first', 'err'); return; }
+    var locks = cfg.locks || {};
+    var isLocked = !!locks[key];
+    var func = DEV_LOCK_FUNCTIONS.find(function(f){ return f.key === key; }) || {};
+    var action = isLocked ? 'unlock' : 'lock';
+    var pwd = prompt('Enter developer password to ' + action + ' "' + func.label + '":');
+    if (!pwd) return;
+    var hash = await ndcpHash(pwd);
+    if (hash !== cfg.passwordHash) { ndcpShowToast('Wrong password', 'err'); return; }
+    if (!cfg.locks) cfg.locks = {};
+    if (isLocked) { delete cfg.locks[key]; } else { cfg.locks[key] = { lockedAt: Date.now() }; }
+    ndcpSaveConfig(cfg);
+    ndcpShowToast((isLocked ? func.label + ' unlocked ✓' : func.label + ' locked ✓'), 'ok');
+    ndcpRenderAll();
+  }
+
+  async function ndcpToggleFocus(key) {
+    var cfg = ndcpGetConfig();
+    if (!cfg.passwordHash) { ndcpShowToast('Set a developer password first', 'err'); return; }
+    var focus = ndcpGetFocus();
+    var hasFocus = !!focus[key];
+    var func = DEV_LOCK_FUNCTIONS.find(function(f){ return f.key === key; }) || {};
+    var action = hasFocus ? 'remove Max Focus from' : 'set Max Focus on';
+    var pwd = prompt('Enter developer password to ' + action + ' "' + func.label + '":');
+    if (!pwd) return;
+    var hash = await ndcpHash(pwd);
+    if (hash !== cfg.passwordHash) { ndcpShowToast('Wrong password', 'err'); return; }
+    if (hasFocus) { delete focus[key]; } else { focus[key] = { setAt: Date.now() }; }
+    ndcpSaveFocus(focus);
+    ndcpShowToast((hasFocus ? 'Max Focus removed ✓' : 'Max Focus set ✓ — AI will prioritise this function'), 'ok');
+    ndcpRenderAll();
+  }
+
+  async function ndcpVerifyUnlock() {
+    var key = document.getElementById('ndcpVerifyFunc')?.value;
+    var pwd = document.getElementById('ndcpVerifyPwd')?.value || '';
+    var result = document.getElementById('ndcpVerifyResult');
+    if (!key) { if (result) { result.style.display=''; result.style.background='#fef3c7'; result.style.color='#92400e'; result.textContent='Please select a function.'; } return; }
+    var cfg = ndcpGetConfig();
+    if (!cfg.passwordHash) { if (result) { result.style.display=''; result.style.background='#fee2e2'; result.style.color='#991b1b'; result.textContent='No password set.'; } return; }
+    var hash = await ndcpHash(pwd);
+    if (hash !== cfg.passwordHash) {
+      if (result) { result.style.display=''; result.style.background='#fee2e2'; result.style.color='#991b1b'; result.textContent='❌ Wrong password. Cannot unlock.'; }
+      return;
+    }
+    if (!cfg.locks) cfg.locks = {};
+    delete cfg.locks[key];
+    ndcpSaveConfig(cfg);
+    var func = DEV_LOCK_FUNCTIONS.find(function(f){ return f.key===key; }) || {};
+    if (result) { result.style.display=''; result.style.background='#f0fdf4'; result.style.color='#166534'; result.textContent='✅ "' + func.label + '" has been unlocked.'; }
+    document.getElementById('ndcpVerifyPwd').value = '';
+    ndcpShowToast(func.label + ' unlocked ✓', 'ok');
+    ndcpRenderAll();
+  }
+
+  async function ndcpLockCategory(catId) {
+    var cfg = ndcpGetConfig();
+    if (!cfg.passwordHash) { ndcpShowToast('Set a developer password first', 'err'); return; }
+    var pwd = prompt('Enter developer password to lock all ' + catId + ' functions:');
+    if (!pwd) return;
+    var hash = await ndcpHash(pwd);
+    if (hash !== cfg.passwordHash) { ndcpShowToast('Wrong password', 'err'); return; }
+    if (!cfg.locks) cfg.locks = {};
+    DEV_LOCK_FUNCTIONS.filter(function(f){ return f.category === catId; }).forEach(function(f){
+      cfg.locks[f.key] = { lockedAt: Date.now() };
+    });
+    ndcpSaveConfig(cfg);
+    ndcpShowToast('Category locked ✓', 'ok');
+    ndcpRenderAll();
+  }
+
+  function ndcpBuildManifest() {
+    try { return typeof devBuildManifest === 'function' ? devBuildManifest() : ''; } catch(e) { return ''; }
+  }
+  function ndcpBuildFocusBlock() {
+    try { return typeof devBuildFocusBlock === 'function' ? devBuildFocusBlock() : ''; } catch(e) { return ''; }
+  }
+
+  function ndcpCopyManifest() {
+    var text = ndcpBuildManifest();
+    if (!text) { ndcpShowToast('No locked functions yet', 'err'); return; }
+    navigator.clipboard.writeText(text).then(function(){ ndcpShowToast('Manifest copied ✓', 'ok'); });
+  }
+
+  function ndcpCopyFocusBlock() {
+    var text = ndcpBuildFocusBlock();
+    if (!text) { ndcpShowToast('No Max Focus functions set yet', 'err'); return; }
+    navigator.clipboard.writeText(text).then(function(){ ndcpShowToast('Focus directive copied ✓', 'ok'); });
+  }
+
+  function ndcpDownloadFullDirective() {
+    try { if (typeof devDownloadFullDirective === 'function') { devDownloadFullDirective(); return; } } catch(e) {}
+    ndcpShowToast('Download unavailable — use Settings → Developer instead', 'err');
+  }
+
+  function ndcpExportOverrides() {
+    var data = devControlReadOverrides();
+    var blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'nova-ui-overrides.json';
+    a.click();
+    URL.revokeObjectURL(a.href);
+    ndcpShowToast('Overrides exported ✓', 'ok');
+  }
+
+  function ndcpClearAllOverrides() {
+    if (!confirm('Clear ALL saved UI overrides for every page? This cannot be undone.')) return;
+    devControlWriteOverrides({});
+    ndcpShowToast('All overrides cleared ✓', 'ok');
+    ndcpRenderAll();
+    devControlRenderChanges();
+  }
+
+  function ndcpNukeSession() {
+    try { sessionStorage.removeItem(DEV_SESSION_KEY); } catch(e) {}
+    var shell = document.getElementById('novaDevControl');
+    if (shell) shell.classList.remove('authenticated');
+    devControlClose();
+    ndcpShowToast('Session ended — DCP locked', 'ok');
+  }
+
+  // ── Master render ─────────────────────────────────────────────
+  function ndcpRenderAll() {
+    var cfg    = ndcpGetConfig();
+    var locks  = cfg.locks || {};
+    var focus  = ndcpGetFocus();
+    var hasPwd = !!cfg.passwordHash;
+    var lockedCount = Object.keys(locks).length;
+    var focusCount  = Object.keys(focus).length;
+
+    // ── Password UI ──
+    var notSet = document.getElementById('ndcpPwdNotSet');
+    var isSet  = document.getElementById('ndcpPwdIsSet');
+    var badge  = document.getElementById('ndcpPwdBadge');
+    var hashPv = document.getElementById('ndcpPwdHashPreview');
+    if (notSet) notSet.style.display = hasPwd ? 'none' : '';
+    if (isSet)  isSet.style.display  = hasPwd ? '' : 'none';
+    if (badge) {
+      if (hasPwd) {
+        badge.textContent = 'SET ✓';
+        badge.className = 'ndcp-badge ndcp-badge-green';
+      } else {
+        badge.textContent = 'NOT SET';
+        badge.className = 'ndcp-badge ndcp-badge-red';
+      }
+    }
+    if (hashPv && cfg.passwordHash) {
+      hashPv.textContent = 'sha256:' + cfg.passwordHash.substring(0,8) + '••' + cfg.passwordHash.slice(-4);
+    }
+
+    // Master badge (system tab)
+    var masterBadge = document.getElementById('ndcpMasterBadge');
+    if (masterBadge) {
+      if (!hasPwd) {
+        masterBadge.textContent = 'NOT SET UP';
+        masterBadge.className = 'ndcp-badge ndcp-badge-red';
+      } else if (lockedCount === 0 && focusCount === 0) {
+        masterBadge.textContent = 'ACTIVE · OPEN';
+        masterBadge.className = 'ndcp-badge ndcp-badge-green';
+      } else {
+        masterBadge.textContent = 'ACTIVE · ' + lockedCount + ' LOCKED · ' + focusCount + ' FOCUS';
+        masterBadge.className = 'ndcp-badge ndcp-badge-yellow';
+      }
+    }
+
+    // ── Function list ──
+    var list = document.getElementById('ndcpFuncList');
+    if (list) {
+      var cats = [
+        { id:'tools',   label:'🛠️ Main Tools',      color:'#3b82f6' },
+        { id:'account', label:'👤 Account & System', color:'#8b5cf6' }
+      ];
+      var html = '';
+      cats.forEach(function(cat) {
+        var funcs = DEV_LOCK_FUNCTIONS.filter(function(f){ return f.category === cat.id; });
+        var catLocked = funcs.filter(function(f){ return locks[f.key]; }).length;
+        var catFocus  = funcs.filter(function(f){ return focus[f.key]; }).length;
+        html += '<div class="ndcp-cat-header">' +
+          '<div style="display:flex;align-items:center;gap:8px">' +
+            '<span style="font-size:.65rem;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:' + cat.color + '">' + cat.label + '</span>' +
+            (catLocked ? '<span class="ndcp-micro-badge" style="background:#fff5f5;color:#dc2626;border-color:#fecaca">' + catLocked + ' locked</span>' : '') +
+            (catFocus  ? '<span class="ndcp-micro-badge" style="background:#fefce8;color:#854d0e;border-color:#fef08a">' + catFocus + ' focus</span>' : '') +
+          '</div>' +
+          '<button onclick="ndcpLockCategory(\'' + cat.id + '\')" class="ndcp-btn-ghost-sm">🔒 Lock All</button>' +
+        '</div>';
+        funcs.forEach(function(f, idx) {
+          var isLocked = !!locks[f.key];
+          var isFocus  = !!focus[f.key];
+          var lk = locks[f.key] || {};
+          var lockedAt = lk.lockedAt ? new Date(lk.lockedAt).toLocaleDateString() : '';
+          var isLast = idx === funcs.length - 1;
+          html += '<div class="ndcp-func-row" style="' + (isLast ? '' : 'border-bottom:1px solid #1a1e1c') + '">' +
+            '<div class="ndcp-func-icon" style="background:' + (isLocked ? '#fff5f5' : isFocus ? '#fefce8' : '#171a18') + ';border-color:' + (isLocked ? '#fecaca' : isFocus ? '#fef08a' : '#2d312e') + '">' + f.icon + '</div>' +
+            '<div class="ndcp-func-info">' +
+              '<div class="ndcp-func-label">' + f.label +
+                (isLocked ? '<span class="ndcp-micro-badge" style="background:#fff5f5;color:#dc2626;border-color:#fecaca">🔒 LOCKED</span>' : '') +
+                (isFocus  ? '<span class="ndcp-micro-badge" style="background:#fefce8;color:#854d0e;border-color:#fef08a">🎯 FOCUS</span>' : '') +
+              '</div>' +
+              '<div class="ndcp-func-file">' + f.file + '</div>' +
+              (isLocked && lockedAt ? '<div style="font-size:.57rem;color:#ef4444;margin-top:1px">Locked ' + lockedAt + '</div>' : '') +
+            '</div>' +
+            '<button onclick="ndcpToggleLock(\'' + f.key + '\')" title="' + (isLocked ? 'Unlock' : 'Lock') + '" class="ndcp-func-btn ' + (isLocked ? 'ndcp-func-btn-locked' : 'ndcp-func-btn-open') + '">' +
+              (isLocked ? '🔓' : '🔒') +
+            '</button>' +
+            '<button onclick="ndcpToggleFocus(\'' + f.key + '\')" title="' + (isFocus ? 'Remove Max Focus' : 'Set Max Focus') + '" class="ndcp-func-btn ' + (isFocus ? 'ndcp-func-btn-focus' : 'ndcp-func-btn-open') + '">' +
+              (isFocus ? '🎯' : '○') +
+            '</button>' +
+          '</div>';
+        });
+        html += '<div style="height:1px;background:#1a1e1c;margin:6px 0 4px"></div>';
+      });
+      list.innerHTML = html;
+    }
+
+    // No pwd warning
+    var warn = document.getElementById('ndcpNoPwdWarn');
+    if (warn) warn.style.display = hasPwd ? 'none' : '';
+
+    // Verify dropdown
+    var vsel = document.getElementById('ndcpVerifyFunc');
+    if (vsel) {
+      vsel.innerHTML = '<option value="">— choose a function —</option>' +
+        DEV_LOCK_FUNCTIONS.filter(function(f){ return locks[f.key]; })
+          .map(function(f){ return '<option value="' + f.key + '">' + f.label + '</option>'; }).join('');
+    }
+
+    // ── Directives tab ──
+    var focusManifestEl = document.getElementById('ndcpFocusManifest');
+    var noFocusMsg      = document.getElementById('ndcpNoFocusMsg');
+    var focusBlock = ndcpBuildFocusBlock();
+    if (focusManifestEl) focusManifestEl.textContent = focusBlock || '';
+    if (focusManifestEl) focusManifestEl.style.display = focusBlock ? '' : 'none';
+    if (noFocusMsg)      noFocusMsg.style.display = focusBlock ? 'none' : '';
+
+    var lockManifestEl = document.getElementById('ndcpLockManifest');
+    var noLocksMsg     = document.getElementById('ndcpNoLocksMsg');
+    var manifest = ndcpBuildManifest();
+    if (lockManifestEl) lockManifestEl.textContent = manifest || '';
+    if (lockManifestEl) lockManifestEl.style.display = manifest ? '' : 'none';
+    if (noLocksMsg)     noLocksMsg.style.display = manifest ? 'none' : '';
+
+    // ── System tab ──
+    var sysInfo = document.getElementById('ndcpSysInfo');
+    if (sysInfo) {
+      var overrides = devControlReadOverrides();
+      var totalOverrides = Object.values(overrides).reduce(function(n, pg){ return n + Object.keys(pg).length; }, 0);
+      var rows = [
+        ['Build', 'NOVA Studio 2026'],
+        ['Pages tracked', DEV_PAGES.length],
+        ['Lockable functions', DEV_LOCK_FUNCTIONS.length],
+        ['Locked functions', lockedCount],
+        ['Max Focus functions', focusCount],
+        ['Saved UI overrides', totalOverrides + ' element' + (totalOverrides !== 1 ? 's' : '')],
+        ['Password', hasPwd ? '✅ Set' : '❌ Not set'],
+        ['User Agent', navigator.userAgent.split(' ').slice(-1)[0] || '—'],
+      ];
+      sysInfo.innerHTML = rows.map(function(r){
+        return '<div class="ndcp-info-row"><span class="ndcp-info-key">' + r[0] + '</span><span class="ndcp-info-val">' + r[1] + '</span></div>';
+      }).join('');
+    }
+
+    var overrideStats = document.getElementById('ndcpOverrideStats');
+    if (overrideStats) {
+      var ov = devControlReadOverrides();
+      var pages = Object.keys(ov).filter(function(k){ return Object.keys(ov[k]).length > 0; });
+      overrideStats.textContent = pages.length
+        ? pages.length + ' page' + (pages.length > 1 ? 's' : '') + ' with saved overrides: ' + pages.join(', ')
+        : 'No saved UI overrides yet.';
+    }
+  }
+
+  // ── Bind events ───────────────────────────────────────────────
   function devControlBind() {
     var shell = devControlShell();
+
+    // Login
     shell.querySelector('#novaDevLoginBtn').addEventListener('click', devControlLogin);
     shell.querySelector('#novaDevCancelBtn').addEventListener('click', devControlClose);
     shell.querySelector('#novaDevPassword').addEventListener('keydown', function(e){ if (e.key === 'Enter') devControlLogin(); });
+
+    // Header
     shell.querySelector('#novaDevCloseBtn').addEventListener('click', devControlClose);
     shell.querySelector('#novaDevLogoutBtn').addEventListener('click', function(){
       try { sessionStorage.removeItem(DEV_SESSION_KEY); } catch(e) {}
       shell.classList.remove('authenticated');
     });
+
+    // Tab nav
+    shell.querySelector('#novaDevTabs').addEventListener('click', function(e) {
+      var btn = e.target.closest('.nova-dev-tab');
+      if (btn && btn.dataset.tab) devControlSwitchTab(btn.dataset.tab);
+    });
+
+    // Inspector tab
     shell.querySelector('#novaDevPageSelect').addEventListener('change', devControlLoadPage);
     shell.querySelector('#novaDevReloadBtn').addEventListener('click', devControlLoadPage);
     shell.querySelector('#novaDevApplyBtn').addEventListener('click', devControlApplyForm);
@@ -4959,22 +5555,54 @@ function devShowLockDialog(label, key) {
     });
   }
 
+  // ── Init ──────────────────────────────────────────────────────
   function devControlInit() {
     devControlRemoveLegacyPanels(document);
     devControlApplyOverrides(document, devControlPageKey());
+
     if (previewMode) {
       devControlInitPreview();
       return;
     }
+
     devControlBind();
+
+    // Make ndcp functions globally accessible from inline onclick handlers
+    window.ndcpSetPassword         = ndcpSetPassword;
+    window.ndcpChangePassword      = ndcpChangePassword;
+    window.ndcpRemovePassword      = ndcpRemovePassword;
+    window.ndcpShowChangePwd       = ndcpShowChangePwd;
+    window.ndcpPwdStrength         = ndcpPwdStrength;
+    window.ndcpLockAll             = ndcpLockAll;
+    window.ndcpUnlockAll           = ndcpUnlockAll;
+    window.ndcpToggleLock          = ndcpToggleLock;
+    window.ndcpToggleFocus         = ndcpToggleFocus;
+    window.ndcpVerifyUnlock        = ndcpVerifyUnlock;
+    window.ndcpLockCategory        = ndcpLockCategory;
+    window.ndcpCopyManifest        = ndcpCopyManifest;
+    window.ndcpCopyFocusBlock      = ndcpCopyFocusBlock;
+    window.ndcpDownloadFullDirective = ndcpDownloadFullDirective;
+    window.ndcpExportOverrides     = ndcpExportOverrides;
+    window.ndcpClearAllOverrides   = ndcpClearAllOverrides;
+    window.ndcpNukeSession         = ndcpNukeSession;
+
     document.addEventListener('keydown', function(e) {
+      // Ctrl + Shift + Alt + D → toggle DCP
       if (e.ctrlKey && e.shiftKey && e.altKey && e.key.toLowerCase() === 'd') {
         e.preventDefault();
+        e.stopImmediatePropagation();
         devControlOpen();
-      } else if (e.key === 'Escape' && document.getElementById('novaDevControl')?.classList.contains('open')) {
-        devControlClose();
+        return;
       }
-    });
+      // Escape → close if open
+      if (e.key === 'Escape') {
+        var s = document.getElementById('novaDevControl');
+        if (s && s.classList.contains('open')) {
+          e.preventDefault();
+          devControlClose();
+        }
+      }
+    }, true); // capture phase so it fires before any other handlers
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', devControlInit, {once:true});
