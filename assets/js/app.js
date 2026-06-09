@@ -4501,9 +4501,9 @@ function devShowLockDialog(label, key) {
 //  Open / Close with Ctrl + Shift + Alt + D
 // ══════════════════════════════════════════════════════════════
 (function novaDeveloperControlCenter() {
-  var DEV_ID_HASH = '8d1cfb8ddcb916235d00ea11fc2bcfb71e0b3ad27fddba4ff7a0e0cad7cd64e5';
-  var DEV_PASSWORD_HASH = 'e72d07106a8e903022d6e288a983a8d21be8cc118c8078095c5cf1d2edebdf0c';
-  var DEV_SESSION_KEY = 'nova_dev_control_session';
+  // Credentials stored in localStorage (set on first run — no hardcoded hashes)
+  var DEV_CREDS_KEY    = 'nova_dcp_credentials_v2';
+  var DEV_SESSION_KEY  = 'nova_dev_control_session';
   var DEV_UI_KEY = 'nova_dev_ui_overrides_v1';
   var DEV_PREVIEW_PARAM = 'nova_dev_preview';
   var previewMode = new URLSearchParams(window.location.search).get(DEV_PREVIEW_PARAM) === '1';
@@ -4528,6 +4528,16 @@ function devShowLockDialog(label, key) {
     return crypto.subtle.digest('SHA-256', new TextEncoder().encode(value)).then(function(buf) {
       return Array.from(new Uint8Array(buf)).map(function(b){ return b.toString(16).padStart(2, '0'); }).join('');
     });
+  }
+
+  function devCredsSaved() {
+    try { var c = JSON.parse(localStorage.getItem(DEV_CREDS_KEY) || 'null'); return c && c.idHash && c.pwHash; } catch(e) { return false; }
+  }
+  function devCredsGet() {
+    try { return JSON.parse(localStorage.getItem(DEV_CREDS_KEY) || 'null') || {}; } catch(e) { return {}; }
+  }
+  function devCredsSave(idHash, pwHash) {
+    try { localStorage.setItem(DEV_CREDS_KEY, JSON.stringify({ idHash: idHash, pwHash: pwHash })); } catch(e) {}
   }
 
   function devControlReadOverrides() {
@@ -4608,12 +4618,27 @@ function devShowLockDialog(label, key) {
       '<div class="nova-dev-login" id="novaDevLogin">' +
         '<div class="nova-dev-login-box">' +
           '<div class="nova-dev-login-mark">N</div>' +
-          '<div><div class="nova-dev-login-title">Developer access</div><div class="nova-dev-login-sub">Private NOVA control center</div></div>' +
-          '<label>Developer ID<input id="novaDevId" type="email" autocomplete="username" spellcheck="false"></label>' +
-          '<label>Password<input id="novaDevPassword" type="password" autocomplete="current-password"></label>' +
-          '<div class="nova-dev-login-error" id="novaDevLoginError"></div>' +
-          '<button type="button" id="novaDevLoginBtn">Unlock control center</button>' +
-          '<button type="button" class="nova-dev-login-cancel" id="novaDevCancelBtn">Cancel</button>' +
+          // First-run setup
+          '<div id="novaDevSetupPane" style="display:none">' +
+            '<div class="nova-dev-login-title">Set up DCP access</div>' +
+            '<div class="nova-dev-login-sub" style="margin-bottom:18px">First time? Create your developer credentials. These are stored locally on this device.</div>' +
+            '<label>Developer ID (email)<input id="novaDevSetupId" type="email" autocomplete="username" placeholder="dev@example.com" spellcheck="false"></label>' +
+            '<label>Choose Password<input id="novaDevSetupPw" type="password" placeholder="Min 6 characters"></label>' +
+            '<label>Confirm Password<input id="novaDevSetupPw2" type="password" placeholder="Repeat password"></label>' +
+            '<div class="nova-dev-login-error" id="novaDevSetupError"></div>' +
+            '<button type="button" id="novaDevSetupBtn">Create credentials &amp; enter</button>' +
+            '<button type="button" class="nova-dev-login-cancel" id="novaDevCancelBtn2">Cancel</button>' +
+          '</div>' +
+          // Normal login
+          '<div id="novaDevLoginPane">' +
+            '<div><div class="nova-dev-login-title">Developer access</div><div class="nova-dev-login-sub">Private NOVA control center</div></div>' +
+            '<label>Developer ID<input id="novaDevId" type="email" autocomplete="username" spellcheck="false"></label>' +
+            '<label>Password<input id="novaDevPassword" type="password" autocomplete="current-password"></label>' +
+            '<div class="nova-dev-login-error" id="novaDevLoginError"></div>' +
+            '<button type="button" id="novaDevLoginBtn">Unlock control center</button>' +
+            '<button type="button" class="nova-dev-login-cancel" id="novaDevCancelBtn">Cancel</button>' +
+            '<div style="margin-top:10px;text-align:center;font-size:.62rem;color:#4d524f">Forgot credentials? <span id="novaDevResetCredsLink" style="color:#c8f135;cursor:pointer;text-decoration:underline">Reset &amp; set new ones</span></div>' +
+          '</div>' +
         '</div>' +
       '</div>' +
       // ── Workspace ──
@@ -4880,7 +4905,18 @@ function devShowLockDialog(label, key) {
       devControlShowWorkspace();
     } else {
       shell.classList.remove('authenticated');
-      setTimeout(function(){ document.getElementById('novaDevId')?.focus(); }, 40);
+      // Show setup pane if no credentials saved yet, else normal login
+      var setupPane  = document.getElementById('novaDevSetupPane');
+      var loginPane  = document.getElementById('novaDevLoginPane');
+      if (devCredsSaved()) {
+        if (setupPane) setupPane.style.display = 'none';
+        if (loginPane) loginPane.style.display = '';
+        setTimeout(function(){ document.getElementById('novaDevId')?.focus(); }, 40);
+      } else {
+        if (setupPane) setupPane.style.display = '';
+        if (loginPane) loginPane.style.display = 'none';
+        setTimeout(function(){ document.getElementById('novaDevSetupId')?.focus(); }, 40);
+      }
     }
   }
 
@@ -4892,17 +4928,36 @@ function devShowLockDialog(label, key) {
     document.body.classList.remove('nova-dev-control-open');
   }
 
+  async function devControlSetupCredentials() {
+    var idVal  = (document.getElementById('novaDevSetupId')?.value || '').trim().toLowerCase();
+    var pw1    = document.getElementById('novaDevSetupPw')?.value || '';
+    var pw2    = document.getElementById('novaDevSetupPw2')?.value || '';
+    var errEl  = document.getElementById('novaDevSetupError');
+    var setErr = function(msg){ if(errEl){ errEl.textContent = msg; } };
+    setErr('');
+    if (!idVal || !idVal.includes('@')) { setErr('Enter a valid email as your Developer ID.'); return; }
+    if (pw1.length < 6) { setErr('Password must be at least 6 characters.'); return; }
+    if (pw1 !== pw2)    { setErr('Passwords do not match.'); return; }
+    var hashes = await Promise.all([devControlHash(idVal), devControlHash(pw1)]);
+    devCredsSave(hashes[0], hashes[1]);
+    try { sessionStorage.setItem(DEV_SESSION_KEY, 'active'); } catch(e) {}
+    setErr('');
+    devControlShowWorkspace();
+  }
+
   async function devControlLogin() {
-    var id = (document.getElementById('novaDevId')?.value || '').trim().toLowerCase();
+    var id       = (document.getElementById('novaDevId')?.value || '').trim().toLowerCase();
     var password = document.getElementById('novaDevPassword')?.value || '';
-    var error = document.getElementById('novaDevLoginError');
-    var hashes = await Promise.all([devControlHash(id), devControlHash(password)]);
-    if (hashes[0] !== DEV_ID_HASH || hashes[1] !== DEV_PASSWORD_HASH) {
-      if (error) error.textContent = 'Invalid developer credentials.';
+    var error    = document.getElementById('novaDevLoginError');
+    var setErr   = function(msg){ if(error){ error.textContent = msg; } };
+    setErr('');
+    var hashes  = await Promise.all([devControlHash(id), devControlHash(password)]);
+    var creds   = devCredsGet();
+    if (hashes[0] !== creds.idHash || hashes[1] !== creds.pwHash) {
+      setErr('Invalid developer credentials.');
       return;
     }
     try { sessionStorage.setItem(DEV_SESSION_KEY, 'active'); } catch(e) {}
-    if (error) error.textContent = '';
     document.getElementById('novaDevPassword').value = '';
     devControlShowWorkspace();
   }
@@ -5524,10 +5579,26 @@ function devShowLockDialog(label, key) {
   function devControlBind() {
     var shell = devControlShell();
 
-    // Login
+    // Setup pane (first-run)
+    shell.querySelector('#novaDevSetupBtn').addEventListener('click', devControlSetupCredentials);
+    shell.querySelector('#novaDevCancelBtn2').addEventListener('click', devControlClose);
+    shell.querySelector('#novaDevSetupPw2').addEventListener('keydown', function(e){ if (e.key === 'Enter') devControlSetupCredentials(); });
+
+    // Login pane
     shell.querySelector('#novaDevLoginBtn').addEventListener('click', devControlLogin);
     shell.querySelector('#novaDevCancelBtn').addEventListener('click', devControlClose);
     shell.querySelector('#novaDevPassword').addEventListener('keydown', function(e){ if (e.key === 'Enter') devControlLogin(); });
+
+    // Reset credentials link
+    shell.querySelector('#novaDevResetCredsLink').addEventListener('click', function() {
+      if (!confirm('Reset your DCP credentials? You will need to create new ones.')) return;
+      try { localStorage.removeItem(DEV_CREDS_KEY); sessionStorage.removeItem(DEV_SESSION_KEY); } catch(e) {}
+      var setupPane = document.getElementById('novaDevSetupPane');
+      var loginPane = document.getElementById('novaDevLoginPane');
+      if (setupPane) setupPane.style.display = '';
+      if (loginPane) loginPane.style.display = 'none';
+      setTimeout(function(){ document.getElementById('novaDevSetupId')?.focus(); }, 40);
+    });
 
     // Header
     shell.querySelector('#novaDevCloseBtn').addEventListener('click', devControlClose);
