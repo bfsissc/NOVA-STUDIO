@@ -5636,7 +5636,7 @@ function devShowLockDialog(label, key) {
       return;
     }
 
-    devControlBind();
+    try { devControlBind(); } catch(err) { console.warn('[NOVA DCP] bind error:', err); }
 
     // Make ndcp functions globally accessible from inline onclick handlers
     window.ndcpSetPassword         = ndcpSetPassword;
@@ -5659,7 +5659,10 @@ function devShowLockDialog(label, key) {
 
     document.addEventListener('keydown', function(e) {
       // Ctrl + Shift + Alt + D → toggle DCP
-      if (e.ctrlKey && e.shiftKey && e.altKey && e.key.toLowerCase() === 'd') {
+      // Use e.code (physical key) not e.key — Alt modifier changes e.key on many keyboards
+      // e.g. Alt+D produces 'ð' on some layouts instead of 'd'
+      var isD = e.code === 'KeyD' || e.key === 'd' || e.key === 'D' || e.key === 'ð' || e.key === 'Ð';
+      if (e.ctrlKey && e.shiftKey && e.altKey && isD) {
         e.preventDefault();
         e.stopImmediatePropagation();
         devControlOpen();
@@ -5673,7 +5676,10 @@ function devShowLockDialog(label, key) {
           devControlClose();
         }
       }
-    }, true); // capture phase so it fires before any other handlers
+    }, true); // capture phase — fires before any other handler
+
+    // Also expose globally so devControlOpen() can be called from console as fallback
+    window.__novaDevOpen = devControlOpen;
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', devControlInit, {once:true});
