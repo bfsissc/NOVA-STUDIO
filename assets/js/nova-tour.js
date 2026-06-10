@@ -482,7 +482,10 @@
     _stepIdx = 0;
     _onDone  = onDone || null;
     _active  = true;
-    document.getElementById('ntOverlay').classList.add('nt-active');
+    const ov = document.getElementById('ntOverlay');
+    ov.style.opacity = '';
+    ov.style.pointerEvents = '';
+    ov.classList.add('nt-active');
     renderStep();
   }
 
@@ -627,7 +630,7 @@
     const overlay = document.getElementById('ntOverlay');
     const tip     = document.getElementById('ntTooltip');
     const ring    = document.getElementById('ntHighlightRing');
-    if (overlay) overlay.classList.remove('nt-active');
+    if (overlay) { overlay.classList.remove('nt-active'); overlay.style.opacity = '0'; overlay.style.pointerEvents = 'none'; }
     if (tip)   { tip.classList.remove('nt-visible'); tip.style.transform = ''; }
     if (ring)  ring.classList.remove('nt-ring-visible');
     if (typeof _onDone === 'function') _onDone();
@@ -717,6 +720,15 @@
     isActive       : function () { return _active; },
   };
 
+  // ── Dev Tours trigger (called from outside IIFE via window slot) ─────────
+  // nova-dev-tours.js sets window.__novaPendingSteps then calls this
+  window.__novaTriggerPendingSteps = function () {
+    var pending = window.__novaPendingSteps;
+    if (!pending || !Array.isArray(pending.steps)) return;
+    window.__novaPendingSteps = null;
+    startTour(pending.steps, pending.onDone || null);
+  };
+
   // ── Boot ─────────────────────────────────────────────────────────────────
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', waitForApp);
@@ -725,3 +737,20 @@
   }
 
 })();
+
+// ── Dev Tours bridge (appended by nova-dev-tours integration) ──────────────
+// nova-dev-tours.js dispatches 'nova:run-steps' with { steps, onDone }
+// This listener forwards it to the internal startTour engine.
+// Must be outside the IIFE so it attaches after the IIFE sets up NovaTour.
+window.addEventListener('nova:run-steps', function (e) {
+  if (!e.detail || !Array.isArray(e.detail.steps)) return;
+  if (window.NovaTour && window.NovaTour.isActive()) return; // don't stack tours
+  // Kick off via a thin adapter: temporarily swap startDashboard steps
+  // then trigger — the IIFE's startTour is private, so we dispatch back
+  // into startModule with a trick: inject a temp key into MODULE_TOURS.
+  // Actually: just use the existing endTour + direct re-fire approach.
+  // Since nova-tour.js's startTour is enclosed, we re-use startDashboard
+  // which has access. We pass via a shared window slot.
+  window.__novaPendingSteps = { steps: e.detail.steps, onDone: e.detail.onDone || null };
+  window.__novaTriggerPendingSteps && window.__novaTriggerPendingSteps();
+});
