@@ -2417,7 +2417,7 @@ function doGet(){return out({ok:true,status:'Nova Drive Relay running'});}</pre>
 
 <!-- ══ COLLEGE PORTAL VIEW ══ -->
 
-    <div class="view" id="viewPortal" data-cp-mode="create" style="flex-direction:column;overflow-y:auto">
+    <div class="view" id="viewPortal" data-cp-mode="list" style="flex-direction:column;overflow-y:auto">
   <div class="cp-wrap">
     <div class="cp-head">
       <div class="cp-head-l">
@@ -2426,6 +2426,12 @@ function doGet(){return out({ok:true,status:'Nova Drive Relay running'});}</pre>
       </div>
     </div>
     <div class="cp-body">
+
+      <!-- ── TAB SWITCH ── -->
+      <div class="cp-mode-switch">
+        <button id="cpPortalModeCreate" class="cp-mode-btn" onclick="cpSetPortalView('create')">Create Portal</button>
+        <button id="cpPortalModeList" class="cp-mode-btn active" onclick="cpSetPortalView('list')">College List</button>
+      </div>
 
       <!-- ── TWO-PANEL LAYOUT ── -->
       <div class="cp-dual">
@@ -2439,7 +2445,7 @@ function doGet(){return out({ok:true,status:'Nova Drive Relay running'});}</pre>
           <div class="cp-panel-body" style="padding:0;overflow:hidden;display:flex;flex-direction:column">
 
       <!-- Create / Edit Wizard — IDs must match college-portal-admin.js exactly -->
-      <div class="cp-wizard" id="cpWizard" style="display:none">
+      <div class="cp-wizard" id="cpWizard" style="display:flex">
         <div class="cp-wizard-head">
           <div class="cp-wizard-title">Create New Portal</div>
           <div class="cp-steps">
@@ -2804,6 +2810,7 @@ function doGet(){return out({ok:true,status:'Nova Drive Relay running'});}</pre>
                 </div>
               </div>
             </div>
+          </div><!-- /cpStep3 -->
 
           <!-- Step 4: Name Verification -->
           <div class="cp-step" id="cpStep4">
