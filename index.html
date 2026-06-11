@@ -81,8 +81,8 @@
 .cp-drop-zone-t{font-size:.78rem;font-weight:600;margin-bottom:4px}
 .cp-drop-zone-s{font-size:.67rem;color:var(--mist)}
 .cp-template-badge{display:flex;align-items:center;gap:8px;padding:9px 12px;background:var(--lime-p);border-radius:8px;font-size:.75rem;font-weight:600}
-.cp-canvas-wrap{position:relative;width:100%;aspect-ratio:2480/1754;overflow:hidden;border-radius:8px;border:1.5px solid var(--fog);background:#f5f5f0;cursor:crosshair}
-.cp-canvas-wrap canvas{width:100%;height:100%}
+.cp-canvas-wrap{position:relative;width:100%;border-radius:8px;border:1.5px solid var(--fog);background:#f5f5f0;cursor:crosshair;touch-action:none}
+.cp-canvas-wrap canvas{display:block;width:100%;height:auto;touch-action:none;user-select:none}
 .cp-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .cp-row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
 .cp-student-table{width:100%;border-collapse:collapse;font-size:.73rem}
@@ -137,7 +137,7 @@
 .cp-pi-tag.state{background:#eff6ff;color:#2563eb}
 .cp-pi-tag.district{background:#fdf4ff;color:#9333ea}
 /* Canvas in panel */
-.cp-panel .cp-canvas-wrap{aspect-ratio:2480/1754}
+.cp-panel .cp-canvas-wrap{width:100%}
 /* Compact wizard inside panel */
 .cp-panel .cp-step-body{padding:14px 16px}
 .cp-panel .cp-wizard-footer{padding:10px 16px}
@@ -2613,7 +2613,7 @@ function doGet(){return out({ok:true,status:'Nova Drive Relay running'});}</pre>
               </div>
 
               <!-- Manual / Paste CSV panel -->
-              <div id="cpManualEntryPanel" style="display:none;margin-top:14px;padding:14px;border:1.5px dashed var(--fog);border-radius:10px;background:var(--surface)">
+              <div id="cpManualEntryPanel" style="display:block;margin-top:14px;padding:14px;border:1.5px dashed var(--fog);border-radius:10px;background:var(--surface)">
                 <div style="font-size:.73rem;font-weight:700;margin-bottom:8px;color:var(--ink)">📋 Paste CSV Text (Alternative)</div>
                 <div style="font-size:.68rem;color:var(--mist);margin-bottom:8px;line-height:1.5">
                   If auto-fetch fails, open your Google Sheet → <b>File → Download → CSV</b>, open the file, copy all text, paste here.<br>
@@ -2644,7 +2644,9 @@ function doGet(){return out({ok:true,status:'Nova Drive Relay running'});}</pre>
                 onmousedown="cpCanvasMouseDown(event)"
                 onmousemove="cpCanvasMouseMove(event)"
                 onmouseup="cpCanvasMouseUp()"
-                onmouseleave="cpCanvasMouseUp()"></canvas>
+                ontouchstart="cpCanvasMouseDown(event)"
+                ontouchmove="cpCanvasMouseMove(event)"
+                ontouchend="cpCanvasMouseUp()"></canvas>
             </div>
 
             <div class="cp-row" style="margin-top:12px">

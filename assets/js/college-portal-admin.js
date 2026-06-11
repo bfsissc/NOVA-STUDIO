@@ -1304,10 +1304,13 @@ function cpDrawNameCanvas() {
   var canvas = document.getElementById('cpNameCanvas');
   if (!canvas) return;
   var wrap   = canvas.parentElement;
-  var wrapW  = wrap.clientWidth || 560;
-  var aspect = CP.templateImg ? (CP.templateImg.naturalWidth / CP.templateImg.naturalHeight) : 1.414;
-  canvas.width = wrapW; canvas.height = Math.round(wrapW / aspect);
-  canvas.style.width = wrapW + 'px'; canvas.style.height = canvas.height + 'px';
+  var wrapW  = Math.round(wrap.getBoundingClientRect().width) || wrap.clientWidth || 560;
+  var aspect = CP.templateImg ? (CP.templateImg.naturalWidth / CP.templateImg.naturalHeight) : (2480 / 1754);
+  var displayH = Math.round(wrapW / aspect);
+  canvas.width  = wrapW;
+  canvas.height = displayH;
+  canvas.style.width  = '';
+  canvas.style.height = '';
   var ctx = canvas.getContext('2d');
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   if (CP.templateImg) {
@@ -1384,35 +1387,45 @@ function cpDrawNameCanvas() {
 }
 
 function cpCanvasMouseDown(e) {
-  // Determine which dot was clicked — closest to pointer
+  e.preventDefault();
   var canvas = document.getElementById('cpNameCanvas');
   var rect   = canvas.getBoundingClientRect();
   var clientX = e.touches ? e.touches[0].clientX : e.clientX;
   var clientY = e.touches ? e.touches[0].clientY : e.clientY;
+  // Use rect dimensions (CSS display size) not canvas.width/height for hit testing
   var pxX = (clientX - rect.left) / rect.width  * canvas.width;
   var pxY = (clientY - rect.top)  / rect.height * canvas.height;
-  var nameX    = canvas.width  * (CP.namePos.xPct     / 100);
-  var nameY    = canvas.height * (CP.namePos.yPct     / 100);
+  var nameX     = canvas.width  * (CP.namePos.xPct     / 100);
+  var nameY     = canvas.height * (CP.namePos.yPct     / 100);
   var fromDateX = canvas.width  * (CP.datePosFrom.xPct / 100);
   var fromDateY = canvas.height * (CP.datePosFrom.yPct / 100);
   var toDateX   = canvas.width  * (CP.datePosTo.xPct   / 100);
   var toDateY   = canvas.height * (CP.datePosTo.yPct   / 100);
-  var distName    = Math.hypot(pxX - nameX,    pxY - nameY);
-  var distFrom    = Math.hypot(pxX - fromDateX, pxY - fromDateY);
-  var distTo      = Math.hypot(pxX - toDateX,   pxY - toDateY);
-  var minDist = Math.min(distName, distFrom, distTo);
-  CP.isDragging      = (minDist === distName);
-  CP.isDraggingDate  = (minDist === distFrom);
-  CP.isDraggingDateTo= (minDist === distTo);
+  var distName  = Math.hypot(pxX - nameX,     pxY - nameY);
+  var distFrom  = Math.hypot(pxX - fromDateX, pxY - fromDateY);
+  var distTo    = Math.hypot(pxX - toDateX,   pxY - toDateY);
+  var minDist   = Math.min(distName, distFrom, distTo);
+  CP.isDragging       = (minDist === distName);
+  CP.isDraggingDate   = (minDist === distFrom);
+  CP.isDraggingDateTo = (minDist === distTo);
+  // Register global listeners so drag continues outside canvas
+  document.addEventListener('mousemove', cpCanvasGlobalMove);
+  document.addEventListener('mouseup',   cpCanvasGlobalUp);
+  document.addEventListener('touchmove', cpCanvasGlobalMove, { passive: false });
+  document.addEventListener('touchend',  cpCanvasGlobalUp);
   cpCanvasUpdatePos(e);
 }
 function cpCanvasMouseMove(e) { if (CP.isDragging || CP.isDraggingDate || CP.isDraggingDateTo) cpCanvasUpdatePos(e); }
+function cpCanvasGlobalMove(e) { if (CP.isDragging || CP.isDraggingDate || CP.isDraggingDateTo) { e.preventDefault(); cpCanvasUpdatePos(e); } }
+function cpCanvasGlobalUp()    { cpCanvasMouseUp(); document.removeEventListener('mousemove', cpCanvasGlobalMove); document.removeEventListener('mouseup', cpCanvasGlobalUp); document.removeEventListener('touchmove', cpCanvasGlobalMove); document.removeEventListener('touchend', cpCanvasGlobalUp); }
 
 function cpCanvasUpdatePos(e) {
   var canvas = document.getElementById('cpNameCanvas');
-  var rect   = canvas.getBoundingClientRect();
-  var clientX = e.touches ? e.touches[0].clientX : e.clientX;
-  var clientY = e.touches ? e.touches[0].clientY : e.clientY;
+  if (!canvas) return;
+  var rect    = canvas.getBoundingClientRect();
+  var clientX = (e.touches && e.touches[0]) ? e.touches[0].clientX : e.clientX;
+  var clientY = (e.touches && e.touches[0]) ? e.touches[0].clientY : e.clientY;
+  // Clamp to canvas bounds — allow dragging slightly outside and it snaps to edge
   var xPct = Math.max(0, Math.min(100, (clientX - rect.left) / rect.width  * 100));
   var yPct = Math.max(0, Math.min(100, (clientY - rect.top)  / rect.height * 100));
   if (CP.isDraggingDateTo) {
@@ -1425,8 +1438,8 @@ function cpCanvasUpdatePos(e) {
     var dfyEl = document.getElementById('cpDateFromYPct'); if (dfyEl) dfyEl.value = yPct.toFixed(1);
   } else {
     CP.namePos.xPct = xPct; CP.namePos.yPct = yPct;
-    document.getElementById('cpXPct').value = xPct.toFixed(1);
-    document.getElementById('cpYPct').value = yPct.toFixed(1);
+    var xEl = document.getElementById('cpXPct'); if (xEl) xEl.value = xPct.toFixed(1);
+    var yEl = document.getElementById('cpYPct'); if (yEl) yEl.value = yPct.toFixed(1);
   }
   cpDrawNameCanvas();
 }
