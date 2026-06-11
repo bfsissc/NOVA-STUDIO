@@ -2722,3 +2722,416 @@ function cpCopyEmail(email) {
     prompt('Copy this email:', email);
   });
 }
+
+// ══════════════════════════════════════════════════════════════════
+// ██  NOVA STUDIO — COLLEGE PORTAL REWRITE (NEW 5-STEP WIZARD)
+// ══════════════════════════════════════════════════════════════════
+
+// ── Gender-split student arrays ──────────────────────────────────
+// CP.students holds ALL students (merged at publish time from male+female)
+// CP.studentsMale / CP.studentsFemale hold the per-gender lists
+CP.studentsMale   = CP.studentsMale   || [];
+CP.studentsFemale = CP.studentsFemale || [];
+CP.csvDriveUrlMale   = CP.csvDriveUrlMale   || '';
+CP.csvDriveUrlFemale = CP.csvDriveUrlFemale || '';
+CP.monitorGenderFilter = 'all'; // 'all' | 'male' | 'female'
+CP.canvasActiveGender  = 'male'; // which template is shown in step 3
+
+// ── Canvas template switcher (Step 3) ────────────────────────────
+function cpSwitchCanvasTemplate(gender) {
+  CP.canvasActiveGender = gender;
+  var btnM = document.getElementById('cpCanvasToggleMale');
+  var btnF = document.getElementById('cpCanvasToggleFemale');
+  if (btnM) { btnM.className = gender === 'male'   ? 'btn bl btn-sm' : 'btn bo btn-sm'; }
+  if (btnF) { btnF.className = gender === 'female' ? 'btn bl btn-sm' : 'btn bo btn-sm'; }
+  // Swap active template image for canvas draw
+  var img = gender === 'female' ? CP.templateImgFemale : CP.templateImgMale;
+  if (img) {
+    CP.templateImg    = img;
+    CP.templateWidth  = img.naturalWidth;
+    CP.templateHeight = img.naturalHeight;
+  }
+  cpDrawNameCanvas();
+}
+
+// ── Override cpRenderStep to handle new step logic ────────────────
+var _cpRenderStepOriginal = cpRenderStep;
+cpRenderStep = function(n) {
+  CP.step = n;
+  for (var i = 1; i <= 5; i++) {
+    var el  = document.getElementById('cpStep' + i);
+    var dot = document.getElementById('cpDot'  + i);
+    if (el)  el.style.display = (i === n) ? 'block' : 'none';
+    if (dot) dot.className = 'cp-dot' + (i < n ? ' done' : i === n ? ' active' : '');
+  }
+  var backBtn = document.getElementById('cpBtnBack');
+  var nextBtn = document.getElementById('cpBtnNext');
+  if (backBtn) backBtn.style.visibility = (n > 1) ? 'visible' : 'hidden';
+  if (nextBtn) nextBtn.style.display    = (n === 5) ? 'none' : 'inline-flex';
+  // Step-specific inits
+  if (n === 3) {
+    var img = CP.canvasActiveGender === 'female' ? CP.templateImgFemale : CP.templateImgMale;
+    if (img) { CP.templateImg = img; CP.templateWidth = img.naturalWidth; CP.templateHeight = img.naturalHeight; }
+    if (CP.templateImg) cpDrawNameCanvas();
+  }
+  if (n === 4) { cpMergeStudentLists(); cpRenderMonitorTable(); cpVerifyFilter(); }
+  if (n === 5) cpRenderPortalLink();
+};
+
+// ── Override cpValidateStep for new steps ────────────────────────
+var _cpValidateStepOriginal = cpValidateStep;
+cpValidateStep = function(n) {
+  if (n === 1) {
+    var name = (document.getElementById('cpCollegeName') || {}).value || '';
+    name = name.trim();
+    if (!name) { cpToast('Please enter a college name.', 'err'); return false; }
+    var slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    var sp = document.getElementById('cpSlugPreview'); if (sp) sp.textContent = slug;
+    CP.currentSlug = slug;
+    if (!CP.uploadMode) {
+      cpToast('Please select a template storage mode before continuing.', 'err');
+      var section = document.getElementById('cpUploadModeSection');
+      if (section) { section.style.outline = '2px solid #ef4444'; section.style.borderRadius = '10px'; setTimeout(function() { section.style.outline = ''; }, 1800); }
+      return false;
+    }
+    return true;
+  }
+  if (n === 2) {
+    if (!CP.templateImgMale)   { cpToast('Please upload the Male certificate template.', 'err'); return false; }
+    if (!CP.templateImgFemale) { cpToast('Please upload the Female certificate template.', 'err'); return false; }
+    if (CP.studentsMale.length === 0 && CP.studentsFemale.length === 0) {
+      cpToast('Please load student data for at least one gender.', 'err'); return false;
+    }
+    if (!CP.templateImg) { CP.templateImg = CP.templateImgMale; }
+    return true;
+  }
+  return true;
+};
+
+// ── Merge male + female students into CP.students ─────────────────
+function cpMergeStudentLists() {
+  var merged = [];
+  CP.studentsMale.forEach(function(s) { merged.push(Object.assign({ gender: 'male' }, s)); });
+  CP.studentsFemale.forEach(function(s) { merged.push(Object.assign({ gender: 'female' }, s)); });
+  CP.students = merged;
+}
+
+// ── Gender-split CSV fetch ────────────────────────────────────────
+async function cpFetchCsvFromUrlGender(gender) {
+  var inputId  = gender === 'male' ? 'cpCsvDriveUrlMale'     : 'cpCsvDriveUrlFemale';
+  var badgeId  = gender === 'male' ? 'cpCsvBadgeMale'        : 'cpCsvBadgeFemale';
+  var wrapId   = gender === 'male' ? 'cpCsvBadgeWrapMale'    : 'cpCsvBadgeWrapFemale';
+  var pillId   = gender === 'male' ? 'cpMaleStudentBadge'    : 'cpFemaleStudentBadge';
+  var raw = ((document.getElementById(inputId) || {}).value || '').trim();
+  if (!raw) { cpToast('Please paste a Google Sheets or CSV link first.', 'err'); return; }
+  var badge    = document.getElementById(badgeId);
+  var badgeWrap= document.getElementById(wrapId);
+  if (badge) badge.textContent = 'Fetching…';
+  if (badgeWrap) badgeWrap.style.display = 'flex';
+  if (gender === 'male') CP.csvDriveUrlMale = raw; else CP.csvDriveUrlFemale = raw;
+
+  var sheetId = null, gid = 0, fileId = null;
+  var sheetMatch = raw.match(/\/spreadsheets\/d\/([a-zA-Z0-9_-]{20,})/);
+  if (sheetMatch) {
+    sheetId = sheetMatch[1];
+    var gidMatch = raw.match(/[#&?]gid=(\d+)/); if (gidMatch) gid = parseInt(gidMatch[1]);
+  } else {
+    var m = raw.match(/\/d\/([a-zA-Z0-9_-]{20,})/); if (!m) m = raw.match(/[?&]id=([a-zA-Z0-9_-]{20,})/);
+    if (m) fileId = m[1];
+  }
+  var proxies = ['https://corsproxy.io/?', 'https://api.allorigins.win/raw?url='];
+  var urlsToTry = [];
+  if (sheetId) {
+    var baseUrls = [
+      'https://docs.google.com/spreadsheets/d/' + sheetId + '/export?format=csv&gid=' + gid,
+      'https://docs.google.com/spreadsheets/d/' + sheetId + '/gviz/tq?tqx=out:csv&gid=' + gid,
+    ];
+    baseUrls.forEach(function(u) { urlsToTry.push(u); });
+    proxies.forEach(function(p) { baseUrls.forEach(function(u) { urlsToTry.push(p + encodeURIComponent(u)); }); });
+  } else if (fileId) {
+    var de = 'https://drive.google.com/uc?export=download&id=' + fileId;
+    urlsToTry.push(de);
+    proxies.forEach(function(p) { urlsToTry.push(p + encodeURIComponent(de)); });
+  } else {
+    urlsToTry.push(raw);
+    proxies.forEach(function(p) { urlsToTry.push(p + encodeURIComponent(raw)); });
+  }
+
+  var parsed = null;
+  for (var ui = 0; ui < urlsToTry.length; ui++) {
+    try {
+      if (badge) badge.textContent = 'Trying method ' + (ui + 1) + '…';
+      var ctrl = new AbortController(); var timer = setTimeout(function() { ctrl.abort(); }, 8000);
+      var resp = await fetch(urlsToTry[ui], { signal: ctrl.signal });
+      clearTimeout(timer);
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      var text = await resp.text();
+      if (!text || text.trim().length < 2) throw new Error('Empty');
+      if (text.trim().startsWith('<')) throw new Error('Got HTML');
+      parsed = cpParseCsvToArray(text);
+      if (parsed.length === 0) throw new Error('No rows');
+      break;
+    } catch(e) { /* try next */ }
+  }
+
+  if (!parsed || parsed.length === 0) {
+    if (badge) badge.textContent = 'Auto-fetch failed — use the paste option below';
+    if (badgeWrap) badgeWrap.style.display = 'none';
+    var manualPanel = document.getElementById(gender === 'male' ? 'cpManualEntryPanelMale' : 'cpManualEntryPanelFemale');
+    if (manualPanel) manualPanel.style.display = 'block';
+    cpToast('Could not load sheet. Try pasting CSV text below.', 'err');
+    return;
+  }
+
+  if (gender === 'male') CP.studentsMale = parsed; else CP.studentsFemale = parsed;
+  var pill = document.getElementById(pillId);
+  if (badge)    badge.textContent = parsed.length + ' students loaded ✓';
+  if (badgeWrap) badgeWrap.style.display = 'flex';
+  if (pill) { pill.textContent = parsed.length + ' loaded'; pill.style.display = 'inline-block'; }
+  cpToast(parsed.length + ' ' + gender + ' students loaded ✓', 'ok');
+  cpSaveDraft();
+}
+
+// ── Gender paste-CSV ──────────────────────────────────────────────
+function cpPasteCsvTextGender(gender) {
+  var areaId  = gender === 'male' ? 'cpCsvPasteAreaMale'   : 'cpCsvPasteAreaFemale';
+  var badgeId = gender === 'male' ? 'cpCsvBadgeMale'       : 'cpCsvBadgeFemale';
+  var wrapId  = gender === 'male' ? 'cpCsvBadgeWrapMale'   : 'cpCsvBadgeWrapFemale';
+  var pillId  = gender === 'male' ? 'cpMaleStudentBadge'   : 'cpFemaleStudentBadge';
+  var panelId = gender === 'male' ? 'cpManualEntryPanelMale' : 'cpManualEntryPanelFemale';
+  var ta = document.getElementById(areaId);
+  if (!ta || !ta.value.trim()) { cpToast('Please paste CSV data first.', 'err'); return; }
+  var parsed = cpParseCsvToArray(ta.value.trim());
+  if (parsed.length === 0) { cpToast('No valid rows found.', 'err'); return; }
+  if (gender === 'male') CP.studentsMale = parsed; else CP.studentsFemale = parsed;
+  var badge = document.getElementById(badgeId); if (badge) badge.textContent = parsed.length + ' students loaded from pasted CSV';
+  var wrap  = document.getElementById(wrapId);  if (wrap) wrap.style.display = 'flex';
+  var pill  = document.getElementById(pillId);  if (pill) { pill.textContent = parsed.length + ' loaded'; pill.style.display = 'inline-block'; }
+  var panel = document.getElementById(panelId); if (panel) panel.style.display = 'none';
+  ta.value = '';
+  cpToast(parsed.length + ' ' + gender + ' students loaded ✓', 'ok');
+  cpSaveDraft();
+}
+
+// ── Remove gender CSV ─────────────────────────────────────────────
+function cpRemoveCsvGender(gender) {
+  if (gender === 'male') { CP.studentsMale = []; CP.csvDriveUrlMale = ''; }
+  else { CP.studentsFemale = []; CP.csvDriveUrlFemale = ''; }
+  var wrapId = gender === 'male' ? 'cpCsvBadgeWrapMale' : 'cpCsvBadgeWrapFemale';
+  var inputId = gender === 'male' ? 'cpCsvDriveUrlMale' : 'cpCsvDriveUrlFemale';
+  var pillId  = gender === 'male' ? 'cpMaleStudentBadge' : 'cpFemaleStudentBadge';
+  var wrap  = document.getElementById(wrapId);  if (wrap)  wrap.style.display = 'none';
+  var input = document.getElementById(inputId); if (input) input.value = '';
+  var pill  = document.getElementById(pillId);  if (pill)  pill.style.display = 'none';
+  cpSaveDraft();
+}
+
+// ── Parse CSV text → array of {name, limit} ───────────────────────
+function cpParseCsvToArray(text) {
+  var lines   = text.split(/\r?\n/).filter(function(l) { return l.trim(); });
+  if (lines.length < 2) return [];
+  var headers = lines[0].split(',').map(function(h) { return h.trim().replace(/^"|"$/g, '').toLowerCase(); });
+  var nameIdx  = headers.findIndex(function(h) { return /^name$/i.test(h); });
+  var limitIdx = headers.findIndex(function(h) { return /^(limit|downloads?|max|allowed)$/i.test(h); });
+  if (nameIdx === -1) nameIdx = 0;
+  var result = [];
+  for (var i = 1; i < lines.length; i++) {
+    var cols  = cpSplitCsvRow(lines[i]);
+    var name  = (cols[nameIdx] || '').trim().replace(/^"|"$/g, '');
+    if (!name) continue;
+    var limit = limitIdx >= 0 ? (parseInt(cols[limitIdx]) || 1) : 1;
+    result.push({ name: name, limit: limit });
+  }
+  return result;
+}
+
+// ── Monitor step: render table with Preview buttons ───────────────
+function cpMonitorFilter(gender) {
+  CP.monitorGenderFilter = gender;
+  var btnAll    = document.getElementById('cpMonFilterAll');
+  var btnMale   = document.getElementById('cpMonFilterMale');
+  var btnFemale = document.getElementById('cpMonFilterFemale');
+  if (btnAll)    btnAll.className    = gender === 'all'    ? 'btn bl btn-sm' : 'btn bo btn-sm';
+  if (btnMale)   btnMale.className   = gender === 'male'   ? 'btn bl btn-sm' : 'btn bo btn-sm';
+  if (btnFemale) btnFemale.className = gender === 'female' ? 'btn bl btn-sm' : 'btn bo btn-sm';
+  cpRenderMonitorTable();
+}
+
+function cpRenderMonitorTable() {
+  var tbody     = document.getElementById('cpStudentTable');
+  var countEl   = document.getElementById('cpStudentCount');
+  if (!tbody) return;
+  var list = CP.students;
+  var fgender = CP.monitorGenderFilter;
+  var shown = fgender === 'all' ? list : list.filter(function(s) { return s.gender === fgender; });
+  if (shown.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--mist)">No students — go back to Step 2 to load data</td></tr>';
+    if (countEl) countEl.textContent = '0 students';
+    return;
+  }
+  var cellStyle  = 'padding:4px 6px;vertical-align:middle';
+  var inputStyle = 'width:100%;padding:4px 7px;border:1px solid var(--fog);border-radius:5px;font-size:.72rem;background:var(--card);color:var(--ink);font-family:inherit';
+  var numStyle   = inputStyle + ';width:54px;text-align:center';
+  tbody.innerHTML = shown.map(function(s, i) {
+    var realIdx = CP.students.indexOf(s);
+    var gBadge = s.gender === 'female'
+      ? '<span style="font-size:.65rem;background:#fdf4ff;color:#7e22ce;border:1px solid #e9d5ff;border-radius:20px;padding:1px 7px;white-space:nowrap">👩 F</span>'
+      : '<span style="font-size:.65rem;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;border-radius:20px;padding:1px 7px;white-space:nowrap">🧑 M</span>';
+    return '<tr id="cpStudentRow_' + realIdx + '">'
+      + '<td style="' + cellStyle + ';color:var(--mist);font-size:.68rem;width:24px">' + (realIdx + 1) + '</td>'
+      + '<td style="' + cellStyle + '"><input type="text" style="' + inputStyle + '" value="' + escH(s.name) + '" oninput="cpStudentEdit(' + realIdx + ',\'name\',this.value)" placeholder="Student name"></td>'
+      + '<td style="' + cellStyle + ';text-align:center">' + gBadge + '</td>'
+      + '<td style="' + cellStyle + '"><input type="number" style="' + numStyle + '" value="' + (s.limit || 1) + '" min="1" max="99" oninput="cpStudentEdit(' + realIdx + ',\'limit\',+this.value)"></td>'
+      + '<td style="' + cellStyle + ';text-align:center"><button onclick="cpMonitorPreview(' + realIdx + ')" title="Preview" style="background:none;border:1.5px solid var(--fog);border-radius:6px;cursor:pointer;font-size:.72rem;padding:3px 8px;color:var(--ink)">👁 Preview</button></td>'
+      + '<td style="' + cellStyle + ';width:28px"><button onclick="cpStudentDelete(' + realIdx + ')" title="Delete row" style="background:none;border:none;cursor:pointer;color:#e05;font-size:.85rem;line-height:1;padding:2px 4px">✕</button></td>'
+      + '</tr>';
+  }).join('');
+  if (countEl) countEl.textContent = shown.length + ' student' + (shown.length === 1 ? '' : 's') + (fgender !== 'all' ? ' (' + fgender + ')' : '');
+}
+
+// ── Monitor preview: render certificate canvas with student name ───
+function cpMonitorPreview(idx) {
+  var s = CP.students[idx];
+  if (!s) return;
+  var wrap = document.getElementById('cpMonitorPreviewWrap');
+  var canvas = document.getElementById('cpMonitorCanvas');
+  var label  = document.getElementById('cpMonitorPreviewName');
+  if (!canvas || !wrap) return;
+  wrap.style.display = 'block';
+  if (label) label.textContent = s.name + ' (' + (s.gender || '?') + ')';
+
+  var img = (s.gender === 'female' && CP.templateImgFemale) ? CP.templateImgFemale : CP.templateImgMale;
+  if (!img) { cpToast('Template not loaded for this gender.', 'err'); return; }
+
+  var maxW = Math.min(canvas.parentElement.clientWidth - 20, 560);
+  var aspect = img.naturalWidth / img.naturalHeight;
+  var w = maxW, h = Math.round(maxW / aspect);
+  canvas.width = w; canvas.height = h;
+  canvas.style.width = w + 'px'; canvas.style.height = h + 'px';
+  var ctx = canvas.getContext('2d');
+  ctx.drawImage(img, 0, 0, w, h);
+
+  var scale = w / (CP.templateWidth || img.naturalWidth || 2480);
+  // Draw name
+  var fs = Math.round((CP.nameStyle.fontSize || 60) * scale);
+  ctx.font = (CP.nameStyle.italic ? 'italic ' : '') + (CP.nameStyle.bold ? 'bold ' : '') + fs + 'px ' + (CP.nameStyle.fontFamily || 'Georgia');
+  ctx.fillStyle = CP.nameStyle.color || '#1a1a1a';
+  ctx.textAlign = CP.nameStyle.align || 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(s.name, w * (CP.namePos.xPct / 100), h * (CP.namePos.yPct / 100));
+  // Draw dates (use gender-specific)
+  var dateFrom = s.gender === 'female' ? (CP.dateFromFemale || CP.dateFromMale || '') : (CP.dateFromMale || '');
+  var dateTo   = s.gender === 'female' ? (CP.dateToFemale   || CP.dateToMale   || '') : (CP.dateToMale   || '');
+  if (dateFrom || dateTo) {
+    var dfs = Math.round((CP.dateStyle.fontSize || 36) * scale);
+    ctx.font = (CP.dateStyle.italic ? 'italic ' : '') + (CP.dateStyle.bold ? 'bold ' : '') + dfs + 'px ' + (CP.dateStyle.fontFamily || 'Georgia');
+    ctx.fillStyle = CP.dateStyle.color || '#1a1a1a';
+    ctx.textAlign = CP.dateStyle.align || 'center';
+    if (dateFrom) ctx.fillText(dateFrom, w * (CP.datePosFrom.xPct / 100), h * (CP.datePosFrom.yPct / 100));
+    if (dateTo)   ctx.fillText(dateTo,   w * (CP.datePosTo.xPct   / 100), h * (CP.datePosTo.yPct   / 100));
+  }
+  // Scroll preview into view
+  wrap.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+// ── Override cpRenderStudentTable to use monitor render in step 4 ──
+var _cpRenderStudentTableOriginal = cpRenderStudentTable;
+cpRenderStudentTable = function() {
+  if (CP.step === 4) { cpRenderMonitorTable(); return; }
+  _cpRenderStudentTableOriginal();
+};
+
+// ── Patch cpPublishPortal to merge lists before saving ─────────────
+var _cpPublishPortalOriginal = cpPublishPortal;
+cpPublishPortal = async function() {
+  cpMergeStudentLists();
+  return _cpPublishPortalOriginal.apply(this, arguments);
+};
+
+// ── Patch cpSaveDraft to also save gender-split data ──────────────
+var _cpSaveDraftOriginal = cpSaveDraft;
+cpSaveDraft = function() {
+  _cpSaveDraftOriginal();
+  // Append extra fields to draft
+  try {
+    var raw = localStorage.getItem('cp_draft');
+    if (!raw) return;
+    var draft = JSON.parse(raw);
+    draft.studentsMale      = CP.studentsMale      || [];
+    draft.studentsFemale    = CP.studentsFemale    || [];
+    draft.csvDriveUrlMale   = CP.csvDriveUrlMale   || '';
+    draft.csvDriveUrlFemale = CP.csvDriveUrlFemale || '';
+    localStorage.setItem('cp_draft', JSON.stringify(draft));
+  } catch(e) { /* quota or parse error — ignore */ }
+};
+
+// ── Patch cpRestoreDraft to restore gender-split data ────────────
+var _cpRestoreDraftOriginal = cpRestoreDraft;
+cpRestoreDraft = function() {
+  var result = _cpRestoreDraftOriginal();
+  try {
+    var raw = localStorage.getItem('cp_draft');
+    if (!raw) return result;
+    var draft = JSON.parse(raw);
+    CP.studentsMale      = draft.studentsMale      || [];
+    CP.studentsFemale    = draft.studentsFemale    || [];
+    CP.csvDriveUrlMale   = draft.csvDriveUrlMale   || '';
+    CP.csvDriveUrlFemale = draft.csvDriveUrlFemale || '';
+    // Restore badge pill labels
+    if (CP.studentsMale.length > 0) {
+      var pill = document.getElementById('cpMaleStudentBadge');
+      var badge = document.getElementById('cpCsvBadgeMale');
+      var wrap  = document.getElementById('cpCsvBadgeWrapMale');
+      if (pill)  { pill.textContent = CP.studentsMale.length + ' loaded';   pill.style.display  = 'inline-block'; }
+      if (badge) badge.textContent = CP.studentsMale.length + ' students (restored)';
+      if (wrap)  wrap.style.display = 'flex';
+    }
+    if (CP.studentsFemale.length > 0) {
+      var pillF = document.getElementById('cpFemaleStudentBadge');
+      var badgeF = document.getElementById('cpCsvBadgeFemale');
+      var wrapF  = document.getElementById('cpCsvBadgeWrapFemale');
+      if (pillF)  { pillF.textContent = CP.studentsFemale.length + ' loaded'; pillF.style.display  = 'inline-block'; }
+      if (badgeF) badgeF.textContent = CP.studentsFemale.length + ' students (restored)';
+      if (wrapF)  wrapF.style.display = 'flex';
+    }
+  } catch(e) { /* ignore */ }
+  return result;
+};
+
+// ── Patch cpTemplateFileMaleChanged / Female to show Auto-resize badge ──
+var _cpTemplateFileMaleChangedOriginal = cpTemplateFileMaleChanged;
+cpTemplateFileMaleChanged = function(input) {
+  var result = _cpTemplateFileMaleChangedOriginal.apply(this, arguments);
+  // Show auto-resize badge after processing
+  var file = input.files && input.files[0];
+  if (file) {
+    var badge = document.getElementById('cpAutoResizeBadgeMale');
+    if (badge) { badge.style.display = 'inline-block'; }
+  }
+  return result;
+};
+var _cpTemplateFileFemaleChangedOriginal = cpTemplateFileFemaleChanged;
+cpTemplateFileFemaleChanged = function(input) {
+  var result = _cpTemplateFileFemaleChangedOriginal.apply(this, arguments);
+  var file = input.files && input.files[0];
+  if (file) {
+    var badge = document.getElementById('cpAutoResizeBadgeFemale');
+    if (badge) { badge.style.display = 'inline-block'; }
+  }
+  return result;
+};
+
+// ── Patch cpNewPortal to reset gender-split state ─────────────────
+var _cpNewPortalOriginal = cpNewPortal;
+cpNewPortal = function() {
+  _cpNewPortalOriginal();
+  CP.studentsMale = []; CP.studentsFemale = [];
+  CP.csvDriveUrlMale = ''; CP.csvDriveUrlFemale = '';
+  CP.monitorGenderFilter = 'all'; CP.canvasActiveGender = 'male';
+  ['cpMaleStudentBadge','cpFemaleStudentBadge'].forEach(function(id){ var el=document.getElementById(id); if(el) el.style.display='none'; });
+  ['cpCsvBadgeWrapMale','cpCsvBadgeWrapFemale'].forEach(function(id){ var el=document.getElementById(id); if(el) el.style.display='none'; });
+  ['cpAutoResizeBadgeMale','cpAutoResizeBadgeFemale'].forEach(function(id){ var el=document.getElementById(id); if(el) el.style.display='none'; });
+  var mpw = document.getElementById('cpMonitorPreviewWrap'); if(mpw) mpw.style.display='none';
+};
+
+console.log('[NOVA] College Portal rewrite v2 loaded — 5-step wizard active');

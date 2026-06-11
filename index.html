@@ -2453,19 +2453,21 @@ function doGet(){return out({ok:true,status:'Nova Drive Relay running'});}</pre>
           <div class="cp-steps">
             <div class="cp-dot active" id="cpDot1" title="College Info">1</div>
             <div style="width:14px;height:2px;background:var(--fog)"></div>
-            <div class="cp-dot" id="cpDot2" title="Template & CSV">2</div>
+            <div class="cp-dot" id="cpDot2" title="Templates & Data">2</div>
             <div style="width:14px;height:2px;background:var(--fog)"></div>
-            <div class="cp-dot" id="cpDot3" title="Name Position">3</div>
+            <div class="cp-dot" id="cpDot3" title="Position">3</div>
             <div style="width:14px;height:2px;background:var(--fog)"></div>
-            <div class="cp-dot" id="cpDot4" title="Verify Names">4</div>
+            <div class="cp-dot" id="cpDot4" title="Monitor">4</div>
             <div style="width:14px;height:2px;background:var(--fog)"></div>
             <div class="cp-dot" id="cpDot5" title="Publish">5</div>
           </div>
         </div>
         <div class="cp-step-body">
 
-          <!-- Step 1: College Details -->
+          <!-- ═══ STEP 1: College Info + Storage Mode ═══ -->
           <div class="cp-step" id="cpStep1">
+            <div style="font-size:.72rem;font-weight:700;color:var(--mist);text-transform:uppercase;letter-spacing:.07em;margin-bottom:14px">Step 1 — College Details</div>
+
             <div class="cp-label">College / Institution Name</div>
             <input class="cp-fi" id="cpCollegeName" placeholder="e.g. Mumbai Institute of Technology" oninput="cpSlugFromName()">
             <div class="cp-slug-preview">Portal URL: …/college-portal.html?c=<b id="cpSlugPreview">your-college</b></div>
@@ -2475,12 +2477,13 @@ function doGet(){return out({ok:true,status:'Nova Drive Relay running'});}</pre>
               <input class="cp-fi" id="cpCardMessage" placeholder="Enter your full name exactly as registered to download your certificate.">
             </div>
 
-            <div class="cp-row" style="margin-top:14px">
+            <!-- Download Limit + Open Access -->
+            <div class="cp-row" style="margin-top:14px;align-items:flex-end">
               <div>
                 <div class="cp-label">Default Download Limit per Student</div>
                 <input class="cp-fi" id="cpDefaultLimit" type="number" min="1" max="10" value="3">
               </div>
-              <div style="display:flex;flex-direction:column;justify-content:flex-end;gap:6px;padding-bottom:2px">
+              <div style="padding-bottom:6px">
                 <label style="display:flex;align-items:center;gap:8px;font-size:.77rem;font-weight:600;cursor:pointer">
                   <input type="checkbox" id="cpOpenAccess" style="width:15px;height:15px;cursor:pointer">
                   Open Access (no student list required)
@@ -2488,17 +2491,7 @@ function doGet(){return out({ok:true,status:'Nova Drive Relay running'});}</pre>
               </div>
             </div>
 
-            <div class="cp-row" style="margin-top:14px">
-              <div>
-                <div class="cp-label">Header Color</div>
-                <input class="cp-fi" id="cpHeaderColor" type="color" value="#1a1a2e" style="padding:4px;height:38px;cursor:pointer">
-              </div>
-              <div>
-                <div class="cp-label">Accent Color</div>
-                <input class="cp-fi" id="cpAccentColor" type="color" value="#4f46e5" style="padding:4px;height:38px;cursor:pointer">
-              </div>
-            </div>
-
+            <!-- State + District -->
             <div class="cp-row2" style="margin-top:14px">
               <div>
                 <div class="cp-label">State <span style="font-weight:400;color:var(--mist)">(for filtering)</span></div>
@@ -2524,26 +2517,54 @@ function doGet(){return out({ok:true,status:'Nova Drive Relay running'});}</pre>
               </div>
             </div>
 
+            <!-- Google Form (optional) -->
             <div style="margin-top:14px">
-              <div class="cp-label">Google Form Link <span style="font-weight:400;color:var(--mist)">(for students who can't download)</span></div>
-              <input class="cp-fi" id="cpGoogleFormUrl" placeholder="https://forms.gle/…  (optional — leave blank to hide)">
-              <div style="font-size:.67rem;color:var(--mist);margin-top:5px;line-height:1.5">When filled in, a button appears on the student portal so students can submit their name & email to receive their certificate manually.</div>
+              <div class="cp-label">Google Form Link <span style="font-weight:400;color:var(--mist)">(optional — for students who can't download)</span></div>
+              <input class="cp-fi" id="cpGoogleFormUrl" placeholder="https://forms.gle/…  (leave blank to hide)">
             </div>
-          </div>
 
-          <!-- Step 2: Drive Links -->
+            <!-- Storage Mode -->
+            <div id="cpUploadModeSection" style="margin-top:20px">
+              <div class="cp-label" style="margin-bottom:8px">📦 Template Storage Mode <span style="font-weight:400;color:var(--mist)">(required)</span></div>
+              <div style="font-size:.7rem;color:var(--mist);margin-bottom:12px;line-height:1.55">Choose how your certificate template will be stored before moving to the next step.</div>
+              <div style="display:flex;flex-direction:column;gap:10px">
+                <div id="cpModeCardLocal" onclick="cpSelectUploadModeCard('local')" style="cursor:pointer;border:2px solid var(--fog);border-radius:12px;padding:14px 16px;display:flex;align-items:flex-start;gap:12px;transition:border .15s,background .15s;background:var(--surface)">
+                  <div style="font-size:1.5rem;margin-top:1px;line-height:1">📦</div>
+                  <div style="flex:1">
+                    <div style="font-weight:700;color:var(--ink);font-size:.9rem">Store Locally <span style="font-size:.72rem;font-weight:500;color:var(--mist)">(Firestore)</span></div>
+                    <div style="font-size:.75rem;color:var(--mist);margin-top:4px;line-height:1.55">Template compressed and stored directly in Firestore. No backend upload needed. Ideal for quick portals.</div>
+                  </div>
+                  <div id="cpModeCheckLocal" style="display:none;font-size:1.1rem;margin-top:1px">✅</div>
+                </div>
+                <div id="cpModeCardBackend" onclick="cpSelectUploadModeCard('backend')" style="cursor:pointer;border:2px solid var(--fog);border-radius:12px;padding:14px 16px;display:flex;align-items:flex-start;gap:12px;transition:border .15s,background .15s;background:var(--surface)">
+                  <div style="font-size:1.5rem;margin-top:1px;line-height:1">☁️</div>
+                  <div style="flex:1">
+                    <div style="font-weight:700;color:var(--ink);font-size:.9rem">NOVA Backend <span style="font-size:.72rem;font-weight:500;color:var(--mist)">(Drive + Storage)</span></div>
+                    <div style="font-size:.75rem;color:var(--mist);margin-top:4px;line-height:1.55">Compress then upload to Firebase Storage and back up to NOVA Drive. Best for large portals.</div>
+                  </div>
+                  <div id="cpModeCheckBackend" style="display:none;font-size:1.1rem;margin-top:1px">✅</div>
+                </div>
+              </div>
+              <div id="cpUploadModeHint" style="display:none;margin-top:8px;font-size:.72rem;font-weight:600;color:#16a34a;background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:8px;padding:6px 10px"></div>
+            </div>
+          </div><!-- /cpStep1 -->
+
+          <!-- ═══ STEP 2: Templates + Data (Gender-Split) ═══ -->
           <div class="cp-step" id="cpStep2">
-            <div class="cp-label">🖼️ Certificate Templates</div>
+            <div style="font-size:.72rem;font-weight:700;color:var(--mist);text-transform:uppercase;letter-spacing:.07em;margin-bottom:14px">Step 2 — Templates &amp; Student Data</div>
+
+            <!-- ── Certificate Templates ── -->
+            <div style="font-size:.82rem;font-weight:800;color:var(--ink);margin-bottom:6px">🖼️ Certificate Templates</div>
             <div style="font-size:.7rem;color:var(--mist);margin-bottom:14px;line-height:1.6">
-              Upload <b>two</b> templates — one for <b>Mr.</b> (male) and one for <b>Ms./Mrs.</b> (female).
-              The correct certificate is selected automatically based on the student&#39;s name prefix.
+              Upload <b>two templates</b> — one for <b>Male (Mr.)</b> and one for <b>Female (Ms./Mrs.)</b>. Templates are auto-resized to the recommended size on upload.
             </div>
 
-            <!-- Male Template -->
+            <!-- Male Template Card -->
             <div style="border:1.5px solid var(--fog);border-radius:12px;padding:14px;margin-bottom:12px;background:var(--surface)">
               <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
                 <span style="font-size:1.1rem">🧑</span>
                 <span class="cp-label" style="margin:0">Male Template <span style="font-size:.68rem;font-weight:400;color:var(--mist)">(Mr.)</span></span>
+                <span id="cpAutoResizeBadgeMale" style="display:none;font-size:.65rem;font-weight:700;color:#16a34a;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:20px;padding:2px 8px;margin-left:auto">🗜️ Auto-resized</span>
               </div>
               <input type="file" id="cpTemplateFileMale" accept="image/*" style="display:none" onchange="cpTemplateFileMaleChanged(this)">
               <div onclick="cpTriggerTemplateMale()"
@@ -2552,8 +2573,8 @@ function doGet(){return out({ok:true,status:'Nova Drive Relay running'});}</pre>
                 ondrop="event.preventDefault();this.style.borderColor='var(--fog)';var f=event.dataTransfer.files[0];if(f){var inp=document.getElementById('cpTemplateFileMale');var dt=new DataTransfer();dt.items.add(f);inp.files=dt.files;cpTemplateFileMaleChanged(inp);}"
                 style="border:2px dashed var(--fog);border-radius:10px;padding:18px 12px;text-align:center;cursor:pointer;transition:border-color .2s">
                 <div style="font-size:1.5rem;margin-bottom:4px">📄</div>
-                <div style="font-size:.78rem;font-weight:700;color:var(--ink);margin-bottom:2px">Click or drag — Male template</div>
-                <div style="font-size:.67rem;color:var(--mist)">PNG, JPG, WebP</div>
+                <div style="font-size:.78rem;font-weight:700;color:var(--ink);margin-bottom:2px">Click or drag — Male certificate template</div>
+                <div style="font-size:.67rem;color:var(--mist)">PNG, JPG, WebP · Auto-compressed to recommended size</div>
                 <img id="cpTemplateThumbMale" style="display:none;margin-top:10px;max-width:100%;max-height:90px;border-radius:6px;object-fit:contain;border:1px solid var(--fog)" alt="male preview">
               </div>
               <div style="display:flex;align-items:center;gap:8px;margin-top:8px;min-height:20px">
@@ -2562,11 +2583,12 @@ function doGet(){return out({ok:true,status:'Nova Drive Relay running'});}</pre>
               </div>
             </div>
 
-            <!-- Female Template -->
-            <div style="border:1.5px solid var(--fog);border-radius:12px;padding:14px;margin-bottom:16px;background:var(--surface)">
+            <!-- Female Template Card -->
+            <div style="border:1.5px solid var(--fog);border-radius:12px;padding:14px;margin-bottom:20px;background:var(--surface)">
               <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
                 <span style="font-size:1.1rem">👩</span>
                 <span class="cp-label" style="margin:0">Female Template <span style="font-size:.68rem;font-weight:400;color:var(--mist)">(Ms. / Mrs. / Miss)</span></span>
+                <span id="cpAutoResizeBadgeFemale" style="display:none;font-size:.65rem;font-weight:700;color:#16a34a;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:20px;padding:2px 8px;margin-left:auto">🗜️ Auto-resized</span>
               </div>
               <input type="file" id="cpTemplateFileFemale" accept="image/*" style="display:none" onchange="cpTemplateFileFemaleChanged(this)">
               <div onclick="cpTriggerTemplateFemale()"
@@ -2575,8 +2597,8 @@ function doGet(){return out({ok:true,status:'Nova Drive Relay running'});}</pre>
                 ondrop="event.preventDefault();this.style.borderColor='var(--fog)';var f=event.dataTransfer.files[0];if(f){var inp=document.getElementById('cpTemplateFileFemale');var dt=new DataTransfer();dt.items.add(f);inp.files=dt.files;cpTemplateFileFemaleChanged(inp);}"
                 style="border:2px dashed var(--fog);border-radius:10px;padding:18px 12px;text-align:center;cursor:pointer;transition:border-color .2s">
                 <div style="font-size:1.5rem;margin-bottom:4px">📄</div>
-                <div style="font-size:.78rem;font-weight:700;color:var(--ink);margin-bottom:2px">Click or drag — Female template</div>
-                <div style="font-size:.67rem;color:var(--mist)">PNG, JPG, WebP</div>
+                <div style="font-size:.78rem;font-weight:700;color:var(--ink);margin-bottom:2px">Click or drag — Female certificate template</div>
+                <div style="font-size:.67rem;color:var(--mist)">PNG, JPG, WebP · Auto-compressed to recommended size</div>
                 <img id="cpTemplateThumbFemale" style="display:none;margin-top:10px;max-width:100%;max-height:90px;border-radius:6px;object-fit:contain;border:1px solid var(--fog)" alt="female preview">
               </div>
               <div style="display:flex;align-items:center;gap:8px;margin-top:8px;min-height:20px">
@@ -2585,62 +2607,107 @@ function doGet(){return out({ok:true,status:'Nova Drive Relay running'});}</pre>
               </div>
             </div>
 
-            <!-- Legacy hidden elements kept for backward compat -->
+            <!-- Legacy compat hidden elements -->
             <input type="file" id="cpTemplateFileInput" accept="image/*" style="display:none" onchange="cpHandleTemplateFileInput(this)">
             <div id="cpTemplateBadgeWrap" style="display:none"><div class="cp-template-badge"><span id="cpTemplateLoadStatus"></span><span id="cpTemplateBadge"></span></div></div>
             <div id="cpDriveBadge" style="display:none"></div>
 
-            <div style="margin-top:18px;padding-top:16px;border-top:1px solid var(--fog)">
-              <div class="cp-label">🟢 Student Data (Google Sheets)</div>
-              <div style="font-size:.7rem;color:var(--mist);margin-bottom:10px;line-height:1.7">
-                <b>How to set up your Google Sheet:</b><br>
-                1. Open <a href="https://sheets.google.com" target="_blank" style="color:var(--accent)">sheets.google.com</a> → create a sheet with <b>exactly two columns: <code>name</code> and <code>limit</code></b><br>
-                2. Column A = <b>name</b> (student full name), Column B = <b>limit</b> (max downloads, e.g. 3)<br>
-                3. Click <b>Share</b> → Change to <b>Anyone with the link</b> → <b>Viewer</b><br>
-                4. Copy the sheet URL and paste below
+            <div style="border-top:2px solid var(--fog);padding-top:18px">
+              <!-- ── Student Data ── -->
+              <div style="font-size:.82rem;font-weight:800;color:var(--ink);margin-bottom:6px">📋 Student Data</div>
+              <div style="font-size:.7rem;color:var(--mist);margin-bottom:14px;line-height:1.6">
+                Upload student lists separately for <b>Male</b> and <b>Female</b> students. Each list needs a <code>name</code> column and an optional <code>limit</code> column.
               </div>
-              <div style="display:flex;gap:8px;align-items:center">
-                <input class="cp-fi" id="cpCsvDriveUrl" placeholder="https://docs.google.com/spreadsheets/d/…" style="flex:1;font-family:'DM Mono',monospace;font-size:.75rem">
-                <button class="btn bo btn-sm" onclick="cpFetchCsvFromUrl()" style="white-space:nowrap;padding:10px 14px">🔄 Load</button>
+
+              <!-- Male Data Card -->
+              <div style="border:1.5px solid var(--fog);border-radius:12px;padding:14px;margin-bottom:12px;background:var(--surface)">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+                  <span style="font-size:1rem">🧑</span>
+                  <span class="cp-label" style="margin:0;color:#4f46e5">Male Student Data</span>
+                  <span id="cpMaleStudentBadge" style="display:none;font-size:.65rem;font-weight:700;color:#16a34a;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:20px;padding:2px 8px;margin-left:auto"></span>
+                </div>
+                <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+                  <input class="cp-fi" id="cpCsvDriveUrlMale" placeholder="Google Sheets URL for male students…" style="flex:1;font-family:'DM Mono',monospace;font-size:.73rem">
+                  <button class="btn bo btn-sm" onclick="cpFetchCsvFromUrlGender('male')" style="white-space:nowrap;padding:10px 12px;font-size:.7rem">🔄 Load</button>
+                </div>
+                <div style="font-size:.65rem;color:var(--mist);margin-bottom:10px">Sheet must have <b>name</b> column (and optional <b>limit</b>). Share → Anyone with link → Viewer.</div>
+                <div id="cpCsvBadgeWrapMale" style="display:none;margin-bottom:8px">
+                  <div class="cp-template-badge">
+                    <span>✅</span>
+                    <span id="cpCsvBadgeMale" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+                    <button onclick="cpRemoveCsvGender('male')" style="font-size:.7rem;background:none;border:none;cursor:pointer;color:var(--mist)">Remove</button>
+                  </div>
+                </div>
+                <!-- Male paste fallback -->
+                <div id="cpManualEntryPanelMale" style="display:none;margin-top:8px;padding:12px;border:1.5px dashed var(--fog);border-radius:8px;background:var(--snow)">
+                  <div style="font-size:.72rem;font-weight:700;margin-bottom:6px">📋 Paste CSV (Male)</div>
+                  <textarea id="cpCsvPasteAreaMale" placeholder="name,limit&#10;Aarav Sharma,3&#10;Rahul Gupta,2" style="width:100%;height:80px;padding:8px;border:1.5px solid var(--fog);border-radius:8px;font-size:.71rem;font-family:'DM Mono',monospace;background:var(--card);color:var(--ink);resize:vertical;box-sizing:border-box"></textarea>
+                  <div style="margin-top:8px;display:flex;gap:8px">
+                    <button class="btn bl btn-sm" onclick="cpPasteCsvTextGender('male')" style="padding:7px 14px;font-size:.72rem">📥 Load Pasted CSV</button>
+                    <button class="btn bo btn-sm" onclick="document.getElementById('cpManualEntryPanelMale').style.display='none'" style="padding:7px 12px;font-size:.72rem">Cancel</button>
+                  </div>
+                </div>
+                <button class="btn bo btn-sm" onclick="document.getElementById('cpManualEntryPanelMale').style.display=document.getElementById('cpManualEntryPanelMale').style.display==='none'?'block':'none'" style="padding:6px 12px;font-size:.7rem;color:var(--mist)">✏️ Paste / Enter manually</button>
               </div>
-              <div style="font-size:.67rem;color:var(--mist);margin-top:6px">
-                ✅ Works with Google Sheets &nbsp;·&nbsp; ✅ Google Drive CSV &nbsp;·&nbsp; ✅ Any public CSV URL
+
+              <!-- Female Data Card -->
+              <div style="border:1.5px solid var(--fog);border-radius:12px;padding:14px;background:var(--surface)">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+                  <span style="font-size:1rem">👩</span>
+                  <span class="cp-label" style="margin:0;color:#db2777">Female Student Data</span>
+                  <span id="cpFemaleStudentBadge" style="display:none;font-size:.65rem;font-weight:700;color:#16a34a;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:20px;padding:2px 8px;margin-left:auto"></span>
+                </div>
+                <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+                  <input class="cp-fi" id="cpCsvDriveUrlFemale" placeholder="Google Sheets URL for female students…" style="flex:1;font-family:'DM Mono',monospace;font-size:.73rem">
+                  <button class="btn bo btn-sm" onclick="cpFetchCsvFromUrlGender('female')" style="white-space:nowrap;padding:10px 12px;font-size:.7rem">🔄 Load</button>
+                </div>
+                <div style="font-size:.65rem;color:var(--mist);margin-bottom:10px">Sheet must have <b>name</b> column (and optional <b>limit</b>). Share → Anyone with link → Viewer.</div>
+                <div id="cpCsvBadgeWrapFemale" style="display:none;margin-bottom:8px">
+                  <div class="cp-template-badge">
+                    <span>✅</span>
+                    <span id="cpCsvBadgeFemale" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+                    <button onclick="cpRemoveCsvGender('female')" style="font-size:.7rem;background:none;border:none;cursor:pointer;color:var(--mist)">Remove</button>
+                  </div>
+                </div>
+                <!-- Female paste fallback -->
+                <div id="cpManualEntryPanelFemale" style="display:none;margin-top:8px;padding:12px;border:1.5px dashed var(--fog);border-radius:8px;background:var(--snow)">
+                  <div style="font-size:.72rem;font-weight:700;margin-bottom:6px">📋 Paste CSV (Female)</div>
+                  <textarea id="cpCsvPasteAreaFemale" placeholder="name,limit&#10;Priya Patel,3&#10;Ananya Singh,2" style="width:100%;height:80px;padding:8px;border:1.5px solid var(--fog);border-radius:8px;font-size:.71rem;font-family:'DM Mono',monospace;background:var(--card);color:var(--ink);resize:vertical;box-sizing:border-box"></textarea>
+                  <div style="margin-top:8px;display:flex;gap:8px">
+                    <button class="btn bl btn-sm" onclick="cpPasteCsvTextGender('female')" style="padding:7px 14px;font-size:.72rem">📥 Load Pasted CSV</button>
+                    <button class="btn bo btn-sm" onclick="document.getElementById('cpManualEntryPanelFemale').style.display='none'" style="padding:7px 12px;font-size:.72rem">Cancel</button>
+                  </div>
+                </div>
+                <button class="btn bo btn-sm" onclick="document.getElementById('cpManualEntryPanelFemale').style.display=document.getElementById('cpManualEntryPanelFemale').style.display==='none'?'block':'none'" style="padding:6px 12px;font-size:.7rem;color:var(--mist)">✏️ Paste / Enter manually</button>
               </div>
-              <div id="cpCsvBadgeWrap" style="display:none;margin-top:10px">
+
+              <!-- Combined legacy CSV badge (hidden, kept for draft compat) -->
+              <div id="cpCsvBadgeWrap" style="display:none">
                 <div class="cp-template-badge">
                   <span>✅</span>
-                  <span id="cpCsvBadge" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Students loaded</span>
+                  <span id="cpCsvBadge" style="flex:1;min-width:0"></span>
                   <button onclick="cpRemoveCsv()" style="font-size:.7rem;background:none;border:none;cursor:pointer;color:var(--mist)">Remove</button>
                 </div>
               </div>
-
-              <!-- Manual / Paste CSV panel -->
-              <div id="cpManualEntryPanel" style="display:block;margin-top:14px;padding:14px;border:1.5px dashed var(--fog);border-radius:10px;background:var(--surface)">
-                <div style="font-size:.73rem;font-weight:700;margin-bottom:8px;color:var(--ink)">📋 Paste CSV Text (Alternative)</div>
-                <div style="font-size:.68rem;color:var(--mist);margin-bottom:8px;line-height:1.5">
-                  If auto-fetch fails, open your Google Sheet → <b>File → Download → CSV</b>, open the file, copy all text, paste here.<br>
-                  Required column: <b>name</b> &nbsp;·&nbsp; Optional: <b>limit</b>
-                </div>
-                <textarea id="cpCsvPasteArea" placeholder="name,limit&#10;Aarav Sharma,3&#10;Priya Patel,2&#10;Rahul Gupta,1" style="width:100%;height:90px;padding:8px 10px;border:1.5px solid var(--fog);border-radius:8px;font-size:.72rem;font-family:'DM Mono',monospace;background:var(--card);color:var(--ink);resize:vertical;box-sizing:border-box"></textarea>
-                <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-                  <button class="btn bo btn-sm" onclick="cpPasteCsvText()" style="padding:8px 16px;font-size:.73rem">📥 Load Pasted CSV</button>
-                  <button class="btn bo btn-sm" onclick="cpStudentAddRow();document.getElementById('cpManualEntryPanel').style.display='none'" style="padding:8px 16px;font-size:.73rem">✏️ Enter Manually</button>
-                  <button onclick="document.getElementById('cpManualEntryPanel').style.display='none'" style="background:none;border:none;cursor:pointer;font-size:.7rem;color:var(--mist)">Dismiss</button>
-                </div>
-              </div>
-
-              <div style="margin-top:10px">
-                <button class="btn bo btn-sm" onclick="document.getElementById('cpManualEntryPanel').style.display=document.getElementById('cpManualEntryPanel').style.display==='none'?'block':'none'" style="padding:7px 13px;font-size:.7rem;color:var(--mist)">
-                  ✏️ Enter data manually / paste CSV text
-                </button>
-              </div>
+              <div id="cpManualEntryPanel" style="display:none"></div>
             </div>
-            </div>
-          </div>
+          </div><!-- /cpStep2 -->
 
-          <!-- Step 3: Name Positioning -->
+          <!-- ═══ STEP 3: Canvas Position ═══ -->
           <div class="cp-step" id="cpStep3">
-            <div class="cp-label">Drag the name label to position it on the certificate</div>
+            <div style="font-size:.72rem;font-weight:700;color:var(--mist);text-transform:uppercase;letter-spacing:.07em;margin-bottom:10px">Step 3 — Name &amp; Date Position</div>
+            <div style="font-size:.72rem;color:var(--mist);margin-bottom:12px;line-height:1.55">
+              Drag the <span style="color:rgba(79,70,229,.9);font-weight:700">● indigo dot</span> to set the name position.
+              Drag the <span style="color:rgba(217,119,6,.9);font-weight:700">● amber dot</span> for <b>From</b> date.
+              Drag the <span style="color:rgba(13,148,136,.9);font-weight:700">● teal dot</span> for <b>To</b> date.
+            </div>
+
+            <!-- Canvas template selector -->
+            <div style="display:flex;gap:8px;margin-bottom:10px">
+              <button id="cpCanvasToggleMale" onclick="cpSwitchCanvasTemplate('male')" class="btn bl btn-sm" style="padding:6px 14px;font-size:.72rem">🧑 Male Template</button>
+              <button id="cpCanvasToggleFemale" onclick="cpSwitchCanvasTemplate('female')" class="btn bo btn-sm" style="padding:6px 14px;font-size:.72rem">👩 Female Template</button>
+            </div>
+
             <div class="cp-canvas-wrap">
               <canvas id="cpNameCanvas"
                 onmousedown="cpCanvasMouseDown(event)"
@@ -2653,17 +2720,17 @@ function doGet(){return out({ok:true,status:'Nova Drive Relay running'});}</pre>
 
             <div class="cp-row" style="margin-top:12px">
               <div>
-                <div class="cp-label">X Position (%)</div>
+                <div class="cp-label">Name X (%)</div>
                 <input class="cp-fi" id="cpXPct" type="number" min="0" max="100" step="0.5" value="50" oninput="cpUpdatePosFromInput()">
               </div>
               <div>
-                <div class="cp-label">Y Position (%)</div>
+                <div class="cp-label">Name Y (%)</div>
                 <input class="cp-fi" id="cpYPct" type="number" min="0" max="100" step="0.5" value="62" oninput="cpUpdatePosFromInput()">
               </div>
             </div>
 
             <div style="margin-top:10px">
-              <div class="cp-label">Preview Name (to test positioning)</div>
+              <div class="cp-label">Preview Name (for positioning)</div>
               <input class="cp-fi" id="cpPreviewName" placeholder="e.g. Aarav Sharma" oninput="cpDrawNameCanvas()">
             </div>
 
@@ -2675,11 +2742,7 @@ function doGet(){return out({ok:true,status:'Nova Drive Relay running'});}</pre>
               <div>
                 <div class="cp-label">Font Family</div>
                 <select class="cp-fi" id="cpFontFamily" onchange="cpUpdateNameStyle()">
-                  <option>Georgia</option>
-                  <option>Arial</option>
-                  <option>Times New Roman</option>
-                  <option>Verdana</option>
-                  <option>Trebuchet MS</option>
+                  <option>Georgia</option><option>Arial</option><option>Times New Roman</option><option>Verdana</option><option>Trebuchet MS</option>
                 </select>
               </div>
               <div>
@@ -2687,151 +2750,104 @@ function doGet(){return out({ok:true,status:'Nova Drive Relay running'});}</pre>
                 <input class="cp-fi" id="cpFontColor" type="color" value="#1a1a1a" oninput="cpUpdateNameStyle()" style="padding:4px;height:38px;cursor:pointer">
               </div>
             </div>
-
             <div class="cp-row3" style="margin-top:10px">
-              <label style="display:flex;align-items:center;gap:6px;font-size:.75rem;font-weight:600;cursor:pointer">
-                <input type="checkbox" id="cpFontBold" onchange="cpUpdateNameStyle()"> Bold
-              </label>
-              <label style="display:flex;align-items:center;gap:6px;font-size:.75rem;font-weight:600;cursor:pointer">
-                <input type="checkbox" id="cpFontItalic" onchange="cpUpdateNameStyle()"> Italic
-              </label>
+              <label style="display:flex;align-items:center;gap:6px;font-size:.75rem;font-weight:600;cursor:pointer"><input type="checkbox" id="cpFontBold" onchange="cpUpdateNameStyle()"> Bold</label>
+              <label style="display:flex;align-items:center;gap:6px;font-size:.75rem;font-weight:600;cursor:pointer"><input type="checkbox" id="cpFontItalic" onchange="cpUpdateNameStyle()"> Italic</label>
               <div>
                 <select class="cp-fi" id="cpFontAlign" onchange="cpUpdateNameStyle()" style="font-size:.72rem">
-                  <option value="center">Center</option>
-                  <option value="left">Left</option>
-                  <option value="right">Right</option>
+                  <option value="center">Center</option><option value="left">Left</option><option value="right">Right</option>
                 </select>
               </div>
-            </div><!-- /cp-row3 Bold/Italic/Align -->
+            </div>
 
-            <!-- ── Date Range (Gender-Split) ──────────────────── -->
+            <!-- Date Range (gender-split) -->
             <div style="margin-top:16px;padding-top:14px;border-top:2px solid var(--fog)">
-              <div style="display:flex;align-items:center;gap:6px;margin-bottom:10px">
-                <span style="font-size:1rem">📅</span>
-                <span class="cp-label" style="margin:0;color:var(--ink)">Conducted On — Date Range</span>
-              </div>
+              <div style="font-size:.78rem;font-weight:800;color:var(--ink);margin-bottom:10px">📅 Date Range (Conducted On)</div>
 
-              <!-- Male dates -->
               <div style="background:var(--surface);border:1.5px solid var(--fog);border-radius:8px;padding:10px 12px;margin-bottom:8px">
                 <div style="font-size:.72rem;font-weight:700;color:#4f46e5;margin-bottom:8px">👨 Male (Mr.) Dates</div>
                 <div class="cp-row" style="gap:10px">
-                  <div>
-                    <div class="cp-label">From Date</div>
-                    <input class="cp-fi" id="cpDateFromMale" placeholder="e.g. 1st July 2025" oninput="cpUpdateDateRange()">
-                  </div>
-                  <div>
-                    <div class="cp-label">To Date</div>
-                    <input class="cp-fi" id="cpDateToMale" placeholder="e.g. 31st July 2026" oninput="cpUpdateDateRange()">
-                  </div>
+                  <div><div class="cp-label">From</div><input class="cp-fi" id="cpDateFromMale" placeholder="e.g. 1st July 2025" oninput="cpUpdateDateRange()"></div>
+                  <div><div class="cp-label">To</div><input class="cp-fi" id="cpDateToMale" placeholder="e.g. 31st July 2026" oninput="cpUpdateDateRange()"></div>
                 </div>
               </div>
-
-              <!-- Female dates -->
               <div style="background:var(--surface);border:1.5px solid var(--fog);border-radius:8px;padding:10px 12px;margin-bottom:10px">
                 <div style="font-size:.72rem;font-weight:700;color:#db2777;margin-bottom:8px">👩 Female (Ms./Mrs.) Dates</div>
                 <div class="cp-row" style="gap:10px">
-                  <div>
-                    <div class="cp-label">From Date</div>
-                    <input class="cp-fi" id="cpDateFromFemale" placeholder="e.g. 1st July 2025" oninput="cpUpdateDateRange()">
-                  </div>
-                  <div>
-                    <div class="cp-label">To Date</div>
-                    <input class="cp-fi" id="cpDateToFemale" placeholder="e.g. 31st July 2026" oninput="cpUpdateDateRange()">
-                  </div>
+                  <div><div class="cp-label">From</div><input class="cp-fi" id="cpDateFromFemale" placeholder="e.g. 1st July 2025" oninput="cpUpdateDateRange()"></div>
+                  <div><div class="cp-label">To</div><input class="cp-fi" id="cpDateToFemale" placeholder="e.g. 31st July 2026" oninput="cpUpdateDateRange()"></div>
                 </div>
               </div>
 
-              <div style="font-size:.67rem;color:var(--mist);margin-bottom:8px;line-height:1.5">
-                Drag the <span style="color:rgba(217,119,6,.9);font-weight:700">● amber dot</span> to position the <b>From</b> date.
-                Drag the <span style="color:rgba(13,148,136,.9);font-weight:700">● teal dot</span> to position the <b>To</b> date.
-                The <span style="color:rgba(79,70,229,.9);font-weight:700">● indigo dot</span> is for the name.<br>
-                <span style="color:var(--mist)">"to" is already printed on your certificate — only the two date values are placed.</span>
-              </div>
-
-              <!-- From-date position -->
+              <!-- Date position controls -->
               <div style="margin-top:8px">
                 <div style="font-size:.7rem;font-weight:700;color:rgba(217,119,6,.9);margin-bottom:4px">● From Date Position</div>
                 <div class="cp-row" style="gap:10px">
-                  <div>
-                    <div class="cp-label">X (%)</div>
-                    <input class="cp-fi" id="cpDateFromXPct" type="number" min="0" max="100" step="0.5" value="48" oninput="cpUpdateDateFromPos()">
-                  </div>
-                  <div>
-                    <div class="cp-label">Y (%)</div>
-                    <input class="cp-fi" id="cpDateFromYPct" type="number" min="0" max="100" step="0.5" value="72" oninput="cpUpdateDateFromPos()">
-                  </div>
+                  <div><div class="cp-label">X (%)</div><input class="cp-fi" id="cpDateFromXPct" type="number" min="0" max="100" step="0.5" value="48" oninput="cpUpdateDateFromPos()"></div>
+                  <div><div class="cp-label">Y (%)</div><input class="cp-fi" id="cpDateFromYPct" type="number" min="0" max="100" step="0.5" value="72" oninput="cpUpdateDateFromPos()"></div>
                 </div>
               </div>
-
-              <!-- To-date position -->
               <div style="margin-top:8px">
                 <div style="font-size:.7rem;font-weight:700;color:rgba(13,148,136,.9);margin-bottom:4px">● To Date Position</div>
                 <div class="cp-row" style="gap:10px">
-                  <div>
-                    <div class="cp-label">X (%)</div>
-                    <input class="cp-fi" id="cpDateToXPct" type="number" min="0" max="100" step="0.5" value="65" oninput="cpUpdateDateToPos()">
-                  </div>
-                  <div>
-                    <div class="cp-label">Y (%)</div>
-                    <input class="cp-fi" id="cpDateToYPct" type="number" min="0" max="100" step="0.5" value="72" oninput="cpUpdateDateToPos()">
-                  </div>
+                  <div><div class="cp-label">X (%)</div><input class="cp-fi" id="cpDateToXPct" type="number" min="0" max="100" step="0.5" value="65" oninput="cpUpdateDateToPos()"></div>
+                  <div><div class="cp-label">Y (%)</div><input class="cp-fi" id="cpDateToYPct" type="number" min="0" max="100" step="0.5" value="72" oninput="cpUpdateDateToPos()"></div>
                 </div>
               </div>
-
               <div class="cp-row3" style="margin-top:10px">
-                <div>
-                  <div class="cp-label">Date Font Size</div>
-                  <input class="cp-fi" id="cpDateFontSize" type="number" min="8" max="200" value="36" oninput="cpUpdateDateStyle()">
-                </div>
-                <div>
-                  <div class="cp-label">Date Font Family</div>
+                <div><div class="cp-label">Date Font Size</div><input class="cp-fi" id="cpDateFontSize" type="number" min="8" max="200" value="36" oninput="cpUpdateDateStyle()"></div>
+                <div><div class="cp-label">Date Font Family</div>
                   <select class="cp-fi" id="cpDateFontFamily" onchange="cpUpdateDateStyle()">
-                    <option>Georgia</option>
-                    <option>Arial</option>
-                    <option>Times New Roman</option>
-                    <option>Verdana</option>
-                    <option>Trebuchet MS</option>
+                    <option>Georgia</option><option>Arial</option><option>Times New Roman</option><option>Verdana</option><option>Trebuchet MS</option>
                   </select>
                 </div>
-                <div>
-                  <div class="cp-label">Date Color</div>
-                  <input class="cp-fi" id="cpDateFontColor" type="color" value="#1a1a1a" oninput="cpUpdateDateStyle()" style="padding:4px;height:38px;cursor:pointer">
-                </div>
+                <div><div class="cp-label">Date Color</div><input class="cp-fi" id="cpDateFontColor" type="color" value="#1a1a1a" oninput="cpUpdateDateStyle()" style="padding:4px;height:38px;cursor:pointer"></div>
               </div>
-
               <div class="cp-row3" style="margin-top:10px">
-                <label style="display:flex;align-items:center;gap:6px;font-size:.75rem;font-weight:600;cursor:pointer">
-                  <input type="checkbox" id="cpDateFontBold" onchange="cpUpdateDateStyle()"> Bold
-                </label>
-                <label style="display:flex;align-items:center;gap:6px;font-size:.75rem;font-weight:600;cursor:pointer">
-                  <input type="checkbox" id="cpDateFontItalic" checked onchange="cpUpdateDateStyle()"> Italic
-                </label>
-                <div>
-                  <select class="cp-fi" id="cpDateFontAlign" onchange="cpUpdateDateStyle()" style="font-size:.72rem">
-                    <option value="center">Center</option>
-                    <option value="left">Left</option>
-                    <option value="right">Right</option>
-                  </select>
-                </div>
+                <label style="display:flex;align-items:center;gap:6px;font-size:.75rem;font-weight:600;cursor:pointer"><input type="checkbox" id="cpDateFontBold" onchange="cpUpdateDateStyle()"> Bold</label>
+                <label style="display:flex;align-items:center;gap:6px;font-size:.75rem;font-weight:600;cursor:pointer"><input type="checkbox" id="cpDateFontItalic" checked onchange="cpUpdateDateStyle()"> Italic</label>
+                <div><select class="cp-fi" id="cpDateFontAlign" onchange="cpUpdateDateStyle()" style="font-size:.72rem"><option value="center">Center</option><option value="left">Left</option><option value="right">Right</option></select></div>
               </div>
             </div>
           </div><!-- /cpStep3 -->
 
-          <!-- Step 4: Name Verification -->
+          <!-- ═══ STEP 4: Monitoring — List + Preview ═══ -->
           <div class="cp-step" id="cpStep4">
-            <div class="cp-label">✅ Verify Student Names</div>
+            <div style="font-size:.72rem;font-weight:700;color:var(--mist);text-transform:uppercase;letter-spacing:.07em;margin-bottom:10px">Step 4 — Monitor &amp; Preview</div>
             <div style="font-size:.7rem;color:var(--mist);margin-bottom:14px;line-height:1.6">
-              Review all student names loaded from your CSV. Each name will appear on the certificate <b>exactly as listed below</b>. Edit, add, or delete before publishing.
+              Review all student names. Click any name to preview the certificate with that student's name rendered on the template. Edit names or limits before publishing.
             </div>
+
+            <!-- Preview area -->
+            <div id="cpMonitorPreviewWrap" style="display:none;margin-bottom:16px;border:1.5px solid var(--fog);border-radius:12px;overflow:hidden;background:var(--surface)">
+              <div style="padding:10px 14px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--fog)">
+                <span style="font-size:.78rem;font-weight:700;color:var(--ink)">Certificate Preview</span>
+                <span id="cpMonitorPreviewName" style="font-size:.72rem;color:var(--mist)"></span>
+              </div>
+              <div style="padding:10px;text-align:center">
+                <canvas id="cpMonitorCanvas" style="max-width:100%;border-radius:6px"></canvas>
+              </div>
+            </div>
+
+            <!-- Search + Stats -->
             <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center">
               <input class="cp-fi" id="cpVerifySearch" placeholder="🔍 Search names…" oninput="cpVerifyFilter()" style="flex:1;font-size:.78rem">
               <span style="font-size:.72rem;font-weight:700;color:var(--mist)" id="cpVerifyCount"></span>
             </div>
             <div id="cpVerifyStats" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px"></div>
+
+            <!-- Toggle: All / Male / Female -->
+            <div style="display:flex;gap:6px;margin-bottom:10px">
+              <button id="cpMonFilterAll" onclick="cpMonitorFilter('all')" class="btn bl btn-sm" style="padding:5px 12px;font-size:.7rem">All</button>
+              <button id="cpMonFilterMale" onclick="cpMonitorFilter('male')" class="btn bo btn-sm" style="padding:5px 12px;font-size:.7rem">🧑 Male</button>
+              <button id="cpMonFilterFemale" onclick="cpMonitorFilter('female')" class="btn bo btn-sm" style="padding:5px 12px;font-size:.7rem">👩 Female</button>
+            </div>
+
+            <!-- Student table -->
             <div id="cpStudentTableWrap">
               <div class="cp-student-overflow" style="max-height:280px">
                 <table class="cp-student-table">
-                  <thead><tr><th>#</th><th>Student Name</th><th>Download Limit</th><th></th></tr></thead>
+                  <thead><tr><th>#</th><th>Student Name</th><th>Gender</th><th>Limit</th><th>Preview</th><th></th></tr></thead>
                   <tbody id="cpStudentTable"></tbody>
                 </table>
               </div>
@@ -2840,24 +2856,24 @@ function doGet(){return out({ok:true,status:'Nova Drive Relay running'});}</pre>
                 <span id="cpStudentCount" style="font-size:.72rem;font-weight:600;color:var(--mist)">0 students</span>
               </div>
             </div>
+
             <div style="margin-top:14px;padding:12px 14px;background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:10px;font-size:.74rem;color:#1d4ed8;line-height:1.6">
-              💡 <b>Tip:</b> Names must match exactly what the student types in the portal. Check for typos, extra spaces, or capitalisation differences before publishing.
+              💡 <b>Tip:</b> Names must exactly match what students type in the portal. Click <b>Preview</b> next to any name to see what their certificate will look like.
             </div>
-          </div>
+          </div><!-- /cpStep4 -->
 
-          <!-- Step 5: Publish & Share -->
+          <!-- ═══ STEP 5: Publish ═══ -->
           <div class="cp-step" id="cpStep5">
-            <div style="text-align:center;padding:8px 0 16px">
-              <div style="font-size:2.2rem;margin-bottom:8px">🚀</div>
-              <div style="font-size:.92rem;font-weight:800;margin-bottom:4px">Ready to Publish</div>
-              <div style="font-size:.72rem;color:var(--mist)">Click Publish to save to Firebase and generate a shareable link</div>
+            <div style="font-size:.72rem;font-weight:700;color:var(--mist);text-transform:uppercase;letter-spacing:.07em;margin-bottom:14px">Step 5 — Publish Portal</div>
+
+            <!-- Preflight panel (injected by cpRenderPortalLink) -->
+            <div id="cpPreflightPanel"></div>
+
+            <div style="text-align:center;margin:16px 0">
+              <button class="btn bl" id="cpPublishBtn" onclick="cpPublishPortal()" style="padding:12px 36px;font-size:.9rem;font-weight:800">🚀 Publish Portal</button>
             </div>
 
-            <div style="text-align:center;margin-bottom:16px">
-              <button class="btn bl" id="cpPublishBtn" onclick="cpPublishPortal()" style="padding:10px 28px;font-size:.82rem">🚀 Publish Portal</button>
-            </div>
-
-            <!-- Success block — hidden until published -->
+            <!-- Success block -->
             <div id="cpPublishedSuccess" style="display:none">
               <div style="font-size:.75rem;font-weight:700;margin-bottom:8px;color:var(--mist)">SHARE LINK</div>
               <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
@@ -2869,7 +2885,7 @@ function doGet(){return out({ok:true,status:'Nova Drive Relay running'});}</pre>
               <div style="font-size:.75rem;font-weight:700;margin-bottom:8px;color:var(--mist)">QR CODE</div>
               <div id="cpQrWrap" style="display:flex;justify-content:center;padding:10px 0"></div>
             </div>
-          </div>
+          </div><!-- /cpStep5 -->
 
         </div><!-- cp-step-body -->
 
@@ -2878,6 +2894,7 @@ function doGet(){return out({ok:true,status:'Nova Drive Relay running'});}</pre>
           <button class="btn bl btn-sm" id="cpBtnNext" onclick="cpNextStep()">Next →</button>
         </div>
       </div><!-- cp-wizard -->
+
 
           </div><!-- cp-panel-body -->
         </div><!-- cp-panel PANEL 1 -->
