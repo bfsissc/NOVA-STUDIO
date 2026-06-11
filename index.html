@@ -2631,6 +2631,17 @@ function doGet(){return out({ok:true,status:'Nova Drive Relay running'});}</pre>
                   <button class="btn bo btn-sm" onclick="cpFetchCsvFromUrlGender('male')" style="white-space:nowrap;padding:10px 12px;font-size:.7rem">🔄 Load</button>
                 </div>
                 <div style="font-size:.65rem;color:var(--mist);margin-bottom:10px">Sheet must have <b>name</b> column. Optional: <b>date</b> (per-student date), <b>limit</b>. Share → Anyone with link → Viewer.</div>
+                <!-- Bulk date for all male students -->
+                <div style="display:flex;gap:8px;margin-bottom:10px;padding:8px 10px;background:var(--snow);border:1.5px solid var(--fog);border-radius:8px;align-items:flex-end">
+                  <span style="font-size:.8rem;padding-bottom:6px">📅</span>
+                  <div style="flex:1">
+                    <div style="font-size:.62rem;font-weight:700;color:var(--mist);margin-bottom:4px">DATE FOR ALL MALE STUDENTS <span style="font-weight:400">(optional — overrides Step 3)</span></div>
+                    <div style="display:flex;gap:8px">
+                      <input class="cp-fi" id="cpBulkDateFromMale" placeholder="From e.g. 1st July 2025" style="flex:1;font-size:.72rem" oninput="cpApplyBulkDate('male')">
+                      <input class="cp-fi" id="cpBulkDateToMale" placeholder="To e.g. 31st July 2026" style="flex:1;font-size:.72rem" oninput="cpApplyBulkDate('male')">
+                    </div>
+                  </div>
+                </div>
                 <div id="cpCsvBadgeWrapMale" style="display:none;margin-bottom:8px">
                   <div class="cp-template-badge">
                     <span>✅</span>
@@ -2662,6 +2673,17 @@ function doGet(){return out({ok:true,status:'Nova Drive Relay running'});}</pre>
                   <button class="btn bo btn-sm" onclick="cpFetchCsvFromUrlGender('female')" style="white-space:nowrap;padding:10px 12px;font-size:.7rem">🔄 Load</button>
                 </div>
                 <div style="font-size:.65rem;color:var(--mist);margin-bottom:10px">Sheet must have <b>name</b> column. Optional: <b>date</b> (per-student date), <b>limit</b>. Share → Anyone with link → Viewer.</div>
+                <!-- Bulk date for all female students -->
+                <div style="display:flex;gap:8px;margin-bottom:10px;padding:8px 10px;background:var(--snow);border:1.5px solid var(--fog);border-radius:8px;align-items:flex-end">
+                  <span style="font-size:.8rem;padding-bottom:6px">📅</span>
+                  <div style="flex:1">
+                    <div style="font-size:.62rem;font-weight:700;color:var(--mist);margin-bottom:4px">DATE FOR ALL FEMALE STUDENTS <span style="font-weight:400">(optional — overrides Step 3)</span></div>
+                    <div style="display:flex;gap:8px">
+                      <input class="cp-fi" id="cpBulkDateFromFemale" placeholder="From e.g. 1st July 2025" style="flex:1;font-size:.72rem" oninput="cpApplyBulkDate('female')">
+                      <input class="cp-fi" id="cpBulkDateToFemale" placeholder="To e.g. 31st July 2026" style="flex:1;font-size:.72rem" oninput="cpApplyBulkDate('female')">
+                    </div>
+                  </div>
+                </div>
                 <div id="cpCsvBadgeWrapFemale" style="display:none;margin-bottom:8px">
                   <div class="cp-template-badge">
                     <span>✅</span>

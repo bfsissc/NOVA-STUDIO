@@ -1803,72 +1803,53 @@ async function cpPublishPortal() {
     if (!CP.templateUrlMale)   { cpToast('No male template — go back to Step 2.', 'err'); btn.disabled = false; btn.textContent = '🚀 Publish Portal'; return; }
     if (!CP.templateUrlFemale) { cpToast('No female template — go back to Step 2.', 'err'); btn.disabled = false; btn.textContent = '🚀 Publish Portal'; return; }
 
-    // ── Fix Firestore 1MB limit: never store base64 data URLs in the document ──
-    // Base64 images are huge (~700KB+ each). Use Storage URLs, or store a blank.
-    var templateMaleForStore   = CP.templateUrlMale.startsWith('data:')   ? '' : CP.templateUrlMale;
-    var templateFemaleForStore = CP.templateUrlFemale.startsWith('data:') ? '' : CP.templateUrlFemale;
-    var templateForStore       = CP.templateUrl && !CP.templateUrl.startsWith('data:') ? CP.templateUrl : '';
+    // ── Template storage strategy ────────────────────────────────────
+    // 1. If already a Storage https:// URL → use directly
+    // 2. If base64 data URL → try Storage upload; on CORS fail → save to
+    //    Firestore _blobs sub-collection (chunked, avoids 1MB doc limit)
+    var templateMaleForStore   = CP.templateUrlMale   && !CP.templateUrlMale.startsWith('data:')   ? CP.templateUrlMale   : '';
+    var templateFemaleForStore = CP.templateUrlFemale && !CP.templateUrlFemale.startsWith('data:') ? CP.templateUrlFemale : '';
+    var templateForStore       = CP.templateUrl       && !CP.templateUrl.startsWith('data:')       ? CP.templateUrl       : '';
 
-    // If templates are still base64 (not yet on Storage), try uploading them now
-    // On CORS failure, fall back to saving base64 in a Firestore _blob sub-document
-    // (avoids 1MB Firestore limit on the main portal doc)
-    if (!templateMaleForStore && CP.templateUrlMale) {
-      btn.textContent = 'Uploading male template…';
-      var maleStorageOk = false;
+    async function cpSaveTemplateBlob(slug, gender, dataUrl, btnEl) {
+      // Try Storage first
       if (typeof fbStorage !== 'undefined') {
         try {
-          var uid5 = (typeof U !== 'undefined' && U && U.uid) ? U.uid : 'anon';
-          var pathM = 'portal-templates/' + uid5 + '/' + CP.currentSlug + '_male_' + Date.now() + '.jpg';
-          var sRefM = fbStorage.ref(pathM);
-          await sRefM.put(cpDataUrlToBlob(CP.templateUrlMale), { contentType: 'image/jpeg' });
-          templateMaleForStore = await sRefM.getDownloadURL();
-          maleStorageOk = true;
-        } catch(e) { /* CORS or permission error — fall through to Firestore blob */ }
+          btnEl.textContent = 'Uploading ' + gender + ' template to Storage…';
+          var uid5x = (typeof U !== 'undefined' && U && U.uid) ? U.uid : 'anon';
+          var pathX = 'portal-templates/' + uid5x + '/' + slug + '_' + gender + '_' + Date.now() + '.jpg';
+          var sRefX = fbStorage.ref(pathX);
+          await sRefX.put(cpDataUrlToBlob(dataUrl), { contentType: 'image/jpeg' });
+          return await sRefX.getDownloadURL(); // success → return Storage URL
+        } catch(storErr) {
+          console.warn('[CP] Storage upload failed (' + storErr.message + '), falling back to Firestore blobs');
+        }
       }
-      if (!maleStorageOk) {
-        // Fallback: compress aggressively and store base64 in Firestore _blob sub-doc
-        btn.textContent = 'Saving male template to Firestore…';
-        try {
-          var compMale = await cpCompressForFirestore(CP.templateUrlMale, 900000);
-          var blobParts = cpSplitBase64(compMale, 900000);
-          for (var bi = 0; bi < blobParts.length; bi++) {
-            await fbDb.collection('college_portals').doc(CP.currentSlug)
-              .collection('_blobs').doc('template_male_' + bi)
-              .set({ data: blobParts[bi], part: bi, total: blobParts.length }, { merge: false });
-          }
-          // Mark that template is stored in Firestore blobs, not Storage
-          templateMaleForStore = '__firestore_blob__';
-          cpToast('Male template saved via Firestore (Storage CORS not configured).', 'warn');
-        } catch(e2) { cpToast('Male template save failed: ' + e2.message, 'err'); }
+      // Firestore blob fallback — compress to ≤800KB then chunk into ≤800KB pieces
+      btnEl.textContent = 'Saving ' + gender + ' template to Firestore…';
+      var compData = await cpCompressForFirestore(dataUrl, 800000);
+      var chunks = cpSplitBase64(compData, 800000);
+      var blobRef = fbDb.collection('college_portals').doc(slug).collection('_blobs');
+      // Clear old blobs for this gender first
+      var oldSnap = await blobRef.get();
+      var delBatch = fbDb.batch();
+      oldSnap.forEach(function(d) { if (d.id.startsWith('template_' + gender)) delBatch.delete(d.ref); });
+      await delBatch.commit();
+      // Write new chunks
+      var writeBatch = fbDb.batch();
+      for (var ci = 0; ci < chunks.length; ci++) {
+        writeBatch.set(blobRef.doc('template_' + gender + '_' + ci), { data: chunks[ci], part: ci, total: chunks.length });
       }
+      await writeBatch.commit();
+      cpToast(gender + ' template saved to Firestore (' + chunks.length + ' chunk' + (chunks.length > 1 ? 's' : '') + '). Configure Firebase Storage CORS for faster loading.', 'warn');
+      return '__firestore_blob__';
+    }
+
+    if (!templateMaleForStore && CP.templateUrlMale) {
+      templateMaleForStore = await cpSaveTemplateBlob(CP.currentSlug, 'male', CP.templateUrlMale, btn);
     }
     if (!templateFemaleForStore && CP.templateUrlFemale) {
-      btn.textContent = 'Uploading female template…';
-      var femaleStorageOk = false;
-      if (typeof fbStorage !== 'undefined') {
-        try {
-          var uid5f = (typeof U !== 'undefined' && U && U.uid) ? U.uid : 'anon';
-          var pathF = 'portal-templates/' + uid5f + '/' + CP.currentSlug + '_female_' + Date.now() + '.jpg';
-          var sRefF = fbStorage.ref(pathF);
-          await sRefF.put(cpDataUrlToBlob(CP.templateUrlFemale), { contentType: 'image/jpeg' });
-          templateFemaleForStore = await sRefF.getDownloadURL();
-          femaleStorageOk = true;
-        } catch(e) { /* CORS or permission error — fall through to Firestore blob */ }
-      }
-      if (!femaleStorageOk) {
-        btn.textContent = 'Saving female template to Firestore…';
-        try {
-          var compFemale = await cpCompressForFirestore(CP.templateUrlFemale, 900000);
-          var blobPartsF = cpSplitBase64(compFemale, 900000);
-          for (var bj = 0; bj < blobPartsF.length; bj++) {
-            await fbDb.collection('college_portals').doc(CP.currentSlug)
-              .collection('_blobs').doc('template_female_' + bj)
-              .set({ data: blobPartsF[bj], part: bj, total: blobPartsF.length }, { merge: false });
-          }
-          templateFemaleForStore = '__firestore_blob__';
-          cpToast('Female template saved via Firestore (Storage CORS not configured).', 'warn');
-        } catch(e2) { cpToast('Female template save failed: ' + e2.message, 'err'); }
-      }
+      templateFemaleForStore = await cpSaveTemplateBlob(CP.currentSlug, 'female', CP.templateUrlFemale, btn);
     }
 
     // Template is already fully resolved by Step 4→5 transition:
@@ -2959,6 +2940,8 @@ async function cpFetchCsvFromUrlGender(gender) {
   }
 
   if (gender === 'male') CP.studentsMale = parsed; else CP.studentsFemale = parsed;
+  // Auto-apply bulk date if already filled in
+  cpApplyBulkDate(gender);
   var pill = document.getElementById(pillId);
   if (badge)    badge.textContent = parsed.length + ' students loaded ✓';
   if (badgeWrap) badgeWrap.style.display = 'flex';
@@ -2979,6 +2962,8 @@ function cpPasteCsvTextGender(gender) {
   var parsed = cpParseCsvToArray(ta.value.trim());
   if (parsed.length === 0) { cpToast('No valid rows found.', 'err'); return; }
   if (gender === 'male') CP.studentsMale = parsed; else CP.studentsFemale = parsed;
+  // Auto-apply bulk date if already filled in
+  cpApplyBulkDate(gender);
   var badge = document.getElementById(badgeId); if (badge) badge.textContent = parsed.length + ' students loaded from pasted CSV';
   var wrap  = document.getElementById(wrapId);  if (wrap) wrap.style.display = 'flex';
   var pill  = document.getElementById(pillId);  if (pill) { pill.textContent = parsed.length + ' loaded'; pill.style.display = 'inline-block'; }
@@ -3019,6 +3004,32 @@ function cpTogglePastePanel(gender) {
     var ta = document.getElementById(gender === 'male' ? 'cpCsvPasteAreaMale' : 'cpCsvPasteAreaFemale');
     if (ta) setTimeout(function() { ta.focus(); }, 50);
   }
+}
+
+// ── Bulk date: set one date for all students of a gender ─────────
+// When user fills the bulk date fields in Step 2, it pre-fills the
+// Step 3 date inputs AND stamps every loaded student with that date.
+function cpApplyBulkDate(gender) {
+  var fromId = gender === 'male' ? 'cpBulkDateFromMale'   : 'cpBulkDateFromFemale';
+  var toId   = gender === 'male' ? 'cpBulkDateToMale'     : 'cpBulkDateToFemale';
+  var fromVal = ((document.getElementById(fromId) || {}).value || '').trim();
+  var toVal   = ((document.getElementById(toId)   || {}).value || '').trim();
+  // Pre-fill Step 3 date inputs for this gender
+  var s3FromId = gender === 'male' ? 'cpDateFromMale'   : 'cpDateFromFemale';
+  var s3ToId   = gender === 'male' ? 'cpDateToMale'     : 'cpDateToFemale';
+  var s3From = document.getElementById(s3FromId); if (s3From && fromVal) s3From.value = fromVal;
+  var s3To   = document.getElementById(s3ToId);   if (s3To   && toVal)   s3To.value   = toVal;
+  // Update CP state
+  if (gender === 'male')   { if (fromVal) CP.dateFromMale   = fromVal; if (toVal) CP.dateToMale   = toVal; }
+  else                     { if (fromVal) CP.dateFromFemale = fromVal; if (toVal) CP.dateToFemale = toVal; }
+  // Stamp all loaded students of this gender with this date
+  var list = gender === 'male' ? CP.studentsMale : CP.studentsFemale;
+  if (list && (fromVal || toVal)) {
+    var combined = (fromVal && toVal) ? fromVal + ' – ' + toVal : (fromVal || toVal);
+    list.forEach(function(s) { if (fromVal || toVal) s.date = combined; });
+  }
+  if (CP.step === 3) cpDrawNameCanvas();
+  cpSaveDraft();
 }
 
 // ── Parse CSV text → array of {name, limit} ───────────────────────
@@ -3162,6 +3173,10 @@ cpSaveDraft = function() {
     draft.studentsFemale    = CP.studentsFemale    || [];
     draft.csvDriveUrlMale   = CP.csvDriveUrlMale   || '';
     draft.csvDriveUrlFemale = CP.csvDriveUrlFemale || '';
+    draft.bulkDateFromMale   = ((document.getElementById('cpBulkDateFromMale')   || {}).value || '').trim();
+    draft.bulkDateToMale     = ((document.getElementById('cpBulkDateToMale')     || {}).value || '').trim();
+    draft.bulkDateFromFemale = ((document.getElementById('cpBulkDateFromFemale') || {}).value || '').trim();
+    draft.bulkDateToFemale   = ((document.getElementById('cpBulkDateToFemale')   || {}).value || '').trim();
     localStorage.setItem('cp_draft', JSON.stringify(draft));
   } catch(e) { /* quota or parse error — ignore */ }
 };
@@ -3178,6 +3193,12 @@ cpRestoreDraft = function() {
     CP.studentsFemale    = draft.studentsFemale    || [];
     CP.csvDriveUrlMale   = draft.csvDriveUrlMale   || '';
     CP.csvDriveUrlFemale = draft.csvDriveUrlFemale || '';
+    // Restore bulk date fields
+    var _set2 = function(id, val) { var el = document.getElementById(id); if (el && val) el.value = val; };
+    _set2('cpBulkDateFromMale',   draft.bulkDateFromMale   || '');
+    _set2('cpBulkDateToMale',     draft.bulkDateToMale     || '');
+    _set2('cpBulkDateFromFemale', draft.bulkDateFromFemale || '');
+    _set2('cpBulkDateToFemale',   draft.bulkDateToFemale   || '');
     // Restore badge pill labels
     if (CP.studentsMale.length > 0) {
       var pill = document.getElementById('cpMaleStudentBadge');
