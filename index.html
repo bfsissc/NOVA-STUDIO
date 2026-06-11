@@ -2644,10 +2644,10 @@ function doGet(){return out({ok:true,status:'Nova Drive Relay running'});}</pre>
                   <textarea id="cpCsvPasteAreaMale" placeholder="name,limit&#10;Aarav Sharma,3&#10;Rahul Gupta,2&#10;&#10;(date column not needed here — set dates in Step 3)" style="width:100%;height:80px;padding:8px;border:1.5px solid var(--fog);border-radius:8px;font-size:.71rem;font-family:'DM Mono',monospace;background:var(--card);color:var(--ink);resize:vertical;box-sizing:border-box"></textarea>
                   <div style="margin-top:8px;display:flex;gap:8px">
                     <button class="btn bl btn-sm" onclick="cpPasteCsvTextGender('male')" style="padding:7px 14px;font-size:.72rem">📥 Load Pasted CSV</button>
-                    <button class="btn bo btn-sm" onclick="document.getElementById('cpManualEntryPanelMale').style.display='none'" style="padding:7px 12px;font-size:.72rem">Cancel</button>
+                    <button class="btn bo btn-sm" onclick="cpTogglePastePanel('male')" style="padding:7px 12px;font-size:.72rem">Cancel</button>
                   </div>
                 </div>
-                <button class="btn bo btn-sm" onclick="document.getElementById('cpManualEntryPanelMale').style.display=document.getElementById('cpManualEntryPanelMale').style.display==='none'?'block':'none'" style="padding:6px 12px;font-size:.7rem;color:var(--mist)">✏️ Paste / Enter manually</button>
+                <button class="btn bo btn-sm" id="cpPasteToggleMale" onclick="cpTogglePastePanel('male')" style="padding:6px 12px;font-size:.7rem;color:var(--mist)">✏️ Paste / Enter manually</button>
               </div>
 
               <!-- Female Data Card -->
@@ -2675,10 +2675,10 @@ function doGet(){return out({ok:true,status:'Nova Drive Relay running'});}</pre>
                   <textarea id="cpCsvPasteAreaFemale" placeholder="name,limit&#10;Priya Patel,3&#10;Ananya Singh,2&#10;&#10;(date column not needed here — set dates in Step 3)" style="width:100%;height:80px;padding:8px;border:1.5px solid var(--fog);border-radius:8px;font-size:.71rem;font-family:'DM Mono',monospace;background:var(--card);color:var(--ink);resize:vertical;box-sizing:border-box"></textarea>
                   <div style="margin-top:8px;display:flex;gap:8px">
                     <button class="btn bl btn-sm" onclick="cpPasteCsvTextGender('female')" style="padding:7px 14px;font-size:.72rem">📥 Load Pasted CSV</button>
-                    <button class="btn bo btn-sm" onclick="document.getElementById('cpManualEntryPanelFemale').style.display='none'" style="padding:7px 12px;font-size:.72rem">Cancel</button>
+                    <button class="btn bo btn-sm" onclick="cpTogglePastePanel('female')" style="padding:7px 12px;font-size:.72rem">Cancel</button>
                   </div>
                 </div>
-                <button class="btn bo btn-sm" onclick="document.getElementById('cpManualEntryPanelFemale').style.display=document.getElementById('cpManualEntryPanelFemale').style.display==='none'?'block':'none'" style="padding:6px 12px;font-size:.7rem;color:var(--mist)">✏️ Paste / Enter manually</button>
+                <button class="btn bo btn-sm" id="cpPasteToggleFemale" onclick="cpTogglePastePanel('female')" style="padding:6px 12px;font-size:.7rem;color:var(--mist)">✏️ Paste / Enter manually</button>
               </div>
 
               <!-- Combined legacy CSV badge (hidden, kept for draft compat) -->

@@ -533,14 +533,21 @@ async function initPortal() {
     }
 
     // Load template images (dual-gender + legacy fallback)
+    // __firestore_blob__ means the image was saved as chunked base64 in Firestore _blobs sub-collection
     var templateLoaded = false;
     if (portalCfg.templateUrlMale) {
-      await loadGenderTemplate(portalCfg.templateUrlMale, 'male');
-      templateLoaded = true;
+      var urlMale = portalCfg.templateUrlMale;
+      if (urlMale === '__firestore_blob__') {
+        urlMale = await cpReassembleBlobPortal(collegeSlug, 'male');
+      }
+      if (urlMale) { await loadGenderTemplate(urlMale, 'male'); templateLoaded = true; }
     }
     if (portalCfg.templateUrlFemale) {
-      await loadGenderTemplate(portalCfg.templateUrlFemale, 'female');
-      templateLoaded = true;
+      var urlFemale = portalCfg.templateUrlFemale;
+      if (urlFemale === '__firestore_blob__') {
+        urlFemale = await cpReassembleBlobPortal(collegeSlug, 'female');
+      }
+      if (urlFemale) { await loadGenderTemplate(urlFemale, 'female'); templateLoaded = true; }
     }
     // Legacy single-template fallback
     if (!templateLoaded && portalCfg.templateUrl) {
@@ -588,6 +595,21 @@ async function initPortal() {
 
 // ── Load template image from URL ──
 // ── Load a gender-specific template image ──────────────────────────
+
+async function cpReassembleBlobPortal(slug, gender) {
+  try {
+    var prefix = 'template_' + gender + '_';
+    var snap = await fbDb.collection('college_portals').doc(slug).collection('_blobs').get();
+    var parts = [];
+    snap.forEach(function(doc) {
+      if (doc.id.startsWith(prefix)) parts.push(doc.data());
+    });
+    if (parts.length === 0) return '';
+    parts.sort(function(a, b) { return (a.part || 0) - (b.part || 0); });
+    return parts.map(function(p) { return p.data; }).join('');
+  } catch(e) { console.warn('[CP] Blob reassemble failed:', e); return ''; }
+}
+
 async function loadGenderTemplate(url, gender) {
   return new Promise(function(resolve) {
     var img = new Image();
