@@ -1344,15 +1344,15 @@ button{cursor:pointer;font-family:inherit}input,select,textarea{font-family:inhe
 .cp-portals-ht{font-size:.8rem;font-weight:700;letter-spacing:-.01em}
 .cp-portals-list{padding:14px}
 .cp-pr-empty{padding:28px;text-align:center;color:var(--mist);font-size:.78rem}
-.cp-wizard{background:var(--snow);border:1.5px solid var(--fog);border-radius:12px;overflow:hidden}
+.cp-wizard{background:var(--snow);border:1.5px solid var(--fog);border-radius:12px;overflow:hidden;display:flex;flex-direction:column;height:100%}
 .cp-panel .cp-wizard{border:0;border-radius:0}
-.cp-wizard-head{padding:16px 18px;border-bottom:1.5px solid var(--fog);display:flex;align-items:center;justify-content:space-between}
+.cp-wizard-head{padding:16px 18px;border-bottom:1.5px solid var(--fog);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
 .cp-wizard-title{font-size:.85rem;font-weight:800}
 .cp-steps{display:flex;align-items:center;gap:4px}
 .cp-dot{width:22px;height:22px;border-radius:50%;background:var(--fog);display:flex;align-items:center;justify-content:center;font-size:.6rem;font-weight:700;color:var(--mist);transition:background .2s,color .2s}
 .cp-dot.active{background:var(--lime);color:var(--ink)}
 .cp-dot.done{background:var(--ink);color:#fff}
-.cp-step-body{padding:20px}
+.cp-step-body{padding:20px;flex:1;overflow-y:auto;min-height:0}
 .cp-panel .cp-step-body{padding:14px 16px}
 .cp-step{display:none}
 .cp-label{font-size:.72rem;font-weight:700;margin-bottom:6px;color:var(--ink)}
@@ -1369,7 +1369,7 @@ button{cursor:pointer;font-family:inherit}input,select,textarea{font-family:inhe
 .cp-student-table td{padding:4px 6px;border-bottom:1px solid var(--fog)}
 .cp-student-table input[type="text"]:focus,.cp-student-table input[type="number"]:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 2px rgba(79,70,229,.12)}
 .cp-student-overflow{max-height:260px;overflow-y:auto;border:1.5px solid var(--fog);border-radius:8px}
-.cp-wizard-footer{padding:14px 20px;border-top:1.5px solid var(--fog);display:flex;justify-content:space-between;align-items:center}
+.cp-wizard-footer{padding:14px 20px;border-top:1.5px solid var(--fog);display:flex;justify-content:space-between;align-items:center;flex-shrink:0;background:var(--snow)}
 .cp-panel .cp-wizard-footer{padding:10px 16px}
 .cp-portal-item{background:var(--card);border:1.5px solid var(--fog);border-radius:12px;padding:14px 16px;margin-bottom:10px;transition:box-shadow .15s,border-color .15s}
 .cp-portal-item:last-child{margin-bottom:0}
