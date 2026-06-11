@@ -2418,6 +2418,8 @@ function doGet(){return out({ok:true,status:'Nova Drive Relay running'});}</pre>
 <!-- ══ COLLEGE PORTAL VIEW ══ -->
 
     <div class="view" id="viewPortal" data-cp-mode="list" style="flex-direction:column;overflow-y:auto">
+  <!-- Sentinel: prevents cpEnsurePortalModeStyles() from injecting a duplicate <style> block -->
+  <div id="cpPortalModeStyles" style="display:none"></div>
   <div class="cp-wrap">
     <div class="cp-head">
       <div class="cp-head-l">
@@ -2700,6 +2702,7 @@ function doGet(){return out({ok:true,status:'Nova Drive Relay running'});}</pre>
                   <option value="right">Right</option>
                 </select>
               </div>
+            </div><!-- /cp-row3 Bold/Italic/Align -->
 
             <!-- ── Date Range (Gender-Split) ──────────────────── -->
             <div style="margin-top:16px;padding-top:14px;border-top:2px solid var(--fog)">

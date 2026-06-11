@@ -691,7 +691,7 @@ function handleNameInput(val) {
   var q = val.trim();
   // Also update preview live (existing behaviour)
   var canvas = document.getElementById('previewCanvas');
-  if (templateImg && q) { drawCertOnCanvas(canvas, q, false); }
+  if ((templateImg || templateImgMale || templateImgFemale) && q) { drawCertOnCanvas(canvas, q, false); }
   else if (!q) { drawPreviewPlaceholder(); }
 
   var box = document.getElementById('nameSuggestions');
@@ -785,7 +785,7 @@ function pickSuggestion(name) {
   acSelectedIdx = -1;
   // Draw preview
   var canvas = document.getElementById('previewCanvas');
-  if (templateImg) drawCertOnCanvas(canvas, name, false);
+  if (templateImg || templateImgMale || templateImgFemale) drawCertOnCanvas(canvas, name, false);
 }
 
 function escH(s) {
