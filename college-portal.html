@@ -832,19 +832,23 @@ function drawCertOnCanvas(canvas, name, preview) {
   var yPx = h * (np.yPct / 100);
   ctx.fillText(name, xPx, yPx);
 
-  // ── Draw date range ──
-  var dateFrom = (portalCfg.dateFrom || '').trim();
-  var dateTo   = (portalCfg.dateTo   || '').trim();
-  if (dateFrom || dateTo) {
-    var dateText = dateFrom && dateTo ? dateFrom + ' to ' + dateTo : (dateFrom || dateTo);
-    var dp = portalCfg.datePosition || { xPct: 50, yPct: 72 };
-    var ds = portalCfg.dateStyle    || {};
-    var dfs = Math.round((ds.fontSize || 36) * (w / (portalCfg.templateWidth || 2480)));
-    ctx.font = (ds.italic ? 'italic ' : '') + (ds.bold ? 'bold ' : '') + dfs + 'px ' + (ds.fontFamily || 'Georgia');
-    ctx.fillStyle = preview ? 'rgba(' + hexToRgb(ds.color || '#1a1a1a') + ',0.5)' : (ds.color || '#1a1a1a');
-    ctx.textAlign = ds.align || 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(dateText, w * (dp.xPct / 100), h * (dp.yPct / 100));
+  // ── Draw dates separately (no "to" — it's already on the template) ──
+  var isFemaleName = /^(ms\.?|mrs\.?|miss)\s/i.test(name.trim());
+  var dateFrom = ((isFemaleName ? portalCfg.dateFromFemale : portalCfg.dateFromMale) || portalCfg.dateFrom || '').trim();
+  var dateTo   = ((isFemaleName ? portalCfg.dateToFemale   : portalCfg.dateToMale)   || portalCfg.dateTo   || '').trim();
+  var ds = portalCfg.dateStyle || {};
+  var dfs = Math.round((ds.fontSize || 36) * (w / (portalCfg.templateWidth || 2480)));
+  ctx.font = (ds.italic ? 'italic ' : '') + (ds.bold ? 'bold ' : '') + dfs + 'px ' + (ds.fontFamily || 'Georgia');
+  ctx.fillStyle = preview ? 'rgba(' + hexToRgb(ds.color || '#1a1a1a') + ',0.5)' : (ds.color || '#1a1a1a');
+  ctx.textAlign = ds.align || 'center';
+  ctx.textBaseline = 'middle';
+  if (dateFrom) {
+    var dpFrom = portalCfg.datePosFrom || portalCfg.datePosition || { xPct: 48, yPct: 72 };
+    ctx.fillText(dateFrom, w * (dpFrom.xPct / 100), h * (dpFrom.yPct / 100));
+  }
+  if (dateTo) {
+    var dpTo = portalCfg.datePosTo || { xPct: (portalCfg.datePosFrom ? portalCfg.datePosFrom.xPct + 17 : 65), yPct: (portalCfg.datePosFrom ? portalCfg.datePosFrom.yPct : 72) };
+    ctx.fillText(dateTo, w * (dpTo.xPct / 100), h * (dpTo.yPct / 100));
   }
 }
 
@@ -915,21 +919,22 @@ async function buildCertPDF(studentName) {
   ctx.fillText(studentName, rc.width * (np.xPct / 100), rc.height * (np.yPct / 100));
   ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;
 
-  // ── Draw date range ──
-  var dateFrom = (portalCfg.dateFrom || '').trim();
-  var dateTo   = (portalCfg.dateTo   || '').trim();
-  if (dateFrom || dateTo) {
-    var dateText = dateFrom && dateTo ? dateFrom + ' to ' + dateTo : (dateFrom || dateTo);
-    var dp  = portalCfg.datePosition || { xPct: 50, yPct: 72 };
-    var ds  = portalCfg.dateStyle    || {};
-    var dfs = Math.round((ds.fontSize || 36) * (rc.width / (portalCfg.templateWidth || 2480)));
-    ctx.font      = (ds.italic ? 'italic ' : '') + (ds.bold ? 'bold ' : '') + dfs + 'px ' + (ds.fontFamily || 'Georgia');
-    ctx.fillStyle = ds.color || '#1a1a1a';
-    ctx.textAlign = ds.align || 'center';
+  // ── Draw dates separately (no "to" — it's already on the template) ──
+  var isFemaleStudent = /^(ms\.?|mrs\.?|miss)\s/i.test(studentName.trim());
+  var dateFromPdf = ((isFemaleStudent ? portalCfg.dateFromFemale : portalCfg.dateFromMale) || portalCfg.dateFrom || '').trim();
+  var dateToPdf   = ((isFemaleStudent ? portalCfg.dateToFemale   : portalCfg.dateToMale)   || portalCfg.dateTo   || '').trim();
+  if (dateFromPdf || dateToPdf) {
+    var dpFrom = portalCfg.datePosFrom || portalCfg.datePosition || { xPct: 48, yPct: 72 };
+    var dpTo   = portalCfg.datePosTo   || { xPct: (dpFrom.xPct + 17), yPct: dpFrom.yPct };
+    var dsPdf  = portalCfg.dateStyle   || {};
+    var dfsPdf = Math.round((dsPdf.fontSize || 36) * (rc.width / (portalCfg.templateWidth || 2480)));
+    ctx.font      = (dsPdf.italic ? 'italic ' : '') + (dsPdf.bold ? 'bold ' : '') + dfsPdf + 'px ' + (dsPdf.fontFamily || 'Georgia');
+    ctx.fillStyle = dsPdf.color || '#1a1a1a';
+    ctx.textAlign = dsPdf.align || 'center';
     ctx.textBaseline = 'middle';
-    ctx.shadowColor = 'rgba(0,0,0,0.10)';
-    ctx.shadowBlur  = Math.round(dfs * 0.03);
-    ctx.fillText(dateText, rc.width * (dp.xPct / 100), rc.height * (dp.yPct / 100));
+    ctx.shadowColor = 'rgba(0,0,0,0.10)'; ctx.shadowBlur = Math.round(dfsPdf * 0.03);
+    if (dateFromPdf) ctx.fillText(dateFromPdf, rc.width * (dpFrom.xPct / 100), rc.height * (dpFrom.yPct / 100));
+    if (dateToPdf)   ctx.fillText(dateToPdf,   rc.width * (dpTo.xPct   / 100), rc.height * (dpTo.yPct   / 100));
     ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;
   }
 

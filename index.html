@@ -2693,37 +2693,77 @@ function doGet(){return out({ok:true,status:'Nova Drive Relay running'});}</pre>
                 </select>
               </div>
 
-            <!-- ── Date Range ──────────────────────────────────── -->
+            <!-- ── Date Range (Gender-Split) ──────────────────── -->
             <div style="margin-top:16px;padding-top:14px;border-top:2px solid var(--fog)">
               <div style="display:flex;align-items:center;gap:6px;margin-bottom:10px">
                 <span style="font-size:1rem">📅</span>
                 <span class="cp-label" style="margin:0;color:var(--ink)">Conducted On — Date Range</span>
               </div>
 
-              <div class="cp-row" style="gap:10px">
-                <div>
-                  <div class="cp-label">From Date</div>
-                  <input class="cp-fi" id="cpDateFrom" placeholder="e.g. 1st July 2025" oninput="cpUpdateDateRange()">
-                </div>
-                <div>
-                  <div class="cp-label">To Date</div>
-                  <input class="cp-fi" id="cpDateTo" placeholder="e.g. 31st July 2025" oninput="cpUpdateDateRange()">
+              <!-- Male dates -->
+              <div style="background:var(--surface);border:1.5px solid var(--fog);border-radius:8px;padding:10px 12px;margin-bottom:8px">
+                <div style="font-size:.72rem;font-weight:700;color:#4f46e5;margin-bottom:8px">👨 Male (Mr.) Dates</div>
+                <div class="cp-row" style="gap:10px">
+                  <div>
+                    <div class="cp-label">From Date</div>
+                    <input class="cp-fi" id="cpDateFromMale" placeholder="e.g. 1st July 2025" oninput="cpUpdateDateRange()">
+                  </div>
+                  <div>
+                    <div class="cp-label">To Date</div>
+                    <input class="cp-fi" id="cpDateToMale" placeholder="e.g. 31st July 2026" oninput="cpUpdateDateRange()">
+                  </div>
                 </div>
               </div>
 
-              <div style="font-size:.67rem;color:var(--mist);margin-top:6px;line-height:1.5">
-                Drag the <span style="color:rgba(217,119,6,.9);font-weight:700">● amber dot</span> on the canvas to position the date text.
-                The <span style="color:rgba(79,70,229,.9);font-weight:700">● indigo dot</span> is for the name.
+              <!-- Female dates -->
+              <div style="background:var(--surface);border:1.5px solid var(--fog);border-radius:8px;padding:10px 12px;margin-bottom:10px">
+                <div style="font-size:.72rem;font-weight:700;color:#db2777;margin-bottom:8px">👩 Female (Ms./Mrs.) Dates</div>
+                <div class="cp-row" style="gap:10px">
+                  <div>
+                    <div class="cp-label">From Date</div>
+                    <input class="cp-fi" id="cpDateFromFemale" placeholder="e.g. 1st July 2025" oninput="cpUpdateDateRange()">
+                  </div>
+                  <div>
+                    <div class="cp-label">To Date</div>
+                    <input class="cp-fi" id="cpDateToFemale" placeholder="e.g. 31st July 2026" oninput="cpUpdateDateRange()">
+                  </div>
+                </div>
               </div>
 
-              <div class="cp-row" style="margin-top:10px">
-                <div>
-                  <div class="cp-label">Date X Position (%)</div>
-                  <input class="cp-fi" id="cpDateXPct" type="number" min="0" max="100" step="0.5" value="50" oninput="cpUpdateDatePosFromInput()">
+              <div style="font-size:.67rem;color:var(--mist);margin-bottom:8px;line-height:1.5">
+                Drag the <span style="color:rgba(217,119,6,.9);font-weight:700">● amber dot</span> to position the <b>From</b> date.
+                Drag the <span style="color:rgba(13,148,136,.9);font-weight:700">● teal dot</span> to position the <b>To</b> date.
+                The <span style="color:rgba(79,70,229,.9);font-weight:700">● indigo dot</span> is for the name.<br>
+                <span style="color:var(--mist)">"to" is already printed on your certificate — only the two date values are placed.</span>
+              </div>
+
+              <!-- From-date position -->
+              <div style="margin-top:8px">
+                <div style="font-size:.7rem;font-weight:700;color:rgba(217,119,6,.9);margin-bottom:4px">● From Date Position</div>
+                <div class="cp-row" style="gap:10px">
+                  <div>
+                    <div class="cp-label">X (%)</div>
+                    <input class="cp-fi" id="cpDateFromXPct" type="number" min="0" max="100" step="0.5" value="48" oninput="cpUpdateDateFromPos()">
+                  </div>
+                  <div>
+                    <div class="cp-label">Y (%)</div>
+                    <input class="cp-fi" id="cpDateFromYPct" type="number" min="0" max="100" step="0.5" value="72" oninput="cpUpdateDateFromPos()">
+                  </div>
                 </div>
-                <div>
-                  <div class="cp-label">Date Y Position (%)</div>
-                  <input class="cp-fi" id="cpDateYPct" type="number" min="0" max="100" step="0.5" value="72" oninput="cpUpdateDatePosFromInput()">
+              </div>
+
+              <!-- To-date position -->
+              <div style="margin-top:8px">
+                <div style="font-size:.7rem;font-weight:700;color:rgba(13,148,136,.9);margin-bottom:4px">● To Date Position</div>
+                <div class="cp-row" style="gap:10px">
+                  <div>
+                    <div class="cp-label">X (%)</div>
+                    <input class="cp-fi" id="cpDateToXPct" type="number" min="0" max="100" step="0.5" value="65" oninput="cpUpdateDateToPos()">
+                  </div>
+                  <div>
+                    <div class="cp-label">Y (%)</div>
+                    <input class="cp-fi" id="cpDateToYPct" type="number" min="0" max="100" step="0.5" value="72" oninput="cpUpdateDateToPos()">
+                  </div>
                 </div>
               </div>
 
@@ -2764,8 +2804,6 @@ function doGet(){return out({ok:true,status:'Nova Drive Relay running'});}</pre>
                 </div>
               </div>
             </div>
-            </div>
-          </div>
 
           <!-- Step 4: Name Verification -->
           <div class="cp-step" id="cpStep4">

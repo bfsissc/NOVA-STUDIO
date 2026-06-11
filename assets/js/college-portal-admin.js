@@ -32,13 +32,21 @@ var CP = {
   templateUrlFemale:'',
   templateImgFemale:null,
   templateBytesFemale: 0,
-  // ── Date range ──
+  // ── Date range (gender-split) ──
+  dateFromMale:     '',
+  dateToMale:       '',
+  dateFromFemale:   '',
+  dateToFemale:     '',
+  datePosFrom:      { xPct: 48, yPct: 72 },   // position for "From" date text
+  datePosTo:        { xPct: 65, yPct: 72 },   // position for "To" date text
+  dateStyle:        { fontSize: 36, fontFamily: 'Georgia', color: '#1a1a1a', bold: false, italic: true, align: 'center' },
+  // ── Legacy single-date (kept for backward compat read) ──
   dateFrom:         '',
   dateTo:           '',
   datePos:          { xPct: 50, yPct: 72 },
-  dateStyle:        { fontSize: 36, fontFamily: 'Georgia', color: '#1a1a1a', bold: false, italic: true, align: 'center' },
   // ── Date canvas drag state ──
   isDraggingDate:   false,
+  isDraggingDateTo: false,
   csvDriveUrl:      '',
   templateWidth:    2480,
   templateHeight:   1754,
@@ -75,10 +83,13 @@ function cpSaveDraft() {
       templateBytesMale: CP.templateBytesMale,
       templateUrlFemale: CP.templateUrlFemale,
       templateBytesFemale: CP.templateBytesFemale,
-      // Date range
-      dateFrom:  CP.dateFrom,
-      dateTo:    CP.dateTo,
-      datePos:   CP.datePos,
+      // Date range (gender-split)
+      dateFromMale:  CP.dateFromMale,
+      dateToMale:    CP.dateToMale,
+      dateFromFemale:CP.dateFromFemale,
+      dateToFemale:  CP.dateToFemale,
+      datePosFrom:   CP.datePosFrom,
+      datePosTo:     CP.datePosTo,
       dateStyle: CP.dateStyle,
       fields: {
         collegeName:   getVal('cpCollegeName'),
@@ -126,10 +137,13 @@ function cpRestoreDraft() {
     CP.templateBytesMale  = draft.templateBytesMale  || 0;
     CP.templateUrlFemale  = draft.templateUrlFemale  || '';
     CP.templateBytesFemale= draft.templateBytesFemale|| 0;
-    // Date range
-    CP.dateFrom  = draft.dateFrom  || '';
-    CP.dateTo    = draft.dateTo    || '';
-    CP.datePos   = draft.datePos   || { xPct: 50, yPct: 72 };
+    // Date range (gender-split)
+    CP.dateFromMale   = draft.dateFromMale   || draft.dateFrom  || '';
+    CP.dateToMale     = draft.dateToMale     || draft.dateTo    || '';
+    CP.dateFromFemale = draft.dateFromFemale || draft.dateFrom  || '';
+    CP.dateToFemale   = draft.dateToFemale   || draft.dateTo    || '';
+    CP.datePosFrom    = draft.datePosFrom    || draft.datePos   || { xPct: 48, yPct: 72 };
+    CP.datePosTo      = draft.datePosTo      || { xPct: CP.datePosFrom.xPct + 17, yPct: CP.datePosFrom.yPct };
     CP.dateStyle = draft.dateStyle || { fontSize: 36, fontFamily: 'Georgia', color: '#1a1a1a', bold: false, italic: true, align: 'center' };
 
     var f = draft.fields || {};
@@ -153,10 +167,14 @@ function cpRestoreDraft() {
     _set('cpXPct',           'value',       CP.namePos.xPct != null ? CP.namePos.xPct.toFixed(1) : '50.0');
     _set('cpYPct',           'value',       CP.namePos.yPct != null ? CP.namePos.yPct.toFixed(1) : '62.0');
     // Date range UI restore
-    _set('cpDateFrom',       'value',       CP.dateFrom || '');
-    _set('cpDateTo',         'value',       CP.dateTo   || '');
-    _set('cpDateXPct',       'value',       CP.datePos.xPct != null ? CP.datePos.xPct.toFixed(1) : '50.0');
-    _set('cpDateYPct',       'value',       CP.datePos.yPct != null ? CP.datePos.yPct.toFixed(1) : '72.0');
+    _set('cpDateFromMale',   'value',       CP.dateFromMale || '');
+    _set('cpDateToMale',     'value',       CP.dateToMale   || '');
+    _set('cpDateFromFemale', 'value',       CP.dateFromFemale || '');
+    _set('cpDateToFemale',   'value',       CP.dateToFemale   || '');
+    _set('cpDateFromXPct',   'value',       CP.datePosFrom.xPct != null ? CP.datePosFrom.xPct.toFixed(1) : '48.0');
+    _set('cpDateFromYPct',   'value',       CP.datePosFrom.yPct != null ? CP.datePosFrom.yPct.toFixed(1) : '72.0');
+    _set('cpDateToXPct',     'value',       CP.datePosTo.xPct   != null ? CP.datePosTo.xPct.toFixed(1)   : '65.0');
+    _set('cpDateToYPct',     'value',       CP.datePosTo.yPct   != null ? CP.datePosTo.yPct.toFixed(1)   : '72.0');
     _set('cpDateFontSize',   'value',       CP.dateStyle.fontSize   || 36);
     _set('cpDateFontFamily', 'value',       CP.dateStyle.fontFamily || 'Georgia');
     _set('cpDateFontColor',  'value',       CP.dateStyle.color      || '#1a1a1a');
@@ -1306,17 +1324,21 @@ function cpDrawNameCanvas() {
   var yPx = canvas.height * (CP.namePos.yPct / 100);
   ctx.fillText(previewName, xPx, yPx);
 
-  // ── Draw date range ──
-  var dateFrom = (CP.dateFrom || '').trim() || '1st Jan 2025';
-  var dateTo   = (CP.dateTo   || '').trim() || '31st Jan 2025';
-  var dateText = dateFrom + ' to ' + dateTo;
+  // ── Draw "From" date ──
+  var dateFromText = (CP.dateFromMale || '').trim() || '1st Jan 2025';
   var dfs = Math.round((CP.dateStyle.fontSize || 36) * scale);
   ctx.font = (CP.dateStyle.italic ? 'italic ' : '') + (CP.dateStyle.bold ? 'bold ' : '') + dfs + 'px ' + (CP.dateStyle.fontFamily || 'Georgia');
   ctx.fillStyle = CP.dateStyle.color || '#1a1a1a';
   ctx.textAlign = CP.dateStyle.align || 'center';
-  var dxPx = canvas.width  * (CP.datePos.xPct / 100);
-  var dyPx = canvas.height * (CP.datePos.yPct / 100);
-  ctx.fillText(dateText, dxPx, dyPx);
+  var dfxPx = canvas.width  * (CP.datePosFrom.xPct / 100);
+  var dfyPx = canvas.height * (CP.datePosFrom.yPct / 100);
+  ctx.fillText(dateFromText, dfxPx, dfyPx);
+
+  // ── Draw "To" date ──
+  var dateToText = (CP.dateToMale || '').trim() || '31st Jan 2025';
+  var dtxPx = canvas.width  * (CP.datePosTo.xPct / 100);
+  var dtyPx = canvas.height * (CP.datePosTo.yPct / 100);
+  ctx.fillText(dateToText, dtxPx, dtyPx);
 
   // ── Crosshair for name (indigo) ──
   ctx.strokeStyle = 'rgba(79,70,229,0.7)'; ctx.lineWidth = 1.5; ctx.setLineDash([5, 4]);
@@ -1327,13 +1349,22 @@ function cpDrawNameCanvas() {
   ctx.fillStyle = 'rgba(79,70,229,0.9)'; ctx.fill();
   ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
 
-  // ── Crosshair for date (amber) ──
+  // ── Crosshair for "From" date (amber) ──
   ctx.strokeStyle = 'rgba(217,119,6,0.7)'; ctx.lineWidth = 1.5; ctx.setLineDash([4, 4]);
-  ctx.beginPath(); ctx.moveTo(dxPx, 0); ctx.lineTo(dxPx, canvas.height); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(0, dyPx); ctx.lineTo(canvas.width, dyPx); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(dfxPx, 0); ctx.lineTo(dfxPx, canvas.height); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0, dfyPx); ctx.lineTo(canvas.width, dfyPx); ctx.stroke();
   ctx.setLineDash([]);
-  ctx.beginPath(); ctx.arc(dxPx, dyPx, 7, 0, Math.PI * 2);
+  ctx.beginPath(); ctx.arc(dfxPx, dfyPx, 7, 0, Math.PI * 2);
   ctx.fillStyle = 'rgba(217,119,6,0.9)'; ctx.fill();
+  ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+
+  // ── Crosshair for "To" date (teal) ──
+  ctx.strokeStyle = 'rgba(13,148,136,0.7)'; ctx.lineWidth = 1.5; ctx.setLineDash([4, 4]);
+  ctx.beginPath(); ctx.moveTo(dtxPx, 0); ctx.lineTo(dtxPx, canvas.height); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0, dtyPx); ctx.lineTo(canvas.width, dtyPx); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.beginPath(); ctx.arc(dtxPx, dtyPx, 7, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(13,148,136,0.9)'; ctx.fill();
   ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
 
   // ── Legend labels ──
@@ -1342,7 +1373,9 @@ function cpDrawNameCanvas() {
   ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
   ctx.fillText('● NAME', 6, canvas.height - 4);
   ctx.fillStyle = 'rgba(217,119,6,0.9)';
-  ctx.fillText('● DATE', 6, canvas.height - Math.round(16 * scale * 1.5));
+  ctx.fillText('● FROM DATE', 6, canvas.height - Math.round(16 * scale * 1.5));
+  ctx.fillStyle = 'rgba(13,148,136,0.9)';
+  ctx.fillText('● TO DATE', 6, canvas.height - Math.round(32 * scale * 1.5));
 }
 
 function cpCanvasMouseDown(e) {
@@ -1353,17 +1386,22 @@ function cpCanvasMouseDown(e) {
   var clientY = e.touches ? e.touches[0].clientY : e.clientY;
   var pxX = (clientX - rect.left) / rect.width  * canvas.width;
   var pxY = (clientY - rect.top)  / rect.height * canvas.height;
-  var nameX = canvas.width  * (CP.namePos.xPct / 100);
-  var nameY = canvas.height * (CP.namePos.yPct / 100);
-  var dateX = canvas.width  * (CP.datePos.xPct / 100);
-  var dateY = canvas.height * (CP.datePos.yPct / 100);
-  var distName = Math.hypot(pxX - nameX, pxY - nameY);
-  var distDate = Math.hypot(pxX - dateX, pxY - dateY);
-  CP.isDragging     = distName <= distDate;
-  CP.isDraggingDate = !CP.isDragging;
+  var nameX    = canvas.width  * (CP.namePos.xPct     / 100);
+  var nameY    = canvas.height * (CP.namePos.yPct     / 100);
+  var fromDateX = canvas.width  * (CP.datePosFrom.xPct / 100);
+  var fromDateY = canvas.height * (CP.datePosFrom.yPct / 100);
+  var toDateX   = canvas.width  * (CP.datePosTo.xPct   / 100);
+  var toDateY   = canvas.height * (CP.datePosTo.yPct   / 100);
+  var distName    = Math.hypot(pxX - nameX,    pxY - nameY);
+  var distFrom    = Math.hypot(pxX - fromDateX, pxY - fromDateY);
+  var distTo      = Math.hypot(pxX - toDateX,   pxY - toDateY);
+  var minDist = Math.min(distName, distFrom, distTo);
+  CP.isDragging      = (minDist === distName);
+  CP.isDraggingDate  = (minDist === distFrom);
+  CP.isDraggingDateTo= (minDist === distTo);
   cpCanvasUpdatePos(e);
 }
-function cpCanvasMouseMove(e) { if (CP.isDragging || CP.isDraggingDate) cpCanvasUpdatePos(e); }
+function cpCanvasMouseMove(e) { if (CP.isDragging || CP.isDraggingDate || CP.isDraggingDateTo) cpCanvasUpdatePos(e); }
 
 function cpCanvasUpdatePos(e) {
   var canvas = document.getElementById('cpNameCanvas');
@@ -1372,10 +1410,14 @@ function cpCanvasUpdatePos(e) {
   var clientY = e.touches ? e.touches[0].clientY : e.clientY;
   var xPct = Math.max(0, Math.min(100, (clientX - rect.left) / rect.width  * 100));
   var yPct = Math.max(0, Math.min(100, (clientY - rect.top)  / rect.height * 100));
-  if (CP.isDraggingDate) {
-    CP.datePos.xPct = xPct; CP.datePos.yPct = yPct;
-    var dxEl = document.getElementById('cpDateXPct'); if (dxEl) dxEl.value = xPct.toFixed(1);
-    var dyEl = document.getElementById('cpDateYPct'); if (dyEl) dyEl.value = yPct.toFixed(1);
+  if (CP.isDraggingDateTo) {
+    CP.datePosTo.xPct = xPct; CP.datePosTo.yPct = yPct;
+    var dtxEl = document.getElementById('cpDateToXPct'); if (dtxEl) dtxEl.value = xPct.toFixed(1);
+    var dtyEl = document.getElementById('cpDateToYPct'); if (dtyEl) dtyEl.value = yPct.toFixed(1);
+  } else if (CP.isDraggingDate) {
+    CP.datePosFrom.xPct = xPct; CP.datePosFrom.yPct = yPct;
+    var dfxEl = document.getElementById('cpDateFromXPct'); if (dfxEl) dfxEl.value = xPct.toFixed(1);
+    var dfyEl = document.getElementById('cpDateFromYPct'); if (dfyEl) dfyEl.value = yPct.toFixed(1);
   } else {
     CP.namePos.xPct = xPct; CP.namePos.yPct = yPct;
     document.getElementById('cpXPct').value = xPct.toFixed(1);
@@ -1384,7 +1426,7 @@ function cpCanvasUpdatePos(e) {
   cpDrawNameCanvas();
 }
 
-function cpCanvasMouseUp() { CP.isDragging = false; CP.isDraggingDate = false; cpSaveDraft(); }
+function cpCanvasMouseUp() { CP.isDragging = false; CP.isDraggingDate = false; CP.isDraggingDateTo = false; cpSaveDraft(); }
 
 function cpUpdatePosFromInput() {
   CP.namePos.xPct = parseFloat(document.getElementById('cpXPct').value) || 50;
@@ -1403,9 +1445,15 @@ function cpUpdateNameStyle() {
   cpSaveDraft();
 }
 
-function cpUpdateDatePosFromInput() {
-  CP.datePos.xPct = parseFloat(document.getElementById('cpDateXPct').value) || 50;
-  CP.datePos.yPct = parseFloat(document.getElementById('cpDateYPct').value) || 72;
+function cpUpdateDateFromPos() {
+  CP.datePosFrom.xPct = parseFloat(document.getElementById('cpDateFromXPct').value) || 48;
+  CP.datePosFrom.yPct = parseFloat(document.getElementById('cpDateFromYPct').value) || 72;
+  cpDrawNameCanvas();
+}
+
+function cpUpdateDateToPos() {
+  CP.datePosTo.xPct = parseFloat(document.getElementById('cpDateToXPct').value) || 65;
+  CP.datePosTo.yPct = parseFloat(document.getElementById('cpDateToYPct').value) || 72;
   cpDrawNameCanvas();
 }
 
@@ -1421,8 +1469,10 @@ function cpUpdateDateStyle() {
 }
 
 function cpUpdateDateRange() {
-  CP.dateFrom = (document.getElementById('cpDateFrom').value || '').trim();
-  CP.dateTo   = (document.getElementById('cpDateTo').value   || '').trim();
+  CP.dateFromMale   = (document.getElementById('cpDateFromMale')   ? document.getElementById('cpDateFromMale').value   : '').trim();
+  CP.dateToMale     = (document.getElementById('cpDateToMale')     ? document.getElementById('cpDateToMale').value     : '').trim();
+  CP.dateFromFemale = (document.getElementById('cpDateFromFemale') ? document.getElementById('cpDateFromFemale').value : '').trim();
+  CP.dateToFemale   = (document.getElementById('cpDateToFemale')   ? document.getElementById('cpDateToFemale').value   : '').trim();
   cpDrawNameCanvas();
   cpSaveDraft();
 }
@@ -1696,12 +1746,38 @@ async function cpPublishPortal() {
     if (!CP.templateUrlMale)   { cpToast('No male template — go back to Step 2.', 'err'); btn.disabled = false; btn.textContent = '🚀 Publish Portal'; return; }
     if (!CP.templateUrlFemale) { cpToast('No female template — go back to Step 2.', 'err'); btn.disabled = false; btn.textContent = '🚀 Publish Portal'; return; }
 
+    // ── Fix Firestore 1MB limit: never store base64 data URLs in the document ──
+    // Base64 images are huge (~700KB+ each). Use Storage URLs, or store a blank.
+    var templateMaleForStore   = CP.templateUrlMale.startsWith('data:')   ? '' : CP.templateUrlMale;
+    var templateFemaleForStore = CP.templateUrlFemale.startsWith('data:') ? '' : CP.templateUrlFemale;
+    var templateForStore       = CP.templateUrl && !CP.templateUrl.startsWith('data:') ? CP.templateUrl : '';
+
+    // If templates are still base64 (not yet on Storage), try uploading them now
+    if (!templateMaleForStore && CP.templateUrlMale && typeof fbStorage !== 'undefined') {
+      btn.textContent = 'Uploading male template…';
+      try {
+        var uid5 = (typeof U !== 'undefined' && U && U.uid) ? U.uid : 'anon';
+        var pathM = 'portal-templates/' + uid5 + '/' + CP.currentSlug + '_male_' + Date.now() + '.jpg';
+        var sRefM = fbStorage.ref(pathM);
+        await sRefM.put(cpDataUrlToBlob(CP.templateUrlMale), { contentType: 'image/jpeg' });
+        templateMaleForStore = await sRefM.getDownloadURL();
+      } catch(e) { cpToast('Male template storage upload failed — using local mode.', 'warn'); }
+    }
+    if (!templateFemaleForStore && CP.templateUrlFemale && typeof fbStorage !== 'undefined') {
+      btn.textContent = 'Uploading female template…';
+      try {
+        var uid5f = (typeof U !== 'undefined' && U && U.uid) ? U.uid : 'anon';
+        var pathF = 'portal-templates/' + uid5f + '/' + CP.currentSlug + '_female_' + Date.now() + '.jpg';
+        var sRefF = fbStorage.ref(pathF);
+        await sRefF.put(cpDataUrlToBlob(CP.templateUrlFemale), { contentType: 'image/jpeg' });
+        templateFemaleForStore = await sRefF.getDownloadURL();
+      } catch(e) { cpToast('Female template storage upload failed — using local mode.', 'warn'); }
+    }
+
     // Template is already fully resolved by Step 4→5 transition:
     //   - Local mode  → CP.templateUrl is a compressed base64 data URL
     //   - Backend mode → CP.templateUrl is a Firebase Storage https:// URL
-    // Nothing to upload here — just write to Firestore.
     btn.textContent = 'Saving…';
-    var templateUrlToStore = CP.templateUrl;
 
     var portalData = {
       collegeName:    collegeName,
@@ -1710,15 +1786,18 @@ async function cpPublishPortal() {
       openAccess:     openAccess,
       headerColor:    headerColor,
       accentColor:    accentColor,
-      templateUrl:    templateUrlToStore,
-      // ── Dual-gender templates ──
-      templateUrlMale:   CP.templateUrlMale,
-      templateUrlFemale: CP.templateUrlFemale,
-      // ── Date range ──
-      dateFrom:       CP.dateFrom || '',
-      dateTo:         CP.dateTo   || '',
-      datePosition:   { xPct: CP.datePos.xPct,  yPct: CP.datePos.yPct  },
-      dateStyle:      Object.assign({}, CP.dateStyle),
+      templateUrl:    templateForStore,
+      // ── Dual-gender templates (Storage URLs only, never base64) ──
+      templateUrlMale:   templateMaleForStore,
+      templateUrlFemale: templateFemaleForStore,
+      // ── Gender-split date ranges ──
+      dateFromMale:     CP.dateFromMale   || '',
+      dateToMale:       CP.dateToMale     || '',
+      dateFromFemale:   CP.dateFromFemale || CP.dateFromMale || '',
+      dateToFemale:     CP.dateToFemale   || CP.dateToMale   || '',
+      datePosFrom:      { xPct: CP.datePosFrom.xPct, yPct: CP.datePosFrom.yPct },
+      datePosTo:        { xPct: CP.datePosTo.xPct,   yPct: CP.datePosTo.yPct   },
+      dateStyle:        Object.assign({}, CP.dateStyle),
       csvDriveUrl:    CP.csvDriveUrl || '',
       templateWidth:  CP.templateWidth,
       templateHeight: CP.templateHeight,
@@ -1799,7 +1878,7 @@ function cpRenderPortalLink() {
   var templateSizeOk = templateReady;
   var studentsReady  = CP.students.length > 0;
   var slugReady      = !!CP.currentSlug;
-  var dateReady      = !!(CP.dateFrom && CP.dateTo);
+  var dateReady      = !!(CP.dateFromMale && CP.dateToMale);
 
   function row(ok, label) {
     return '<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--fog)">' +
@@ -1819,7 +1898,8 @@ function cpRenderPortalLink() {
     row(slugReady,          'College: <b>' + (CP.currentSlug || '—') + '</b>') +
     row(templateMaleReady,  '🧑 Male template: ' + (templateMaleReady   ? cpFormatBytes(CP.templateBytesMale)   + ' — ready ✓' : 'not loaded — go back to Step 2')) +
     row(templateFemaleReady,'👩 Female template: ' + (templateFemaleReady ? cpFormatBytes(CP.templateBytesFemale) + ' — ready ✓' : 'not loaded — go back to Step 2')) +
-    row(dateReady,          '📅 Date range: ' + (dateReady ? '<b>' + escH(CP.dateFrom) + '</b> to <b>' + escH(CP.dateTo) + '</b>' : 'not set — go back to Step 3')) +
+    row(dateReady, '📅 Date range (Male): '   + (CP.dateFromMale   ? '<b>' + escH(CP.dateFromMale)   + '</b> __ <b>' + escH(CP.dateToMale)   + '</b>' : 'not set — go back to Step 3')) +
+    row(!!(CP.dateFromFemale && CP.dateToFemale), '📅 Date range (Female): ' + (CP.dateFromFemale ? '<b>' + escH(CP.dateFromFemale) + '</b> __ <b>' + escH(CP.dateToFemale) + '</b>' : 'not set — go back to Step 3')) +
     row(studentsReady,      '<b>' + CP.students.length + '</b> students loaded') +
     row(true,               'Storage mode: <b>' + (CP.uploadMode === 'backend' ? '☁️ NOVA Backend' : '📦 Local (Firestore)') + '</b>');
 
@@ -2390,8 +2470,8 @@ function cpNewPortal() {
   CP.currentSlug = ''; CP.templateImg = null; CP.templateUrl = ''; CP.storageUrl = ''; CP.csvDriveUrl = ''; CP.students = []; CP.uploadMode = '';
   CP.templateUrlMale = ''; CP.templateImgMale = null; CP.templateBytesMale = 0;
   CP.templateUrlFemale = ''; CP.templateImgFemale = null; CP.templateBytesFemale = 0;
-  CP.dateFrom = ''; CP.dateTo = '';
-  CP.datePos  = { xPct: 50, yPct: 72 };
+  CP.dateFromMale = ''; CP.dateToMale = ''; CP.dateFromFemale = ''; CP.dateToFemale = '';
+  CP.datePosFrom = { xPct: 48, yPct: 72 }; CP.datePosTo = { xPct: 65, yPct: 72 };
   CP.dateStyle = { fontSize: 36, fontFamily: 'Georgia', color: '#1a1a1a', bold: false, italic: true, align: 'center' };
   CP.namePos   = { xPct: 50, yPct: 62 };
   CP.nameStyle = { fontSize: 60, fontFamily: 'Georgia', color: '#1a1a1a', bold: false, italic: false, align: 'center' };
