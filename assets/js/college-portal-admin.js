@@ -1304,14 +1304,22 @@ function cpDrawNameCanvas() {
   var canvas = document.getElementById('cpNameCanvas');
   if (!canvas) return;
   var wrap   = canvas.parentElement;
-  var wrapW  = Math.round(wrap.getBoundingClientRect().width) || wrap.clientWidth || 560;
+  // Get zoom factor from slider (default 100%)
+  var zoomSlider = document.getElementById('cpCanvasZoom');
+  var zoomPct    = zoomSlider ? parseInt(zoomSlider.value) : 100;
+  var zoomFactor = zoomPct / 100;
   var aspect = CP.templateImg ? (CP.templateImg.naturalWidth / CP.templateImg.naturalHeight) : (2480 / 1754);
-  // Cap canvas height at 50vh so controls below are always reachable by scrolling
-  var maxH = Math.round(window.innerHeight * 0.50);
+  // Base width on the parent container, modified by zoom
+  var containerW = Math.round(wrap.getBoundingClientRect().width) || wrap.clientWidth || 560;
+  var wrapW  = Math.round(containerW * zoomFactor);
+  // At zoom <= 100%: also cap height at 50vh. At zoom > 100% let it grow freely so user can position precisely.
   var displayH = Math.round(wrapW / aspect);
-  if (displayH > maxH) {
-    displayH = maxH;
-    wrapW = Math.round(displayH * aspect);
+  if (zoomPct <= 100) {
+    var maxH = Math.round(window.innerHeight * 0.50);
+    if (displayH > maxH) {
+      displayH = maxH;
+      wrapW = Math.round(displayH * aspect);
+    }
   }
   canvas.width  = wrapW;
   canvas.height = displayH;
@@ -1760,8 +1768,8 @@ async function cpPublishPortal() {
     var cardMessage  = document.getElementById('cpCardMessage').value.trim();
     var defaultLimit = parseInt(document.getElementById('cpDefaultLimit').value) || 1;
     var openAccess   = document.getElementById('cpOpenAccess').checked;
-    var headerColor  = document.getElementById('cpHeaderColor').value;
-    var accentColor  = document.getElementById('cpAccentColor').value;
+    var headerColor  = (document.getElementById('cpHeaderColor')  ? document.getElementById('cpHeaderColor').value  : '#1a1a2e');
+    var accentColor  = (document.getElementById('cpAccentColor')  ? document.getElementById('cpAccentColor').value  : '#4f46e5');
     var googleFormUrl= (document.getElementById('cpGoogleFormUrl') ? document.getElementById('cpGoogleFormUrl').value.trim() : '');
     var state        = (document.getElementById('cpState') ? document.getElementById('cpState').value.trim() : '');
     var district     = (document.getElementById('cpDistrict') ? document.getElementById('cpDistrict').value.trim() : '');
@@ -1849,7 +1857,9 @@ async function cpPublishPortal() {
         var key = nameLower.replace(/\s+/g, '_');
         var ref = fbDb.collection('college_portals').doc(CP.currentSlug).collection('students').doc(key);
         // Use merge:true so existing `downloaded` count is preserved
-        batch.set(ref, { name: s.name.trim(), nameLower: nameLower, limit: s.limit || 1 }, { merge: true });
+        var sData = { name: s.name.trim(), nameLower: nameLower, limit: s.limit || 1 };
+        if (s.date) sData.date = s.date; // per-student date from bulk CSV
+        batch.set(ref, sData, { merge: true });
         batchCount++;
         if (batchCount === 490) { await batch.commit(); batch = fbDb.batch(); batchCount = 0; }
       }
@@ -2933,6 +2943,7 @@ function cpParseCsvToArray(text) {
   var headers = lines[0].split(',').map(function(h) { return h.trim().replace(/^"|"$/g, '').toLowerCase(); });
   var nameIdx  = headers.findIndex(function(h) { return /^name$/i.test(h); });
   var limitIdx = headers.findIndex(function(h) { return /^(limit|downloads?|max|allowed)$/i.test(h); });
+  var dateIdx  = headers.findIndex(function(h) { return /^date$/i.test(h); });
   if (nameIdx === -1) nameIdx = 0;
   var result = [];
   for (var i = 1; i < lines.length; i++) {
@@ -2940,7 +2951,12 @@ function cpParseCsvToArray(text) {
     var name  = (cols[nameIdx] || '').trim().replace(/^"|"$/g, '');
     if (!name) continue;
     var limit = limitIdx >= 0 ? (parseInt(cols[limitIdx]) || 1) : 1;
-    result.push({ name: name, limit: limit });
+    var entry = { name: name, limit: limit };
+    if (dateIdx >= 0) {
+      var dateVal = (cols[dateIdx] || '').trim().replace(/^"|"$/g, '');
+      if (dateVal) entry.date = dateVal;
+    }
+    result.push(entry);
   }
   return result;
 }
@@ -3019,9 +3035,9 @@ function cpMonitorPreview(idx) {
   ctx.textAlign = CP.nameStyle.align || 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText(s.name, w * (CP.namePos.xPct / 100), h * (CP.namePos.yPct / 100));
-  // Draw dates (use gender-specific)
-  var dateFrom = s.gender === 'female' ? (CP.dateFromFemale || CP.dateFromMale || '') : (CP.dateFromMale || '');
-  var dateTo   = s.gender === 'female' ? (CP.dateToFemale   || CP.dateToMale   || '') : (CP.dateToMale   || '');
+  // Draw dates — per-student date overrides gender-specific global if present
+  var dateFrom = s.date || (s.gender === 'female' ? (CP.dateFromFemale || CP.dateFromMale || '') : (CP.dateFromMale || ''));
+  var dateTo   = s.date || (s.gender === 'female' ? (CP.dateToFemale   || CP.dateToMale   || '') : (CP.dateToMale   || ''));
   if (dateFrom || dateTo) {
     var dfs = Math.round((CP.dateStyle.fontSize || 36) * scale);
     ctx.font = (CP.dateStyle.italic ? 'italic ' : '') + (CP.dateStyle.bold ? 'bold ' : '') + dfs + 'px ' + (CP.dateStyle.fontFamily || 'Georgia');
