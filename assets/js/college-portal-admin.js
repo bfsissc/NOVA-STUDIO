@@ -360,6 +360,8 @@ function cpSetPortalView(mode) {
   var listBtn = document.getElementById('cpPortalModeList');
   if (createBtn) createBtn.classList.toggle('active', mode === 'create');
   if (listBtn) listBtn.classList.toggle('active', mode === 'list');
+  // FIX: Always reload portal list when switching to list tab so portals are never stale/empty
+  if (mode === 'list') cpLoadPortalList();
 }
 
 function cpEnsurePortalModeStyles() {
@@ -511,6 +513,9 @@ function cpInit() {
     cpToast('📋 Draft restored — your unsaved work is back!', 'ok');
   } else {
     cpRenderStep(1);
+    // FIX: Show wizard so the Next/Back footer is visible when Create Portal tab is used
+    var wiz = document.getElementById('cpWizard');
+    if (wiz) wiz.style.display = 'block';
     var cUrl = localStorage.getItem('cp_last_csv_url') || '';
     var ci = document.getElementById('cpCsvDriveUrl');
     if (ci && cUrl) ci.value = cUrl;
