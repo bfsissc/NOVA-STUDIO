@@ -2630,7 +2630,12 @@ function doGet(){return out({ok:true,status:'Nova Drive Relay running'});}</pre>
                   <input class="cp-fi" id="cpCsvDriveUrlMale" placeholder="Google Sheets URL for male students…" style="flex:1;font-family:'DM Mono',monospace;font-size:.73rem">
                   <button class="btn bo btn-sm" onclick="cpFetchCsvFromUrlGender('male')" style="white-space:nowrap;padding:10px 12px;font-size:.7rem">🔄 Load</button>
                 </div>
-                <div style="font-size:.65rem;color:var(--mist);margin-bottom:10px">Sheet must have <b>name</b> column. Optional: <b>date</b> (per-student date), <b>limit</b>. Share → Anyone with link → Viewer.</div>
+                <!-- Bulk CSV file upload -->
+                <input type="file" id="cpCsvFileMale" accept=".csv,.xlsx,.xls,.tsv" style="display:none" onchange="cpHandleCsvFileUpload(this,'male')">
+                <button class="btn bo btn-sm" onclick="document.getElementById('cpCsvFileMale').click()" style="width:100%;padding:8px 12px;font-size:.72rem;margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:6px">
+                  📂 Upload CSV / Excel File <span style="font-size:.65rem;color:var(--mist);font-weight:400">(bulk import)</span>
+                </button>
+                <div style="font-size:.65rem;color:var(--mist);margin-bottom:10px">Sheet / file must have <b>name</b> column. Optional: <b>date</b> (per-student date), <b>limit</b>. For Google Sheets URL: Share → Anyone with link → Viewer.</div>
                 <!-- Bulk date for all male students -->
                 <div style="display:flex;gap:8px;margin-bottom:10px;padding:8px 10px;background:var(--snow);border:1.5px solid var(--fog);border-radius:8px;align-items:flex-end">
                   <span style="font-size:.8rem;padding-bottom:6px">📅</span>
@@ -2672,7 +2677,12 @@ function doGet(){return out({ok:true,status:'Nova Drive Relay running'});}</pre>
                   <input class="cp-fi" id="cpCsvDriveUrlFemale" placeholder="Google Sheets URL for female students…" style="flex:1;font-family:'DM Mono',monospace;font-size:.73rem">
                   <button class="btn bo btn-sm" onclick="cpFetchCsvFromUrlGender('female')" style="white-space:nowrap;padding:10px 12px;font-size:.7rem">🔄 Load</button>
                 </div>
-                <div style="font-size:.65rem;color:var(--mist);margin-bottom:10px">Sheet must have <b>name</b> column. Optional: <b>date</b> (per-student date), <b>limit</b>. Share → Anyone with link → Viewer.</div>
+                <!-- Bulk CSV file upload -->
+                <input type="file" id="cpCsvFileFemale" accept=".csv,.xlsx,.xls,.tsv" style="display:none" onchange="cpHandleCsvFileUpload(this,'female')">
+                <button class="btn bo btn-sm" onclick="document.getElementById('cpCsvFileFemale').click()" style="width:100%;padding:8px 12px;font-size:.72rem;margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:6px">
+                  📂 Upload CSV / Excel File <span style="font-size:.65rem;color:var(--mist);font-weight:400">(bulk import)</span>
+                </button>
+                <div style="font-size:.65rem;color:var(--mist);margin-bottom:10px">Sheet / file must have <b>name</b> column. Optional: <b>date</b> (per-student date), <b>limit</b>. For Google Sheets URL: Share → Anyone with link → Viewer.</div>
                 <!-- Bulk date for all female students -->
                 <div style="display:flex;gap:8px;margin-bottom:10px;padding:8px 10px;background:var(--snow);border:1.5px solid var(--fog);border-radius:8px;align-items:flex-end">
                   <span style="font-size:.8rem;padding-bottom:6px">📅</span>

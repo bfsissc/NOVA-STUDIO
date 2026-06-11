@@ -1,14 +1,26 @@
 [
   {
-    "origin": ["*"],
-    "method": ["GET", "HEAD", "POST", "PUT", "DELETE"],
+    "origin": [
+      "https://nova-studio-kohl.vercel.app",
+      "http://localhost:3000",
+      "http://localhost:5000",
+      "http://127.0.0.1:5000"
+    ],
+    "method": ["GET", "HEAD", "POST", "PUT", "DELETE", "OPTIONS"],
     "maxAgeSeconds": 3600,
     "responseHeader": [
       "Content-Type",
       "Authorization",
+      "Content-Length",
+      "Accept",
+      "Origin",
+      "X-Requested-With",
       "x-goog-resumable",
       "x-goog-upload-protocol",
-      "x-firebase-storage-version"
+      "x-goog-upload-offset",
+      "x-goog-upload-command",
+      "x-firebase-storage-version",
+      "Access-Control-Allow-Origin"
     ]
   }
 ]

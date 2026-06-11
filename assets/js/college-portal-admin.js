@@ -2967,13 +2967,65 @@ function cpPasteCsvTextGender(gender) {
   var badge = document.getElementById(badgeId); if (badge) badge.textContent = parsed.length + ' students loaded from pasted CSV';
   var wrap  = document.getElementById(wrapId);  if (wrap) wrap.style.display = 'flex';
   var pill  = document.getElementById(pillId);  if (pill) { pill.textContent = parsed.length + ' loaded'; pill.style.display = 'inline-block'; }
-  if (panel) panel.style.display = 'none';
+  var panel = document.getElementById(panelId); if (panel) panel.style.display = 'none';
   // Reset toggle button label
   var toggleBtn = document.getElementById(gender === 'male' ? 'cpPasteToggleMale' : 'cpPasteToggleFemale');
   if (toggleBtn) toggleBtn.textContent = '✏️ Paste / Enter manually';
   ta.value = '';
   cpToast(parsed.length + ' ' + gender + ' students loaded ✓', 'ok');
   cpSaveDraft();
+}
+
+// ── Bulk CSV / Excel file upload for a gender ─────────────────────
+// Handles .csv, .tsv and .xlsx/.xls (via SheetJS if loaded)
+function cpHandleCsvFileUpload(input, gender) {
+  if (!input || !input.files || !input.files[0]) return;
+  var file = input.files[0];
+  input.value = ''; // reset so re-uploading same file works
+  var badgeId = gender === 'male' ? 'cpCsvBadgeMale'       : 'cpCsvBadgeFemale';
+  var wrapId  = gender === 'male' ? 'cpCsvBadgeWrapMale'   : 'cpCsvBadgeWrapFemale';
+  var pillId  = gender === 'male' ? 'cpMaleStudentBadge'   : 'cpFemaleStudentBadge';
+  var panelId = gender === 'male' ? 'cpManualEntryPanelMale' : 'cpManualEntryPanelFemale';
+  var ext = file.name.split('.').pop().toLowerCase();
+
+  function _loadCsvText(text) {
+    var parsed = cpParseCsvToArray(text.trim());
+    if (parsed.length === 0) { cpToast('No valid rows found in file.', 'err'); return; }
+    if (gender === 'male') CP.studentsMale = parsed; else CP.studentsFemale = parsed;
+    cpApplyBulkDate(gender);
+    var badge = document.getElementById(badgeId); if (badge) badge.textContent = parsed.length + ' students loaded from ' + file.name;
+    var wrap  = document.getElementById(wrapId);  if (wrap) wrap.style.display = 'flex';
+    var pill  = document.getElementById(pillId);  if (pill) { pill.textContent = parsed.length + ' loaded'; pill.style.display = 'inline-block'; }
+    var panel = document.getElementById(panelId); if (panel) panel.style.display = 'none';
+    cpToast(parsed.length + ' ' + gender + ' students loaded from file ✓', 'ok');
+    cpSaveDraft();
+  }
+
+  if (ext === 'xlsx' || ext === 'xls') {
+    // Use SheetJS (XLSX) if available
+    if (typeof XLSX !== 'undefined') {
+      var fr = new FileReader();
+      fr.onload = function(e) {
+        try {
+          var wb = XLSX.read(e.target.result, { type: 'array' });
+          var ws = wb.Sheets[wb.SheetNames[0]];
+          var csv = XLSX.utils.sheet_to_csv(ws);
+          _loadCsvText(csv);
+        } catch(err) {
+          cpToast('Could not read Excel file: ' + err.message, 'err');
+        }
+      };
+      fr.readAsArrayBuffer(file);
+    } else {
+      cpToast('Excel support unavailable. Please export as CSV first.', 'err');
+    }
+  } else {
+    // Plain CSV / TSV
+    var fr = new FileReader();
+    fr.onload = function(e) { _loadCsvText(e.target.result); };
+    fr.onerror = function() { cpToast('Could not read file.', 'err'); };
+    fr.readAsText(file, 'UTF-8');
+  }
 }
 
 // ── Remove gender CSV ─────────────────────────────────────────────
