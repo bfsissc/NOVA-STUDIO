@@ -2525,52 +2525,62 @@ function doGet(){return out({ok:true,status:'Nova Drive Relay running'});}</pre>
 
           <!-- Step 2: Drive Links -->
           <div class="cp-step" id="cpStep2">
-            <div class="cp-label">🖼️ Certificate Template</div>
-            <div style="font-size:.7rem;color:var(--mist);margin-bottom:12px;line-height:1.6">
-              Upload your certificate template image directly — this always works, no Drive permissions needed.
+            <div class="cp-label">🖼️ Certificate Templates</div>
+            <div style="font-size:.7rem;color:var(--mist);margin-bottom:14px;line-height:1.6">
+              Upload <b>two</b> templates — one for <b>Mr.</b> (male) and one for <b>Ms./Mrs.</b> (female).
+              The correct certificate is selected automatically based on the student&#39;s name prefix.
             </div>
 
-            <!-- Hidden real file input -->
+            <!-- Male Template -->
+            <div style="border:1.5px solid var(--fog);border-radius:12px;padding:14px;margin-bottom:12px;background:var(--surface)">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+                <span style="font-size:1.1rem">🧑</span>
+                <span class="cp-label" style="margin:0">Male Template <span style="font-size:.68rem;font-weight:400;color:var(--mist)">(Mr.)</span></span>
+              </div>
+              <input type="file" id="cpTemplateFileMale" accept="image/*" style="display:none" onchange="cpTemplateFileMaleChanged(this)">
+              <div onclick="cpTriggerTemplateMale()"
+                ondragover="event.preventDefault();this.style.borderColor='var(--accent)'"
+                ondragleave="this.style.borderColor='var(--fog)'"
+                ondrop="event.preventDefault();this.style.borderColor='var(--fog)';var f=event.dataTransfer.files[0];if(f){var inp=document.getElementById('cpTemplateFileMale');var dt=new DataTransfer();dt.items.add(f);inp.files=dt.files;cpTemplateFileMaleChanged(inp);}"
+                style="border:2px dashed var(--fog);border-radius:10px;padding:18px 12px;text-align:center;cursor:pointer;transition:border-color .2s">
+                <div style="font-size:1.5rem;margin-bottom:4px">📄</div>
+                <div style="font-size:.78rem;font-weight:700;color:var(--ink);margin-bottom:2px">Click or drag — Male template</div>
+                <div style="font-size:.67rem;color:var(--mist)">PNG, JPG, WebP</div>
+                <img id="cpTemplateThumbMale" style="display:none;margin-top:10px;max-width:100%;max-height:90px;border-radius:6px;object-fit:contain;border:1px solid var(--fog)" alt="male preview">
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;margin-top:8px;min-height:20px">
+                <span id="cpTemplateStatusMale" style="font-size:.9rem;width:18px;text-align:center"></span>
+                <span id="cpTemplateBadgeMale" style="font-size:.7rem;color:var(--mist);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+              </div>
+            </div>
+
+            <!-- Female Template -->
+            <div style="border:1.5px solid var(--fog);border-radius:12px;padding:14px;margin-bottom:16px;background:var(--surface)">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+                <span style="font-size:1.1rem">👩</span>
+                <span class="cp-label" style="margin:0">Female Template <span style="font-size:.68rem;font-weight:400;color:var(--mist)">(Ms. / Mrs. / Miss)</span></span>
+              </div>
+              <input type="file" id="cpTemplateFileFemale" accept="image/*" style="display:none" onchange="cpTemplateFileFemaleChanged(this)">
+              <div onclick="cpTriggerTemplateFemale()"
+                ondragover="event.preventDefault();this.style.borderColor='var(--accent)'"
+                ondragleave="this.style.borderColor='var(--fog)'"
+                ondrop="event.preventDefault();this.style.borderColor='var(--fog)';var f=event.dataTransfer.files[0];if(f){var inp=document.getElementById('cpTemplateFileFemale');var dt=new DataTransfer();dt.items.add(f);inp.files=dt.files;cpTemplateFileFemaleChanged(inp);}"
+                style="border:2px dashed var(--fog);border-radius:10px;padding:18px 12px;text-align:center;cursor:pointer;transition:border-color .2s">
+                <div style="font-size:1.5rem;margin-bottom:4px">📄</div>
+                <div style="font-size:.78rem;font-weight:700;color:var(--ink);margin-bottom:2px">Click or drag — Female template</div>
+                <div style="font-size:.67rem;color:var(--mist)">PNG, JPG, WebP</div>
+                <img id="cpTemplateThumbFemale" style="display:none;margin-top:10px;max-width:100%;max-height:90px;border-radius:6px;object-fit:contain;border:1px solid var(--fog)" alt="female preview">
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;margin-top:8px;min-height:20px">
+                <span id="cpTemplateStatusFemale" style="font-size:.9rem;width:18px;text-align:center"></span>
+                <span id="cpTemplateBadgeFemale" style="font-size:.7rem;color:var(--mist);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+              </div>
+            </div>
+
+            <!-- Legacy hidden elements kept for backward compat -->
             <input type="file" id="cpTemplateFileInput" accept="image/*" style="display:none" onchange="cpHandleTemplateFileInput(this)">
-
-            <!-- Upload drop zone -->
-            <div id="cpTemplateDropZone"
-              onclick="cpTriggerTemplateUpload()"
-              ondragover="event.preventDefault();this.style.borderColor='var(--accent)'"
-              ondragleave="this.style.borderColor='var(--fog)'"
-              ondrop="event.preventDefault();this.style.borderColor='var(--fog)';var f=event.dataTransfer.files[0];if(f){var i=document.getElementById('cpTemplateFileInput');var dt=new DataTransfer();dt.items.add(f);i.files=dt.files;cpHandleTemplateFileInput(i);}"
-              style="border:2px dashed var(--fog);border-radius:12px;padding:28px 16px;text-align:center;cursor:pointer;transition:border-color .2s;background:var(--surface)">
-              <div style="font-size:2rem;margin-bottom:6px">🖼️</div>
-              <div style="font-size:.8rem;font-weight:700;color:var(--ink);margin-bottom:4px">Click to upload template image</div>
-              <div style="font-size:.68rem;color:var(--mist)">or drag & drop · PNG, JPG, WebP · max 10 MB</div>
-              <img id="cpTemplateThumb" style="display:none;margin-top:12px;max-width:100%;max-height:120px;border-radius:8px;object-fit:contain;border:1px solid var(--fog)" alt="preview">
-            </div>
-
-            <div id="cpTemplateBadgeWrap" style="display:none;margin-top:10px">
-              <div class="cp-template-badge">
-                <span id="cpTemplateLoadStatus">✅</span>
-                <span id="cpTemplateBadge" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Template loaded</span>
-                <button onclick="cpRemoveTemplate()" style="font-size:.7rem;background:none;border:none;cursor:pointer;color:var(--mist)">Remove</button>
-              </div>
-            </div>
-
-            <!-- Google Drive backup status badge -->
-            <div id="cpDriveBadge" style="display:none;margin-top:6px;font-size:.72rem;font-weight:600;color:#166534;background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:8px;padding:6px 10px"></div>
-
-            <!-- Drive URL as optional fallback -->
-            <details style="margin-top:14px">
-              <summary style="font-size:.7rem;color:var(--mist);cursor:pointer;user-select:none">Or load from Google Drive URL (optional)</summary>
-              <div style="margin-top:10px">
-                <div style="font-size:.68rem;color:var(--mist);margin-bottom:6px;line-height:1.5">
-                  Share the file as <b>Anyone with the link → Viewer</b>, then paste the link below.
-                  <b>Note:</b> Drive URLs may fail due to browser security — uploading directly above is more reliable.
-                </div>
-                <div style="display:flex;gap:8px;align-items:center">
-                  <input class="cp-fi" id="cpTemplateDriveUrl" placeholder="https://drive.google.com/file/d/…/view" oninput="cpTemplateUrlChanged()" style="flex:1;font-family:'DM Mono',monospace;font-size:.72rem">
-                  <button class="btn bo btn-sm" onclick="cpFetchTemplateFromUrl()" style="white-space:nowrap;padding:10px 14px">🔄 Load</button>
-                </div>
-              </div>
-            </details>
+            <div id="cpTemplateBadgeWrap" style="display:none"><div class="cp-template-badge"><span id="cpTemplateLoadStatus"></span><span id="cpTemplateBadge"></span></div></div>
+            <div id="cpDriveBadge" style="display:none"></div>
 
             <div style="margin-top:18px;padding-top:16px;border-top:1px solid var(--fog)">
               <div class="cp-label">🟢 Student Data (Google Sheets)</div>
@@ -2682,6 +2692,78 @@ function doGet(){return out({ok:true,status:'Nova Drive Relay running'});}</pre>
                   <option value="right">Right</option>
                 </select>
               </div>
+
+            <!-- ── Date Range ──────────────────────────────────── -->
+            <div style="margin-top:16px;padding-top:14px;border-top:2px solid var(--fog)">
+              <div style="display:flex;align-items:center;gap:6px;margin-bottom:10px">
+                <span style="font-size:1rem">📅</span>
+                <span class="cp-label" style="margin:0;color:var(--ink)">Conducted On — Date Range</span>
+              </div>
+
+              <div class="cp-row" style="gap:10px">
+                <div>
+                  <div class="cp-label">From Date</div>
+                  <input class="cp-fi" id="cpDateFrom" placeholder="e.g. 1st July 2025" oninput="cpUpdateDateRange()">
+                </div>
+                <div>
+                  <div class="cp-label">To Date</div>
+                  <input class="cp-fi" id="cpDateTo" placeholder="e.g. 31st July 2025" oninput="cpUpdateDateRange()">
+                </div>
+              </div>
+
+              <div style="font-size:.67rem;color:var(--mist);margin-top:6px;line-height:1.5">
+                Drag the <span style="color:rgba(217,119,6,.9);font-weight:700">● amber dot</span> on the canvas to position the date text.
+                The <span style="color:rgba(79,70,229,.9);font-weight:700">● indigo dot</span> is for the name.
+              </div>
+
+              <div class="cp-row" style="margin-top:10px">
+                <div>
+                  <div class="cp-label">Date X Position (%)</div>
+                  <input class="cp-fi" id="cpDateXPct" type="number" min="0" max="100" step="0.5" value="50" oninput="cpUpdateDatePosFromInput()">
+                </div>
+                <div>
+                  <div class="cp-label">Date Y Position (%)</div>
+                  <input class="cp-fi" id="cpDateYPct" type="number" min="0" max="100" step="0.5" value="72" oninput="cpUpdateDatePosFromInput()">
+                </div>
+              </div>
+
+              <div class="cp-row3" style="margin-top:10px">
+                <div>
+                  <div class="cp-label">Date Font Size</div>
+                  <input class="cp-fi" id="cpDateFontSize" type="number" min="8" max="200" value="36" oninput="cpUpdateDateStyle()">
+                </div>
+                <div>
+                  <div class="cp-label">Date Font Family</div>
+                  <select class="cp-fi" id="cpDateFontFamily" onchange="cpUpdateDateStyle()">
+                    <option>Georgia</option>
+                    <option>Arial</option>
+                    <option>Times New Roman</option>
+                    <option>Verdana</option>
+                    <option>Trebuchet MS</option>
+                  </select>
+                </div>
+                <div>
+                  <div class="cp-label">Date Color</div>
+                  <input class="cp-fi" id="cpDateFontColor" type="color" value="#1a1a1a" oninput="cpUpdateDateStyle()" style="padding:4px;height:38px;cursor:pointer">
+                </div>
+              </div>
+
+              <div class="cp-row3" style="margin-top:10px">
+                <label style="display:flex;align-items:center;gap:6px;font-size:.75rem;font-weight:600;cursor:pointer">
+                  <input type="checkbox" id="cpDateFontBold" onchange="cpUpdateDateStyle()"> Bold
+                </label>
+                <label style="display:flex;align-items:center;gap:6px;font-size:.75rem;font-weight:600;cursor:pointer">
+                  <input type="checkbox" id="cpDateFontItalic" checked onchange="cpUpdateDateStyle()"> Italic
+                </label>
+                <div>
+                  <select class="cp-fi" id="cpDateFontAlign" onchange="cpUpdateDateStyle()" style="font-size:.72rem">
+                    <option value="center">Center</option>
+                    <option value="left">Left</option>
+                    <option value="right">Right</option>
+                  </select>
+                </div>
+              </div>
+            </div>
             </div>
           </div>
 

@@ -17,6 +17,7 @@
 
 var CP = {
   currentSlug:      '',
+  // ── Single/legacy template (kept for backward compat) ──
   templateImg:      null,
   templateUrl:      '',
   storageUrl:       '',
@@ -24,6 +25,20 @@ var CP = {
   templateBytes:    0,
   templateTargetBytes: 716800,
   templateNeedsCompression: false,
+  // ── Dual-gender templates ──
+  templateUrlMale:  '',
+  templateImgMale:  null,
+  templateBytesMale: 0,
+  templateUrlFemale:'',
+  templateImgFemale:null,
+  templateBytesFemale: 0,
+  // ── Date range ──
+  dateFrom:         '',
+  dateTo:           '',
+  datePos:          { xPct: 50, yPct: 72 },
+  dateStyle:        { fontSize: 36, fontFamily: 'Georgia', color: '#1a1a1a', bold: false, italic: true, align: 'center' },
+  // ── Date canvas drag state ──
+  isDraggingDate:   false,
   csvDriveUrl:      '',
   templateWidth:    2480,
   templateHeight:   1754,
@@ -55,6 +70,16 @@ function cpSaveDraft() {
       students:      CP.students,
       step:          CP.step,
       uploadMode:    CP.uploadMode,
+      // Dual-gender templates
+      templateUrlMale:   CP.templateUrlMale,
+      templateBytesMale: CP.templateBytesMale,
+      templateUrlFemale: CP.templateUrlFemale,
+      templateBytesFemale: CP.templateBytesFemale,
+      // Date range
+      dateFrom:  CP.dateFrom,
+      dateTo:    CP.dateTo,
+      datePos:   CP.datePos,
+      dateStyle: CP.dateStyle,
       fields: {
         collegeName:   getVal('cpCollegeName'),
         cardMessage:   getVal('cpCardMessage'),
@@ -96,6 +121,16 @@ function cpRestoreDraft() {
     CP.csvDriveUrl    = draft.csvDriveUrl    || '';
     CP.students       = draft.students       || [];
     CP.uploadMode     = draft.uploadMode     || '';
+    // Dual-gender templates
+    CP.templateUrlMale    = draft.templateUrlMale    || '';
+    CP.templateBytesMale  = draft.templateBytesMale  || 0;
+    CP.templateUrlFemale  = draft.templateUrlFemale  || '';
+    CP.templateBytesFemale= draft.templateBytesFemale|| 0;
+    // Date range
+    CP.dateFrom  = draft.dateFrom  || '';
+    CP.dateTo    = draft.dateTo    || '';
+    CP.datePos   = draft.datePos   || { xPct: 50, yPct: 72 };
+    CP.dateStyle = draft.dateStyle || { fontSize: 36, fontFamily: 'Georgia', color: '#1a1a1a', bold: false, italic: true, align: 'center' };
 
     var f = draft.fields || {};
     function _set(id, prop, val) { var el = document.getElementById(id); if (el && val !== undefined) el[prop] = val; }
@@ -117,6 +152,17 @@ function cpRestoreDraft() {
     _set('cpFontAlign',      'value',       CP.nameStyle.align      || 'center');
     _set('cpXPct',           'value',       CP.namePos.xPct != null ? CP.namePos.xPct.toFixed(1) : '50.0');
     _set('cpYPct',           'value',       CP.namePos.yPct != null ? CP.namePos.yPct.toFixed(1) : '62.0');
+    // Date range UI restore
+    _set('cpDateFrom',       'value',       CP.dateFrom || '');
+    _set('cpDateTo',         'value',       CP.dateTo   || '');
+    _set('cpDateXPct',       'value',       CP.datePos.xPct != null ? CP.datePos.xPct.toFixed(1) : '50.0');
+    _set('cpDateYPct',       'value',       CP.datePos.yPct != null ? CP.datePos.yPct.toFixed(1) : '72.0');
+    _set('cpDateFontSize',   'value',       CP.dateStyle.fontSize   || 36);
+    _set('cpDateFontFamily', 'value',       CP.dateStyle.fontFamily || 'Georgia');
+    _set('cpDateFontColor',  'value',       CP.dateStyle.color      || '#1a1a1a');
+    _set('cpDateFontBold',   'checked',     CP.dateStyle.bold       || false);
+    _set('cpDateFontItalic', 'checked',     CP.dateStyle.italic     || true);
+    _set('cpDateFontAlign',  'value',       CP.dateStyle.align      || 'center');
 
     // Restore template image from base64 / URL
     if (CP.templateUrl) {
@@ -136,6 +182,32 @@ function cpRestoreDraft() {
         if (CP.step === 3) cpDrawNameCanvas();
       };
       img.src = CP.templateUrl;
+    }
+    // Restore male template image
+    if (CP.templateUrlMale) {
+      var imgM = new Image();
+      imgM.onload = function() {
+        CP.templateImgMale = imgM;
+        if (!CP.templateImg) { CP.templateImg = imgM; CP.templateWidth = imgM.naturalWidth; CP.templateHeight = imgM.naturalHeight; }
+        var badge = document.getElementById('cpTemplateBadgeMale');
+        var thumb = document.getElementById('cpTemplateThumbMale');
+        if (badge) badge.textContent = 'Male template restored (' + imgM.naturalWidth + '×' + imgM.naturalHeight + ') ✓';
+        if (thumb) { thumb.src = CP.templateUrlMale; thumb.style.display = 'block'; }
+        if (CP.step === 3) cpDrawNameCanvas();
+      };
+      imgM.src = CP.templateUrlMale;
+    }
+    // Restore female template image
+    if (CP.templateUrlFemale) {
+      var imgF = new Image();
+      imgF.onload = function() {
+        CP.templateImgFemale = imgF;
+        var badge = document.getElementById('cpTemplateBadgeFemale');
+        var thumb = document.getElementById('cpTemplateThumbFemale');
+        if (badge) badge.textContent = 'Female template restored (' + imgF.naturalWidth + '×' + imgF.naturalHeight + ') ✓';
+        if (thumb) { thumb.src = CP.templateUrlFemale; thumb.style.display = 'block'; }
+      };
+      imgF.src = CP.templateUrlFemale;
     }
 
     // Restore CSV badge & table
@@ -581,8 +653,11 @@ function cpValidateStep(n) {
     return true;
   }
   if (n === 2) {
-    if (!CP.templateImg) { cpToast('Please load a certificate template first.', 'err'); return false; }
+    if (!CP.templateImgMale)   { cpToast('Please load the Male (Mr.) certificate template.', 'err'); return false; }
+    if (!CP.templateImgFemale) { cpToast('Please load the Female (Ms.) certificate template.', 'err'); return false; }
     if (CP.students.length === 0) { cpToast('Please load student CSV data first.', 'err'); return false; }
+    // Use male template as the primary (for sizing reference)
+    if (!CP.templateImg) { CP.templateImg = CP.templateImgMale; }
     return true;
   }
   return true;
@@ -615,6 +690,82 @@ function cpTemplateUrlChanged() {
 function cpTriggerTemplateUpload() {
   var input = document.getElementById('cpTemplateFileInput');
   if (input) input.click();
+}
+
+// ── Gender-specific template upload triggers ──────────────────────
+function cpTriggerTemplateMale()   { var el = document.getElementById('cpTemplateFileMale');   if (el) el.click(); }
+function cpTriggerTemplateFemale() { var el = document.getElementById('cpTemplateFileFemale'); if (el) el.click(); }
+
+function cpTemplateFileMaleChanged(input) {
+  var file = input.files && input.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = async function(e) {
+    await cpProcessGenderTemplateDataUrl(e.target.result, file.name, 'male');
+  };
+  reader.readAsDataURL(file);
+}
+
+function cpTemplateFileFemaleChanged(input) {
+  var file = input.files && input.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = async function(e) {
+    await cpProcessGenderTemplateDataUrl(e.target.result, file.name, 'female');
+  };
+  reader.readAsDataURL(file);
+}
+
+async function cpProcessGenderTemplateDataUrl(dataUrl, fileName, gender) {
+  var badgeId = gender === 'male' ? 'cpTemplateBadgeMale' : 'cpTemplateBadgeFemale';
+  var thumbId  = gender === 'male' ? 'cpTemplateThumbMale'  : 'cpTemplateThumbFemale';
+  var statusId = gender === 'male' ? 'cpTemplateStatusMale'  : 'cpTemplateStatusFemale';
+  var badge = document.getElementById(badgeId);
+  var thumb = document.getElementById(thumbId);
+  var statusEl = document.getElementById(statusId);
+  if (statusEl) statusEl.textContent = '⏳';
+  if (badge) badge.textContent = 'Processing…';
+
+  // Compress if needed
+  var bytes = cpDataUrlBytes(dataUrl);
+  if (bytes > CP.templateTargetBytes) {
+    if (badge) badge.textContent = '🗜️ Compressing…';
+    try {
+      var compressed = await cpAdaptiveCompressTemplate(dataUrl, CP.templateTargetBytes);
+      dataUrl = compressed.dataUrl;
+      bytes   = compressed.bytes;
+    } catch(e) { /* use original */ }
+  }
+
+  var img = new Image();
+  await new Promise(function(resolve, reject) {
+    img.onload = resolve;
+    img.onerror = function() { reject(new Error('Image decode failed')); };
+    img.src = dataUrl;
+  });
+
+  if (gender === 'male') {
+    CP.templateUrlMale   = dataUrl;
+    CP.templateImgMale   = img;
+    CP.templateBytesMale = bytes;
+    // Also set as primary template for sizing
+    CP.templateImg    = img;
+    CP.templateUrl    = dataUrl;
+    CP.templateWidth  = img.naturalWidth;
+    CP.templateHeight = img.naturalHeight;
+    CP.templateBytes  = bytes;
+  } else {
+    CP.templateUrlFemale    = dataUrl;
+    CP.templateImgFemale    = img;
+    CP.templateBytesFemale  = bytes;
+  }
+
+  if (thumb)    { thumb.src = dataUrl; thumb.style.display = 'block'; }
+  if (statusEl) statusEl.textContent = '✅';
+  if (badge)    badge.textContent = fileName + ' (' + img.naturalWidth + '×' + img.naturalHeight + ', ' + cpFormatBytes(bytes) + ') — ready ✓';
+
+  cpSaveDraft();
+  if (CP.step === 3) cpDrawNameCanvas();
 }
 
 // Override: simplified template flow. No Firebase Storage upload here.
@@ -1124,7 +1275,7 @@ function cpPasteCsvText() {
 function escH(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
 // ══════════════════════════════════════════════════════════════════
-// ── Step 3: Name position canvas ──
+// ── Step 3: Name + Date position canvas ──
 // ══════════════════════════════════════════════════════════════════
 function cpDrawNameCanvas() {
   var canvas = document.getElementById('cpNameCanvas');
@@ -1141,8 +1292,11 @@ function cpDrawNameCanvas() {
   } else {
     ctx.fillStyle = '#f0f0ee'; ctx.fillRect(0, 0, canvas.width, canvas.height);
   }
-  var previewName = (document.getElementById('cpPreviewName').value || '').trim() || 'Sample Name';
+
   var scale = canvas.width / (CP.templateWidth || 2480);
+
+  // ── Draw name ──
+  var previewName = (document.getElementById('cpPreviewName') ? document.getElementById('cpPreviewName').value || '' : '').trim() || 'Sample Name';
   var fs = Math.round((CP.nameStyle.fontSize || 60) * scale);
   ctx.font = (CP.nameStyle.italic ? 'italic ' : '') + (CP.nameStyle.bold ? 'bold ' : '') + fs + 'px ' + (CP.nameStyle.fontFamily || 'Georgia');
   ctx.fillStyle = CP.nameStyle.color || '#1a1a1a';
@@ -1151,6 +1305,20 @@ function cpDrawNameCanvas() {
   var xPx = canvas.width  * (CP.namePos.xPct / 100);
   var yPx = canvas.height * (CP.namePos.yPct / 100);
   ctx.fillText(previewName, xPx, yPx);
+
+  // ── Draw date range ──
+  var dateFrom = (CP.dateFrom || '').trim() || '1st Jan 2025';
+  var dateTo   = (CP.dateTo   || '').trim() || '31st Jan 2025';
+  var dateText = dateFrom + ' to ' + dateTo;
+  var dfs = Math.round((CP.dateStyle.fontSize || 36) * scale);
+  ctx.font = (CP.dateStyle.italic ? 'italic ' : '') + (CP.dateStyle.bold ? 'bold ' : '') + dfs + 'px ' + (CP.dateStyle.fontFamily || 'Georgia');
+  ctx.fillStyle = CP.dateStyle.color || '#1a1a1a';
+  ctx.textAlign = CP.dateStyle.align || 'center';
+  var dxPx = canvas.width  * (CP.datePos.xPct / 100);
+  var dyPx = canvas.height * (CP.datePos.yPct / 100);
+  ctx.fillText(dateText, dxPx, dyPx);
+
+  // ── Crosshair for name (indigo) ──
   ctx.strokeStyle = 'rgba(79,70,229,0.7)'; ctx.lineWidth = 1.5; ctx.setLineDash([5, 4]);
   ctx.beginPath(); ctx.moveTo(xPx, 0); ctx.lineTo(xPx, canvas.height); ctx.stroke();
   ctx.beginPath(); ctx.moveTo(0, yPx); ctx.lineTo(canvas.width, yPx); ctx.stroke();
@@ -1158,24 +1326,65 @@ function cpDrawNameCanvas() {
   ctx.beginPath(); ctx.arc(xPx, yPx, 7, 0, Math.PI * 2);
   ctx.fillStyle = 'rgba(79,70,229,0.9)'; ctx.fill();
   ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+
+  // ── Crosshair for date (amber) ──
+  ctx.strokeStyle = 'rgba(217,119,6,0.7)'; ctx.lineWidth = 1.5; ctx.setLineDash([4, 4]);
+  ctx.beginPath(); ctx.moveTo(dxPx, 0); ctx.lineTo(dxPx, canvas.height); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0, dyPx); ctx.lineTo(canvas.width, dyPx); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.beginPath(); ctx.arc(dxPx, dyPx, 7, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(217,119,6,0.9)'; ctx.fill();
+  ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+
+  // ── Legend labels ──
+  ctx.font = 'bold ' + Math.round(11 * scale * 1.5) + 'px Arial';
+  ctx.fillStyle = 'rgba(79,70,229,0.9)';
+  ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
+  ctx.fillText('● NAME', 6, canvas.height - 4);
+  ctx.fillStyle = 'rgba(217,119,6,0.9)';
+  ctx.fillText('● DATE', 6, canvas.height - Math.round(16 * scale * 1.5));
 }
 
-function cpCanvasMouseDown(e) { CP.isDragging = true; cpCanvasUpdatePos(e); }
-function cpCanvasMouseMove(e) { if (CP.isDragging) cpCanvasUpdatePos(e); }
+function cpCanvasMouseDown(e) {
+  // Determine which dot was clicked — closest to pointer
+  var canvas = document.getElementById('cpNameCanvas');
+  var rect   = canvas.getBoundingClientRect();
+  var clientX = e.touches ? e.touches[0].clientX : e.clientX;
+  var clientY = e.touches ? e.touches[0].clientY : e.clientY;
+  var pxX = (clientX - rect.left) / rect.width  * canvas.width;
+  var pxY = (clientY - rect.top)  / rect.height * canvas.height;
+  var nameX = canvas.width  * (CP.namePos.xPct / 100);
+  var nameY = canvas.height * (CP.namePos.yPct / 100);
+  var dateX = canvas.width  * (CP.datePos.xPct / 100);
+  var dateY = canvas.height * (CP.datePos.yPct / 100);
+  var distName = Math.hypot(pxX - nameX, pxY - nameY);
+  var distDate = Math.hypot(pxX - dateX, pxY - dateY);
+  CP.isDragging     = distName <= distDate;
+  CP.isDraggingDate = !CP.isDragging;
+  cpCanvasUpdatePos(e);
+}
+function cpCanvasMouseMove(e) { if (CP.isDragging || CP.isDraggingDate) cpCanvasUpdatePos(e); }
 
 function cpCanvasUpdatePos(e) {
   var canvas = document.getElementById('cpNameCanvas');
   var rect   = canvas.getBoundingClientRect();
   var clientX = e.touches ? e.touches[0].clientX : e.clientX;
   var clientY = e.touches ? e.touches[0].clientY : e.clientY;
-  CP.namePos.xPct = Math.max(0, Math.min(100, (clientX - rect.left) / rect.width  * 100));
-  CP.namePos.yPct = Math.max(0, Math.min(100, (clientY - rect.top)  / rect.height * 100));
-  document.getElementById('cpXPct').value = CP.namePos.xPct.toFixed(1);
-  document.getElementById('cpYPct').value = CP.namePos.yPct.toFixed(1);
+  var xPct = Math.max(0, Math.min(100, (clientX - rect.left) / rect.width  * 100));
+  var yPct = Math.max(0, Math.min(100, (clientY - rect.top)  / rect.height * 100));
+  if (CP.isDraggingDate) {
+    CP.datePos.xPct = xPct; CP.datePos.yPct = yPct;
+    var dxEl = document.getElementById('cpDateXPct'); if (dxEl) dxEl.value = xPct.toFixed(1);
+    var dyEl = document.getElementById('cpDateYPct'); if (dyEl) dyEl.value = yPct.toFixed(1);
+  } else {
+    CP.namePos.xPct = xPct; CP.namePos.yPct = yPct;
+    document.getElementById('cpXPct').value = xPct.toFixed(1);
+    document.getElementById('cpYPct').value = yPct.toFixed(1);
+  }
   cpDrawNameCanvas();
 }
 
-function cpCanvasMouseUp() { CP.isDragging = false; cpSaveDraft(); }
+function cpCanvasMouseUp() { CP.isDragging = false; CP.isDraggingDate = false; cpSaveDraft(); }
 
 function cpUpdatePosFromInput() {
   CP.namePos.xPct = parseFloat(document.getElementById('cpXPct').value) || 50;
@@ -1190,6 +1399,30 @@ function cpUpdateNameStyle() {
   CP.nameStyle.bold       = document.getElementById('cpFontBold').checked;
   CP.nameStyle.italic     = document.getElementById('cpFontItalic').checked;
   CP.nameStyle.align      = document.getElementById('cpFontAlign').value;
+  cpDrawNameCanvas();
+  cpSaveDraft();
+}
+
+function cpUpdateDatePosFromInput() {
+  CP.datePos.xPct = parseFloat(document.getElementById('cpDateXPct').value) || 50;
+  CP.datePos.yPct = parseFloat(document.getElementById('cpDateYPct').value) || 72;
+  cpDrawNameCanvas();
+}
+
+function cpUpdateDateStyle() {
+  CP.dateStyle.fontSize   = parseInt(document.getElementById('cpDateFontSize').value)  || 36;
+  CP.dateStyle.fontFamily = document.getElementById('cpDateFontFamily').value;
+  CP.dateStyle.color      = document.getElementById('cpDateFontColor').value;
+  CP.dateStyle.bold       = document.getElementById('cpDateFontBold').checked;
+  CP.dateStyle.italic     = document.getElementById('cpDateFontItalic').checked;
+  CP.dateStyle.align      = document.getElementById('cpDateFontAlign').value;
+  cpDrawNameCanvas();
+  cpSaveDraft();
+}
+
+function cpUpdateDateRange() {
+  CP.dateFrom = (document.getElementById('cpDateFrom').value || '').trim();
+  CP.dateTo   = (document.getElementById('cpDateTo').value   || '').trim();
   cpDrawNameCanvas();
   cpSaveDraft();
 }
@@ -1460,7 +1693,8 @@ async function cpPublishPortal() {
     var district     = (document.getElementById('cpDistrict') ? document.getElementById('cpDistrict').value.trim() : '');
 
     if (!CP.currentSlug || !collegeName) { cpToast('Missing college name.', 'err'); btn.disabled = false; btn.textContent = '🚀 Publish Portal'; return; }
-    if (!CP.templateUrl) { cpToast('No template — go back to Step 2 and load a template.', 'err'); btn.disabled = false; btn.textContent = '🚀 Publish Portal'; return; }
+    if (!CP.templateUrlMale)   { cpToast('No male template — go back to Step 2.', 'err'); btn.disabled = false; btn.textContent = '🚀 Publish Portal'; return; }
+    if (!CP.templateUrlFemale) { cpToast('No female template — go back to Step 2.', 'err'); btn.disabled = false; btn.textContent = '🚀 Publish Portal'; return; }
 
     // Template is already fully resolved by Step 4→5 transition:
     //   - Local mode  → CP.templateUrl is a compressed base64 data URL
@@ -1477,6 +1711,14 @@ async function cpPublishPortal() {
       headerColor:    headerColor,
       accentColor:    accentColor,
       templateUrl:    templateUrlToStore,
+      // ── Dual-gender templates ──
+      templateUrlMale:   CP.templateUrlMale,
+      templateUrlFemale: CP.templateUrlFemale,
+      // ── Date range ──
+      dateFrom:       CP.dateFrom || '',
+      dateTo:         CP.dateTo   || '',
+      datePosition:   { xPct: CP.datePos.xPct,  yPct: CP.datePos.yPct  },
+      dateStyle:      Object.assign({}, CP.dateStyle),
       csvDriveUrl:    CP.csvDriveUrl || '',
       templateWidth:  CP.templateWidth,
       templateHeight: CP.templateHeight,
@@ -1550,11 +1792,14 @@ function cpRenderPortalLink() {
   var pf = document.getElementById('cpPreflightPanel');
   if (!pf) return;
 
-  var templateReady  = !!CP.templateUrl;
+  var templateMaleReady   = !!CP.templateUrlMale;
+  var templateFemaleReady = !!CP.templateUrlFemale;
+  var templateReady  = templateMaleReady && templateFemaleReady;
   var isStorageUrl   = templateReady && !CP.templateUrl.startsWith('data:');
-  var templateSizeOk = !CP.templateUrl || CP.templateBytes <= CP.templateTargetBytes || isStorageUrl;
+  var templateSizeOk = templateReady;
   var studentsReady  = CP.students.length > 0;
   var slugReady      = !!CP.currentSlug;
+  var dateReady      = !!(CP.dateFrom && CP.dateTo);
 
   function row(ok, label) {
     return '<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--fog)">' +
@@ -1571,14 +1816,16 @@ function cpRenderPortalLink() {
 
   pf.innerHTML =
     '<div style="font-size:.75rem;font-weight:700;color:var(--mist);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">✅ Ready to publish</div>' +
-    row(slugReady,      'College: <b>' + (CP.currentSlug || '—') + '</b>') +
-    row(templateReady && templateSizeOk, templateLabel) +
-    row(studentsReady,  '<b>' + CP.students.length + '</b> students loaded') +
-    row(true,           'Storage mode: <b>' + (CP.uploadMode === 'backend' ? '☁️ NOVA Backend' : '📦 Local (Firestore)') + '</b>');
+    row(slugReady,          'College: <b>' + (CP.currentSlug || '—') + '</b>') +
+    row(templateMaleReady,  '🧑 Male template: ' + (templateMaleReady   ? cpFormatBytes(CP.templateBytesMale)   + ' — ready ✓' : 'not loaded — go back to Step 2')) +
+    row(templateFemaleReady,'👩 Female template: ' + (templateFemaleReady ? cpFormatBytes(CP.templateBytesFemale) + ' — ready ✓' : 'not loaded — go back to Step 2')) +
+    row(dateReady,          '📅 Date range: ' + (dateReady ? '<b>' + escH(CP.dateFrom) + '</b> to <b>' + escH(CP.dateTo) + '</b>' : 'not set — go back to Step 3')) +
+    row(studentsReady,      '<b>' + CP.students.length + '</b> students loaded') +
+    row(true,               'Storage mode: <b>' + (CP.uploadMode === 'backend' ? '☁️ NOVA Backend' : '📦 Local (Firestore)') + '</b>');
 
   // Enable/disable publish button based on readiness
   var publishBtnEl = document.getElementById('cpPublishBtn');
-  var allReady = slugReady && templateReady && templateSizeOk;
+  var allReady = slugReady && templateMaleReady && templateFemaleReady && studentsReady;
   if (publishBtnEl) {
     publishBtnEl.disabled = !allReady;
     publishBtnEl.style.opacity = allReady ? '1' : '0.5';
@@ -2141,6 +2388,11 @@ function cpNewPortal() {
   cpSetPortalView('create');
   cpClearDraft();
   CP.currentSlug = ''; CP.templateImg = null; CP.templateUrl = ''; CP.storageUrl = ''; CP.csvDriveUrl = ''; CP.students = []; CP.uploadMode = '';
+  CP.templateUrlMale = ''; CP.templateImgMale = null; CP.templateBytesMale = 0;
+  CP.templateUrlFemale = ''; CP.templateImgFemale = null; CP.templateBytesFemale = 0;
+  CP.dateFrom = ''; CP.dateTo = '';
+  CP.datePos  = { xPct: 50, yPct: 72 };
+  CP.dateStyle = { fontSize: 36, fontFamily: 'Georgia', color: '#1a1a1a', bold: false, italic: true, align: 'center' };
   CP.namePos   = { xPct: 50, yPct: 62 };
   CP.nameStyle = { fontSize: 60, fontFamily: 'Georgia', color: '#1a1a1a', bold: false, italic: false, align: 'center' };
   function _set(id, prop, val) { var el = document.getElementById(id); if (el) el[prop] = val; }

@@ -434,11 +434,27 @@ function waitForFirebase(callback, attempt) {
 <script>
 // ── Portal config from Firestore ──
 var portalCfg = null;
-var templateImg = null;
+var templateImg       = null; // active / legacy single template
+var templateImgMale   = null; // Mr. template
+var templateImgFemale = null; // Ms. template
 var studentData = null; // {limit, downloaded}
 var collegeSlug = '';
 var allStudentNames = []; // [{name, nameLower}] — loaded on init for autocomplete
 var acSelectedIdx = -1; // keyboard navigation index
+
+// ── Gender detection from name prefix ────────────────────────────
+function detectGenderFromName(name) {
+  var n = (name || '').trim().toLowerCase();
+  if (/^ms\.?\s/.test(n) || /^mrs\.?\s/.test(n) || /^miss\s/.test(n)) return 'female';
+  if (/^mr\.?\s/.test(n)) return 'male';
+  return 'unknown';
+}
+// Returns the right Image object (Mr. vs Ms. template) for a given name
+function getTemplateForName(name) {
+  var gender = detectGenderFromName(name);
+  if (gender === 'female' && templateImgFemale) return templateImgFemale;
+  return templateImgMale || templateImg; // male or fallback
+}
 
 function getParam(k) {
   return new URLSearchParams(location.search).get(k) || '';
@@ -516,11 +532,22 @@ async function initPortal() {
       document.documentElement.style.setProperty('--accent', portalCfg.accentColor);
     }
 
-    // Load template image
-    if (portalCfg.templateUrl) {
-      await loadTemplateImage(portalCfg.templateUrl);
-      drawPreviewPlaceholder();
+    // Load template images (dual-gender + legacy fallback)
+    var templateLoaded = false;
+    if (portalCfg.templateUrlMale) {
+      await loadGenderTemplate(portalCfg.templateUrlMale, 'male');
+      templateLoaded = true;
     }
+    if (portalCfg.templateUrlFemale) {
+      await loadGenderTemplate(portalCfg.templateUrlFemale, 'female');
+      templateLoaded = true;
+    }
+    // Legacy single-template fallback
+    if (!templateLoaded && portalCfg.templateUrl) {
+      await loadTemplateImage(portalCfg.templateUrl);
+      templateLoaded = true;
+    }
+    if (templateLoaded) drawPreviewPlaceholder();
 
     // Show limit badge if global limit
     if (portalCfg.defaultLimit) {
@@ -560,6 +587,21 @@ async function initPortal() {
 }
 
 // ── Load template image from URL ──
+// ── Load a gender-specific template image ──────────────────────────
+async function loadGenderTemplate(url, gender) {
+  return new Promise(function(resolve) {
+    var img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = function() {
+      if (gender === 'female') { templateImgFemale = img; }
+      else                     { templateImgMale   = img; templateImg = img; }
+      resolve();
+    };
+    img.onerror = function() { resolve(); };
+    img.src = url;
+  });
+}
+
 async function loadTemplateImage(url) {
   // ── If already base64 data URL, load directly — zero CORS risk ──
   if (url && url.startsWith('data:')) {
@@ -624,11 +666,12 @@ async function loadTemplateImage(url) {
 
 // ── Draw preview with placeholder name ──
 function drawPreviewPlaceholder() {
-  if (!templateImg) return;
+  var tpl = templateImgMale || templateImg;
+  if (!tpl) return;
   var canvas = document.getElementById('previewCanvas');
   document.getElementById('previewEmpty').style.display = 'none';
   canvas.style.display = 'block';
-  var aspect = templateImg.naturalWidth / templateImg.naturalHeight;
+  var aspect = tpl.naturalWidth / tpl.naturalHeight;
   var box = canvas.parentElement.getBoundingClientRect();
   canvas.width = Math.round(box.width || 520);
   canvas.height = Math.round(canvas.width / aspect);
@@ -759,20 +802,21 @@ document.addEventListener('click', function(e) {
 
 // ── Draw certificate on canvas ──
 function drawCertOnCanvas(canvas, name, preview) {
-  if (!templateImg && !portalCfg.bgColor) return;
+  var tpl = getTemplateForName(name); // pick Mr. or Ms. template
+  if (!tpl && !portalCfg.bgColor) return;
   var ctx = canvas.getContext('2d');
   var w = canvas.width, h = canvas.height;
 
   ctx.clearRect(0, 0, w, h);
 
-  if (templateImg) {
-    ctx.drawImage(templateImg, 0, 0, w, h);
+  if (tpl) {
+    ctx.drawImage(tpl, 0, 0, w, h);
   } else {
     ctx.fillStyle = portalCfg.bgColor || '#fff';
     ctx.fillRect(0, 0, w, h);
   }
 
-  // Draw name
+  // ── Draw name ──
   var np = portalCfg.namePosition || { xPct: 50, yPct: 62 };
   var style = portalCfg.nameStyle || {};
   var fontSize = Math.round((style.fontSize || 60) * (w / (portalCfg.templateWidth || 2480)));
@@ -784,10 +828,24 @@ function drawCertOnCanvas(canvas, name, preview) {
   ctx.fillStyle = preview ? 'rgba(' + hexToRgb(color) + ',0.4)' : color;
   ctx.textAlign = style.align || 'center';
   ctx.textBaseline = 'middle';
-
   var xPx = w * (np.xPct / 100);
   var yPx = h * (np.yPct / 100);
   ctx.fillText(name, xPx, yPx);
+
+  // ── Draw date range ──
+  var dateFrom = (portalCfg.dateFrom || '').trim();
+  var dateTo   = (portalCfg.dateTo   || '').trim();
+  if (dateFrom || dateTo) {
+    var dateText = dateFrom && dateTo ? dateFrom + ' to ' + dateTo : (dateFrom || dateTo);
+    var dp = portalCfg.datePosition || { xPct: 50, yPct: 72 };
+    var ds = portalCfg.dateStyle    || {};
+    var dfs = Math.round((ds.fontSize || 36) * (w / (portalCfg.templateWidth || 2480)));
+    ctx.font = (ds.italic ? 'italic ' : '') + (ds.bold ? 'bold ' : '') + dfs + 'px ' + (ds.fontFamily || 'Georgia');
+    ctx.fillStyle = preview ? 'rgba(' + hexToRgb(ds.color || '#1a1a1a') + ',0.5)' : (ds.color || '#1a1a1a');
+    ctx.textAlign = ds.align || 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(dateText, w * (dp.xPct / 100), h * (dp.yPct / 100));
+  }
 }
 
 function hexToRgb(hex) {
@@ -828,22 +886,23 @@ async function submitCertRequest() {
 // Renders at 2x resolution with contrast/saturation boost, exports PDF
 // sized exactly to the certificate aspect ratio.
 async function buildCertPDF(studentName) {
-  if (!templateImg) throw new Error('Template not loaded');
+  var tpl = getTemplateForName(studentName);
+  if (!tpl) throw new Error('Template not loaded');
   var SCALE = 2;
-  var natW = templateImg.naturalWidth, natH = templateImg.naturalHeight;
+  var natW = tpl.naturalWidth, natH = tpl.naturalHeight;
   var rc = document.getElementById('renderCanvas');
   rc.width  = natW * SCALE;
   rc.height = natH * SCALE;
   var ctx = rc.getContext('2d');
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = 'high';
-  // Enhancement: contrast + saturation + brightness on template
   if (typeof ctx.filter !== 'undefined') {
     ctx.filter = 'contrast(1.07) saturate(1.10) brightness(1.015)';
   }
-  ctx.drawImage(templateImg, 0, 0, rc.width, rc.height);
+  ctx.drawImage(tpl, 0, 0, rc.width, rc.height);
   if (typeof ctx.filter !== 'undefined') { ctx.filter = 'none'; }
-  // Draw student name at 2x scale with subtle shadow
+
+  // ── Draw student name ──
   var np       = portalCfg.namePosition || { xPct: 50, yPct: 62 };
   var style    = portalCfg.nameStyle    || {};
   var fontSize = Math.round((style.fontSize || 60) * (rc.width / (portalCfg.templateWidth || 2480)));
@@ -855,7 +914,26 @@ async function buildCertPDF(studentName) {
   ctx.textBaseline = 'middle';
   ctx.fillText(studentName, rc.width * (np.xPct / 100), rc.height * (np.yPct / 100));
   ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;
-  // Build PDF at certificate aspect ratio (A3-width base)
+
+  // ── Draw date range ──
+  var dateFrom = (portalCfg.dateFrom || '').trim();
+  var dateTo   = (portalCfg.dateTo   || '').trim();
+  if (dateFrom || dateTo) {
+    var dateText = dateFrom && dateTo ? dateFrom + ' to ' + dateTo : (dateFrom || dateTo);
+    var dp  = portalCfg.datePosition || { xPct: 50, yPct: 72 };
+    var ds  = portalCfg.dateStyle    || {};
+    var dfs = Math.round((ds.fontSize || 36) * (rc.width / (portalCfg.templateWidth || 2480)));
+    ctx.font      = (ds.italic ? 'italic ' : '') + (ds.bold ? 'bold ' : '') + dfs + 'px ' + (ds.fontFamily || 'Georgia');
+    ctx.fillStyle = ds.color || '#1a1a1a';
+    ctx.textAlign = ds.align || 'center';
+    ctx.textBaseline = 'middle';
+    ctx.shadowColor = 'rgba(0,0,0,0.10)';
+    ctx.shadowBlur  = Math.round(dfs * 0.03);
+    ctx.fillText(dateText, rc.width * (dp.xPct / 100), rc.height * (dp.yPct / 100));
+    ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;
+  }
+
+  // Build PDF at certificate aspect ratio
   var imgData  = rc.toDataURL('image/jpeg', 0.95);
   var isLand   = natW >= natH;
   var PDF_W    = isLand ? 420 : 297;
@@ -954,7 +1032,7 @@ async function downloadCertificate() {
 
     // Generate full-res certificate
     btn.textContent = 'Generating…';
-    if (!templateImg) {
+    if (!templateImgMale && !templateImgFemale && !templateImg) {
       showStatus('❌ Certificate template is not available. Please contact your institution.', 'error');
       if (iosPreOpenedTab && !iosPreOpenedTab.closed) { iosPreOpenedTab.close(); }
       resetBtn(); return;
