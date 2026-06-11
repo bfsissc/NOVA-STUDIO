@@ -508,14 +508,14 @@ function cpInit() {
   if (hasDraft) {
     cpRenderStep(CP.step || 1);
     var wiz = document.getElementById('cpWizard');
-    if (wiz) wiz.style.display = 'block';
+    if (wiz) wiz.style.display = 'flex';
     cpSetPortalView('create');
     cpToast('📋 Draft restored — your unsaved work is back!', 'ok');
   } else {
     cpRenderStep(1);
     // FIX: Show wizard so the Next/Back footer is visible when Create Portal tab is used
     var wiz = document.getElementById('cpWizard');
-    if (wiz) wiz.style.display = 'block';
+    if (wiz) wiz.style.display = 'flex';
     var cUrl = localStorage.getItem('cp_last_csv_url') || '';
     var ci = document.getElementById('cpCsvDriveUrl');
     if (ci && cUrl) ci.value = cUrl;
@@ -1929,6 +1929,14 @@ function cpCopyLink() {
 // ══════════════════════════════════════════════════════════════════
 async function cpLoadPortalList() {
   if (typeof U === 'undefined' || !U) return;
+  // Demo users have no Firestore data — show friendly message
+  if (U.email === 'demo@nova.studio' || typeof fbDb === 'undefined' || !fbDb) {
+    CP.portals = [];
+    cpRenderPortalList();
+    var wrap = document.getElementById('cpPortalList');
+    if (wrap) wrap.innerHTML = '<div style="color:var(--mist);font-size:.8rem;text-align:center;padding:30px">Demo mode — portals are not stored. Sign in with a real account to create and manage portals.</div>';
+    return;
+  }
   try {
     var snap = await fbDb.collection('college_portals').where('createdBy', '==', U.email).limit(500).get();
     CP.portals = [];
@@ -2459,7 +2467,7 @@ async function cpLoadPortal(slug) {
     cpRenderStep(1);
     // Show wizard
     var wiz = document.getElementById('cpWizard');
-    if (wiz) wiz.style.display = 'block';
+    if (wiz) wiz.style.display = 'flex';
   } catch(e) { cpToast('Error: ' + e.message, 'err'); }
 }
 
@@ -2491,7 +2499,7 @@ function cpNewPortal() {
   ['cpModeCardLocal','cpModeCardBackend'].forEach(function(id){ var el=document.getElementById(id); if(el){ el.style.border='2px solid var(--fog)'; el.style.background='var(--surface)'; } });
   ['cpModeCheckLocal','cpModeCheckBackend'].forEach(function(id){ var el=document.getElementById(id); if(el) el.style.display='none'; });
   var hint=document.getElementById('cpUploadModeHint'); if(hint) hint.style.display='none';
-  var wiz = document.getElementById('cpWizard'); if (wiz) wiz.style.display = 'block';
+  var wiz = document.getElementById('cpWizard'); if (wiz) wiz.style.display = 'flex';
   cpRenderStudentTable();
   cpRenderStep(1);
 }
