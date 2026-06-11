@@ -1306,11 +1306,17 @@ function cpDrawNameCanvas() {
   var wrap   = canvas.parentElement;
   var wrapW  = Math.round(wrap.getBoundingClientRect().width) || wrap.clientWidth || 560;
   var aspect = CP.templateImg ? (CP.templateImg.naturalWidth / CP.templateImg.naturalHeight) : (2480 / 1754);
+  // Cap canvas height at 50vh so controls below are always reachable by scrolling
+  var maxH = Math.round(window.innerHeight * 0.50);
   var displayH = Math.round(wrapW / aspect);
+  if (displayH > maxH) {
+    displayH = maxH;
+    wrapW = Math.round(displayH * aspect);
+  }
   canvas.width  = wrapW;
   canvas.height = displayH;
-  canvas.style.width  = '';
-  canvas.style.height = '';
+  canvas.style.width  = wrapW + 'px';
+  canvas.style.height = displayH + 'px';
   var ctx = canvas.getContext('2d');
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   if (CP.templateImg) {
