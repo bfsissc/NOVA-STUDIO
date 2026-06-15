@@ -1,0 +1,3084 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Control Panel — NOVA Studio</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%23c8f135'/><text x='16' y='22' font-size='18' text-anchor='middle' font-family='serif' font-weight='800'>C</text></svg>">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+
+<script>
+(function(){
+  var _mem=function(){var s={};return{getItem:function(k){return s.hasOwnProperty(k)?s[k]:null;},setItem:function(k,v){s[k]=String(v);},removeItem:function(k){delete s[k];},clear:function(){s={};},key:function(i){return Object.keys(s)[i]||null;},get length(){return Object.keys(s).length;}}; };
+  try{localStorage.setItem('__t','1');localStorage.removeItem('__t');}catch(e){try{Object.defineProperty(window,'localStorage',{value:_mem(),writable:false});}catch(e2){window.localStorage=_mem();}}
+  try{sessionStorage.setItem('__t','1');sessionStorage.removeItem('__t');}catch(e){try{Object.defineProperty(window,'sessionStorage',{value:_mem(),writable:false});}catch(e2){window.sessionStorage=_mem();}}
+})();
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/firebase@10.12.0/firebase-app-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/firebase@10.12.0/firebase-auth-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/firebase@10.12.0/firebase-firestore-compat.js"></script>
+<script src="assets/js/config.js"></script>
+
+<style>
+/* ════════════════════════════════════════
+   NOVA CONTROL PANEL — Design Tokens
+════════════════════════════════════════ */
+:root{
+  --cp-bg:       #0d0f14;
+  --cp-surface:  #141720;
+  --cp-surface2: #1a1e2a;
+  --cp-border:   #252a38;
+  --cp-body:     #e8eaf0;
+  --cp-muted:    #5a6278;
+  --cp-lime:     #c8f135;
+  --cp-lime-d:   #9ec000;
+  --cp-blue:     #4f8ef7;
+  --cp-red:      #f05252;
+  --cp-green:    #31c48d;
+  --cp-amber:    #f6a609;
+  --cp-violet:   #9d71f8;
+  --cp-sidebar:  220px;
+  --cp-nav:      58px;
+  --cp-rd:       10px;
+  --cp-sh:       0 4px 24px rgba(0,0,0,.35);
+}
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:'Bricolage Grotesque',system-ui,sans-serif;background:var(--cp-bg);color:var(--cp-body);font-size:15px;overflow:hidden}
+
+/* ── Scrollbar ────────────────────────── */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--cp-border);border-radius:3px}
+
+/* ════════════════════════════════════════
+   LOGIN SCREEN
+════════════════════════════════════════ */
+
+
+
+
+
+
+
+
+.cp-login-input:focus{border-color:var(--cp-lime-d)}
+.cp-login-input::placeholder{color:var(--cp-muted)}
+
+.cp-login-btn:hover{background:var(--cp-lime-d);transform:translateY(-1px)}
+
+
+
+/* ════════════════════════════════════════
+   SHELL LAYOUT
+════════════════════════════════════════ */
+#cpShell{
+  display:flex;flex-direction:column;height:100vh;overflow:hidden;
+}
+
+/* ── Top Navbar ───────────────────────── */
+.cp-navbar{
+  height:var(--cp-nav);background:var(--cp-surface);border-bottom:1.5px solid var(--cp-border);
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 20px;flex-shrink:0;z-index:200;
+}
+.cp-navbar-brand{display:flex;align-items:center;gap:10px}
+.cp-navbar-icon{
+  width:32px;height:32px;background:var(--cp-lime);border-radius:7px;
+  display:flex;align-items:center;justify-content:center;font-size:.95rem;font-weight:900;color:#0d0f12;
+}
+.cp-navbar-title{font-size:.95rem;font-weight:800;letter-spacing:-.02em;color:var(--cp-body)}
+.cp-navbar-chip{
+  font-size:.58rem;font-weight:700;background:rgba(200,241,53,.15);color:var(--cp-lime);
+  padding:3px 9px;border-radius:20px;letter-spacing:.06em;border:1px solid rgba(200,241,53,.3);
+}
+.cp-navbar-right{display:flex;align-items:center;gap:12px}
+.cp-admin-avatar{
+  width:32px;height:32px;background:var(--cp-lime);border-radius:50%;
+  display:flex;align-items:center;justify-content:center;font-size:.8rem;font-weight:700;
+  color:#0d0f12;background-size:cover;background-position:center;cursor:pointer;overflow:hidden;
+}
+.cp-admin-name{font-size:.8rem;color:var(--cp-muted)}
+.cp-logout-btn{
+  padding:7px 14px;background:rgba(255,255,255,.06);border:1.5px solid var(--cp-border);
+  color:var(--cp-muted);border-radius:7px;font-family:inherit;font-size:.75rem;font-weight:600;cursor:pointer;
+  transition:all .15s;
+}
+.cp-logout-btn:hover{background:rgba(255,255,255,.1);color:var(--cp-body)}
+.cp-broadcast-btn{
+  padding:7px 14px;background:rgba(200,241,53,.12);border:1.5px solid rgba(200,241,53,.3);
+  color:var(--cp-lime);border-radius:7px;font-family:inherit;font-size:.72rem;font-weight:700;cursor:pointer;
+  transition:all .15s;display:flex;align-items:center;gap:5px;
+}
+.cp-broadcast-btn:hover{background:rgba(200,241,53,.2)}
+
+/* ── Body Layout ─────────────────────── */
+.cp-body{display:flex;flex:1;min-height:0;overflow:hidden}
+
+/* ── Sidebar ──────────────────────────── */
+.cp-sidebar{
+  width:var(--cp-sidebar);background:var(--cp-surface);border-right:1.5px solid var(--cp-border);
+  display:flex;flex-direction:column;overflow-y:auto;flex-shrink:0;
+}
+.cp-nav-label{
+  padding:14px 14px 5px;font-size:.6rem;font-weight:700;text-transform:uppercase;
+  letter-spacing:.08em;color:var(--cp-muted);
+}
+.cp-nav-item{
+  display:flex;align-items:center;gap:9px;padding:9px 13px;margin:1px 8px;
+  border-radius:8px;cursor:pointer;font-size:.82rem;font-weight:600;color:var(--cp-muted);
+  transition:all .13s;user-select:none;
+}
+.cp-nav-item:hover{background:var(--cp-surface2);color:var(--cp-body)}
+.cp-nav-item.active{background:var(--cp-lime);color:#0d0f12}
+.cp-nav-item .cp-nav-ic{font-size:1rem;width:20px;text-align:center}
+.cp-nav-item .cp-nav-badge{
+  margin-left:auto;font-size:.6rem;font-weight:700;padding:2px 7px;border-radius:20px;
+  background:rgba(200,241,53,.15);color:var(--cp-lime);border:1px solid rgba(200,241,53,.25);
+}
+
+/* ── Content area ─────────────────────── */
+.cp-content-wrap{flex:1;min-height:0;overflow-y:auto;padding:26px}
+
+/* ── Section heading ─────────────────── */
+.cp-section-title{
+  font-size:1.15rem;font-weight:800;letter-spacing:-.03em;margin-bottom:20px;
+  display:flex;align-items:center;gap:10px;color:var(--cp-body);
+}
+.cp-count{font-size:.72rem;font-weight:600;color:var(--cp-muted);background:var(--cp-surface2);border:1.5px solid var(--cp-border);padding:2px 9px;border-radius:20px}
+
+/* ── Cards / Stat ─────────────────────── */
+.cp-stat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-bottom:22px}
+.cp-stat-card{
+  background:var(--cp-surface);border:1.5px solid var(--cp-border);border-radius:var(--cp-rd);
+  padding:16px 14px;
+}
+.cp-stat-val{font-size:1.8rem;font-weight:800;line-height:1;letter-spacing:-.03em}
+.cp-stat-lbl{font-size:.7rem;font-weight:700;color:var(--cp-muted);margin-top:4px;text-transform:uppercase;letter-spacing:.04em}
+.cp-stat-icon{font-size:1.4rem;margin-bottom:8px}
+
+/* ── Tables ──────────────────────────── */
+.cp-table{width:100%;border-collapse:collapse;font-size:.8rem}
+.cp-table th{padding:9px 13px;text-align:left;font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--cp-muted);border-bottom:1.5px solid var(--cp-border)}
+.cp-table td{padding:10px 13px;border-bottom:1px solid var(--cp-border);vertical-align:middle;color:var(--cp-body)}
+.cp-table tr:last-child td{border-bottom:none}
+.cp-table tr:hover td{background:var(--cp-surface2)}
+.cp-table-wrap{background:var(--cp-surface);border:1.5px solid var(--cp-border);border-radius:var(--cp-rd);overflow:hidden}
+
+/* ── Badges ──────────────────────────── */
+.cp-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:.65rem;font-weight:700}
+.cp-badge-green{background:rgba(49,196,141,.12);color:var(--cp-green);border:1px solid rgba(49,196,141,.3)}
+.cp-badge-red{background:rgba(240,82,82,.12);color:var(--cp-red);border:1px solid rgba(240,82,82,.3)}
+.cp-badge-amber{background:rgba(246,166,9,.12);color:var(--cp-amber);border:1px solid rgba(246,166,9,.3)}
+.cp-badge-blue{background:rgba(79,142,247,.12);color:var(--cp-blue);border:1px solid rgba(79,142,247,.3)}
+.cp-badge-lime{background:rgba(200,241,53,.1);color:var(--cp-lime);border:1px solid rgba(200,241,53,.25)}
+.cp-badge-violet{background:rgba(157,113,248,.12);color:var(--cp-violet);border:1px solid rgba(157,113,248,.3)}
+
+/* ── Buttons ──────────────────────────── */
+.cp-btn-pri{padding:8px 16px;background:var(--cp-lime);color:#0d0f12;border:none;border-radius:8px;font-family:inherit;font-size:.78rem;font-weight:700;cursor:pointer;transition:all .15s}
+.cp-btn-pri:hover{background:var(--cp-lime-d);transform:translateY(-1px)}
+.cp-btn-sec{padding:8px 16px;background:var(--cp-surface2);color:var(--cp-body);border:1.5px solid var(--cp-border);border-radius:8px;font-family:inherit;font-size:.78rem;font-weight:600;cursor:pointer;transition:all .15s}
+.cp-btn-sec:hover{border-color:var(--cp-muted)}
+.cp-btn-sm{padding:5px 11px;background:var(--cp-surface2);color:var(--cp-body);border:1.5px solid var(--cp-border);border-radius:6px;font-family:inherit;font-size:.72rem;font-weight:600;cursor:pointer;transition:all .15s}
+.cp-btn-sm:hover{border-color:var(--cp-muted)}
+.cp-btn-danger{padding:8px 16px;background:rgba(240,82,82,.12);color:var(--cp-red);border:1.5px solid rgba(240,82,82,.3);border-radius:8px;font-family:inherit;font-size:.78rem;font-weight:700;cursor:pointer;transition:all .15s}
+.cp-btn-danger:hover{background:rgba(240,82,82,.2)}
+
+/* ── Inputs ──────────────────────────── */
+.cp-input{
+  padding:9px 12px;border:1.5px solid var(--cp-border);border-radius:8px;
+  background:var(--cp-surface2);color:var(--cp-body);font-family:inherit;font-size:.83rem;outline:none;
+  transition:border-color .15s;
+}
+.cp-input:focus{border-color:var(--cp-lime-d)}
+.cp-input::placeholder{color:var(--cp-muted)}
+.cp-select{
+  padding:9px 12px;border:1.5px solid var(--cp-border);border-radius:8px;
+  background:var(--cp-surface2);color:var(--cp-body);font-family:inherit;font-size:.83rem;outline:none;cursor:pointer;
+}
+
+/* ── Loading / Empty ─────────────────── */
+.cp-loading{display:flex;align-items:center;justify-content:center;gap:10px;padding:60px;color:var(--cp-muted);font-size:.85rem}
+.cp-spinner{width:20px;height:20px;border:2.5px solid var(--cp-border);border-top-color:var(--cp-lime);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.cp-empty{text-align:center;padding:60px;color:var(--cp-muted);font-size:.85rem}
+
+/* ── Toast ───────────────────────────── */
+.cp-toast{
+  position:fixed;bottom:20px;right:20px;padding:11px 18px;border-radius:10px;
+  font-size:.82rem;font-weight:600;display:none;z-index:9999;
+  animation:slideUp .2s ease;
+}
+@keyframes slideUp{from{transform:translateY(10px);opacity:0}to{transform:translateY(0);opacity:1}}
+.cp-toast.ok{background:rgba(49,196,141,.15);border:1.5px solid rgba(49,196,141,.4);color:var(--cp-green)}
+.cp-toast.err{background:rgba(240,82,82,.15);border:1.5px solid rgba(240,82,82,.4);color:var(--cp-red)}
+.cp-toast.info{background:rgba(79,142,247,.15);border:1.5px solid rgba(79,142,247,.4);color:var(--cp-blue)}
+
+/* ── Modal ───────────────────────────── */
+.cp-modal-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:5000;
+  display:flex;align-items:center;justify-content:center;padding:20px;
+}
+.cp-modal{
+  background:var(--cp-surface);border:1.5px solid var(--cp-border);border-radius:14px;
+  padding:28px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;
+  box-shadow:var(--cp-sh);
+}
+.cp-modal-title{font-size:1rem;font-weight:800;margin-bottom:18px;letter-spacing:-.02em}
+.cp-modal-footer{display:flex;justify-content:flex-end;gap:10px;margin-top:20px;padding-top:16px;border-top:1.5px solid var(--cp-border)}
+
+/* ── Form rows ───────────────────────── */
+.cp-field{margin-bottom:14px}
+.cp-field label{display:block;font-size:.7rem;font-weight:700;color:var(--cp-muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em}
+.cp-field input,.cp-field select,.cp-field textarea{width:100%}
+.cp-field textarea{padding:9px 12px;border:1.5px solid var(--cp-border);border-radius:8px;background:var(--cp-surface2);color:var(--cp-body);font-family:inherit;font-size:.83rem;outline:none;resize:vertical;min-height:80px}
+.cp-field textarea:focus{border-color:var(--cp-lime-d)}
+
+/* ── Quick actions ───────────────────── */
+.cp-qa-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-bottom:20px}
+.cp-qa-btn{
+  padding:14px 12px;background:var(--cp-surface);border:1.5px solid var(--cp-border);border-radius:var(--cp-rd);
+  font-family:inherit;font-size:.78rem;font-weight:700;cursor:pointer;text-align:center;color:var(--cp-body);
+  transition:all .15s;display:flex;flex-direction:column;align-items:center;gap:7px;
+}
+.cp-qa-btn:hover{background:var(--cp-surface2);border-color:var(--cp-muted);transform:translateY(-2px)}
+.cp-qa-btn span{font-size:1.5rem}
+
+/* ── Toggle switch ───────────────────── */
+.cp-toggle{position:relative;display:inline-block;width:36px;height:20px}
+.cp-toggle input{opacity:0;width:0;height:0}
+.cp-toggle-slider{position:absolute;inset:0;background:var(--cp-border);border-radius:20px;cursor:pointer;transition:.2s}
+.cp-toggle-slider:before{content:'';position:absolute;height:14px;width:14px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.2s}
+.cp-toggle input:checked + .cp-toggle-slider{background:var(--cp-lime)}
+.cp-toggle input:checked + .cp-toggle-slider:before{transform:translateX(16px)}
+
+/* ── Info box ────────────────────────── */
+.cp-info-box{background:rgba(79,142,247,.06);border:1.5px solid rgba(79,142,247,.2);border-radius:10px;padding:12px 15px;font-size:.76rem;color:var(--cp-muted);line-height:1.7;margin-bottom:16px}
+.cp-info-box b{color:var(--cp-blue)}
+
+/* ── Code / mono ─────────────────────── */
+code{font-family:'DM Mono',monospace;font-size:.78rem;background:rgba(255,255,255,.06);padding:2px 6px;border-radius:4px;color:var(--cp-lime)}
+
+/* ════════════════════════════════════════
+   CONSTRUCTION FEATURE — SPECIAL STYLES
+════════════════════════════════════════ */
+
+/* Split pane layout */
+.cp-studio-layout{display:flex;height:100%;gap:0;overflow:hidden}
+
+/* Left: Tool palette */
+.cp-tool-palette{
+  width:260px;flex-shrink:0;background:var(--cp-surface);border-right:1.5px solid var(--cp-border);
+  display:flex;flex-direction:column;overflow:hidden;
+}
+.cp-tool-palette-header{
+  padding:14px 14px 10px;border-bottom:1.5px solid var(--cp-border);
+  font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--cp-muted);
+}
+.cp-tool-palette-body{flex:1;overflow-y:auto;padding:10px}
+.cp-tool-palette-section{font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--cp-muted);padding:10px 4px 5px}
+.cp-tool-item{
+  display:flex;align-items:center;gap:9px;padding:9px 11px;margin-bottom:4px;
+  border-radius:8px;cursor:grab;font-size:.8rem;font-weight:600;color:var(--cp-body);
+  background:var(--cp-surface2);border:1.5px solid var(--cp-border);
+  transition:all .13s;user-select:none;
+}
+.cp-tool-item:hover{border-color:var(--cp-lime-d);background:rgba(200,241,53,.06);transform:translateX(3px)}
+.cp-tool-item:active{cursor:grabbing}
+.cp-tool-item-ic{font-size:1.1rem;width:22px;text-align:center}
+.cp-tool-item-info{flex:1}
+.cp-tool-item-name{font-size:.8rem;font-weight:700}
+.cp-tool-item-sub{font-size:.63rem;color:var(--cp-muted);margin-top:1px}
+.cp-tool-item-drag{color:var(--cp-muted);font-size:.85rem}
+
+/* Middle: Canvas drop zone + layer list */
+.cp-canvas-area{flex:1;display:flex;flex-direction:column;overflow:hidden;background:var(--cp-bg)}
+.cp-canvas-topbar{
+  padding:10px 16px;background:var(--cp-surface);border-bottom:1.5px solid var(--cp-border);
+  display:flex;align-items:center;gap:10px;flex-shrink:0;
+}
+.cp-canvas-topbar-title{font-size:.82rem;font-weight:700;color:var(--cp-body);flex:1}
+.cp-canvas-body{flex:1;overflow-y:auto;padding:16px;display:flex;gap:14px}
+
+/* Drop Zone */
+.cp-drop-zone{
+  flex:1;background:var(--cp-surface);border:2px dashed var(--cp-border);border-radius:12px;
+  min-height:400px;position:relative;transition:all .2s;overflow-y:auto;padding:12px;
+}
+.cp-drop-zone.drag-over{border-color:var(--cp-lime);background:rgba(200,241,53,.04);box-shadow:inset 0 0 0 2px rgba(200,241,53,.15)}
+.cp-drop-zone-empty{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  height:100%;min-height:300px;color:var(--cp-muted);text-align:center;gap:12px;
+  pointer-events:none;
+}
+.cp-drop-zone-empty .cp-dz-icon{font-size:3rem;opacity:.3}
+.cp-drop-zone-empty p{font-size:.83rem;font-weight:600;opacity:.5}
+
+/* Dropped element blocks */
+.cp-canvas-block{
+  display:flex;align-items:stretch;gap:0;margin-bottom:8px;border-radius:10px;
+  border:1.5px solid var(--cp-border);overflow:hidden;background:var(--cp-surface2);
+  transition:border-color .15s;
+  position:relative;
+}
+.cp-canvas-block:hover{border-color:var(--cp-blue)}
+.cp-canvas-block.selected{border-color:var(--cp-lime)!important;box-shadow:0 0 0 3px rgba(200,241,53,.15)}
+.cp-canvas-block-drag{
+  width:28px;background:var(--cp-surface);border-right:1.5px solid var(--cp-border);
+  display:flex;align-items:center;justify-content:center;cursor:grab;font-size:.9rem;color:var(--cp-muted);
+  flex-shrink:0;
+}
+.cp-canvas-block-drag:active{cursor:grabbing}
+.cp-canvas-block-body{flex:1;padding:11px 14px;min-width:0}
+.cp-canvas-block-header{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.cp-canvas-block-icon{font-size:1.1rem}
+.cp-canvas-block-title{font-size:.82rem;font-weight:700;flex:1}
+.cp-canvas-block-actions{display:flex;gap:5px}
+.cp-canvas-block-actions button{
+  padding:4px 9px;background:var(--cp-surface);border:1.5px solid var(--cp-border);
+  border-radius:6px;font-family:inherit;font-size:.65rem;font-weight:600;cursor:pointer;
+  color:var(--cp-muted);transition:all .15s;
+}
+.cp-canvas-block-actions button:hover{border-color:var(--cp-muted);color:var(--cp-body)}
+.cp-canvas-block-actions .del-btn:hover{border-color:var(--cp-red);color:var(--cp-red);background:rgba(240,82,82,.08)}
+.cp-canvas-block-props{display:none;padding-top:10px;border-top:1.5px solid var(--cp-border);margin-top:8px}
+.cp-canvas-block-props.show{display:block}
+.cp-prop-row{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.cp-prop-label{font-size:.68rem;font-weight:700;color:var(--cp-muted);width:80px;flex-shrink:0;text-transform:uppercase;letter-spacing:.04em}
+.cp-prop-control{flex:1}
+.cp-prop-control input,.cp-prop-control select{width:100%;padding:6px 9px;background:var(--cp-bg);border:1.5px solid var(--cp-border);border-radius:6px;color:var(--cp-body);font-family:inherit;font-size:.78rem;outline:none}
+.cp-prop-control input:focus,.cp-prop-control select:focus{border-color:var(--cp-lime-d)}
+.cp-prop-color{display:flex;align-items:center;gap:6px}
+.cp-prop-color input[type=color]{width:32px;height:28px;border:1.5px solid var(--cp-border);border-radius:5px;cursor:pointer;background:none;padding:2px}
+.cp-prop-color span{font-size:.75rem;color:var(--cp-muted);font-family:'DM Mono',monospace}
+
+/* Live preview bubble */
+.cp-preview-bubble{
+  flex-shrink:0;width:240px;background:var(--cp-surface);border:1.5px solid var(--cp-border);
+  border-radius:12px;padding:14px;overflow-y:auto;max-height:600px;
+}
+.cp-preview-title{font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--cp-muted);margin-bottom:12px;display:flex;align-items:center;gap:6px}
+.cp-preview-title:before{content:'';width:7px;height:7px;border-radius:50%;background:var(--cp-green);display:inline-block;animation:pulse-dot 1.5s infinite}
+@keyframes pulse-dot{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* Preview user-side simulation */
+.cp-preview-sim{border:1.5px solid var(--cp-border);border-radius:8px;overflow:hidden;background:var(--cp-bg)}
+.cp-preview-sim-nav{height:30px;background:var(--cp-surface2);border-bottom:1px solid var(--cp-border);display:flex;align-items:center;padding:0 10px;gap:6px}
+.cp-preview-sim-dot{width:7px;height:7px;border-radius:50%}
+.cp-preview-sim-body{padding:10px;min-height:120px;font-size:.7rem;color:var(--cp-muted)}
+
+/* Publish bar */
+.cp-studio-footer{
+  background:var(--cp-surface);border-top:1.5px solid var(--cp-border);
+  padding:12px 16px;display:flex;align-items:center;gap:12px;flex-shrink:0;
+}
+.cp-studio-footer-status{flex:1;font-size:.75rem;color:var(--cp-muted)}
+.cp-studio-footer-status b{color:var(--cp-amber)}
+
+/* Blocks reorder drag visual */
+.cp-canvas-block.dragging-block{opacity:.4;border-style:dashed}
+.cp-canvas-block.drag-target{border-color:var(--cp-lime);background:rgba(200,241,53,.04)}
+
+/* ─── Feature Manager (light version for construction tab) ─ */
+.fm-col{min-height:100px;border-radius:10px;padding:8px;display:flex;flex-direction:column;gap:5px;transition:all .15s}
+.fm-col.drag-over{border-color:var(--cp-lime)!important;background:rgba(200,241,53,.05)!important}
+.fm-card{
+  display:flex;align-items:center;gap:8px;padding:9px 12px;border-radius:8px;
+  background:var(--cp-surface2);border:1.5px solid var(--cp-border);
+  transition:all .15s;user-select:none;font-size:.8rem;font-weight:600;
+}
+.fm-card[draggable=true]{cursor:grab}
+.fm-card[draggable=true]:hover{border-color:var(--cp-lime-d);transform:translateX(2px)}
+
+/* ── Activity feed ─────────────────────── */
+.cp-activity-item{display:flex;align-items:flex-start;gap:11px;padding:11px 0;border-bottom:1px solid var(--cp-border)}
+.cp-activity-item:last-child{border-bottom:none}
+.cp-activity-ic{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:.9rem;flex-shrink:0;background:var(--cp-surface2)}
+.cp-activity-text{flex:1;min-width:0}
+.cp-activity-action{font-size:.8rem;font-weight:600;color:var(--cp-body)}
+.cp-activity-target{font-size:.75rem;color:var(--cp-muted)}
+.cp-activity-time{font-size:.65rem;color:var(--cp-muted);margin-top:2px;font-family:'DM Mono',monospace}
+</style>
+</head>
+<body>
+
+<!-- login removed: uses shared Firebase session -->
+<!-- Compat shims: admin.js toggles these IDs; keep them hidden but present -->
+<div id="adminLogin" style="display:none"></div>
+<div id="adminShell" style="display:none"></div>
+
+<!-- ════ CONTROL PANEL SHELL ════ -->
+<div id="cpShell" style="display:none">
+
+  <!-- Navbar -->
+  <nav class="cp-navbar">
+    <div class="cp-navbar-brand">
+      <div class="cp-navbar-icon">⚡</div>
+      <span class="cp-navbar-title">NOVA Studio</span>
+      <span class="cp-navbar-chip">CONTROL PANEL</span>
+    </div>
+    <div class="cp-navbar-right">
+      <button class="cp-broadcast-btn" onclick="quickBroadcast()">📢 Broadcast</button>
+      <span class="cp-admin-name" id="adminUserName">Admin</span>
+      <div class="cp-admin-avatar" id="adminUserAvatar">A</div>
+      <button class="cp-logout-btn" onclick="adminDoLogout()">Sign Out</button>
+    </div>
+  </nav>
+
+  <!-- Body -->
+  <div class="cp-body">
+
+    <!-- Sidebar -->
+    <aside class="cp-sidebar">
+      <div class="cp-nav-label">Overview</div>
+      <div class="cp-nav-item active" data-section="dashboard" onclick="loadSection('dashboard')">
+        <span class="cp-nav-ic">📊</span>Dashboard
+      </div>
+
+      <div class="cp-nav-label">People</div>
+      <div class="cp-nav-item" data-section="users" onclick="loadSection('users')">
+        <span class="cp-nav-ic">👤</span>User Management
+      </div>
+
+      <div class="cp-nav-label">Content</div>
+      <div class="cp-nav-item" data-section="portals" onclick="loadSection('portals')">
+        <span class="cp-nav-ic">🏫</span>College Portals
+      </div>
+      <div class="cp-nav-item" data-section="teams" onclick="loadSection('teams')">
+        <span class="cp-nav-ic">👥</span>Teams
+      </div>
+      <div class="cp-nav-item" data-section="sessions" onclick="loadSection('sessions')">
+        <span class="cp-nav-ic">📡</span>Live Sessions
+      </div>
+      <div class="cp-nav-item" data-section="sync" onclick="loadSection('sync')">
+        <span class="cp-nav-ic">🔄</span>Sync Rooms
+      </div>
+
+      <div class="cp-nav-label">Dev Tools</div>
+      <div class="cp-nav-item" data-section="construction" onclick="loadSection('construction')" style="position:relative">
+        <span class="cp-nav-ic">🏗️</span>Construction
+        <span class="cp-nav-badge">DEV</span>
+      </div>
+      <div class="cp-nav-item" data-section="edit" onclick="loadSection('edit')" style="position:relative">
+        <span class="cp-nav-ic">✏️</span>Edit
+        <span class="cp-nav-badge" style="background:rgba(157,113,248,.18);color:#9d71f8;border:1px solid rgba(157,113,248,.35)">DEV</span>
+      </div>
+      <div class="cp-nav-item" data-section="features" onclick="loadSection('features')">
+        <span class="cp-nav-ic">🧩</span>Feature Manager
+      </div>
+      <div class="cp-nav-item" data-section="siteconfig" onclick="loadSection('siteconfig')">
+        <span class="cp-nav-ic">⚙️</span>Site Config
+      </div>
+
+      <div class="cp-nav-label">System</div>
+      <div class="cp-nav-item" data-section="firestore" onclick="loadSection('firestore')">
+        <span class="cp-nav-ic">🗄️</span>Firestore Explorer
+      </div>
+      <div class="cp-nav-item" data-section="security" onclick="loadSection('security')">
+        <span class="cp-nav-ic">🔒</span>Security Rules
+      </div>
+      <div class="cp-nav-item" data-section="logs" onclick="loadSection('logs')">
+        <span class="cp-nav-ic">📋</span>Activity Logs
+      </div>
+
+      <div style="margin-top:auto;padding:12px 10px;border-top:1.5px solid var(--cp-border)">
+        <a href="index.html" style="display:flex;align-items:center;gap:8px;padding:9px 12px;border-radius:8px;text-decoration:none;color:var(--cp-muted);font-size:.8rem;font-weight:600;transition:all .13s" onmouseover="this.style.background='var(--cp-surface2)'" onmouseout="this.style.background='none'">
+          <span>🏠</span> Back to NOVA Studio
+        </a>
+      </div>
+    </aside>
+
+    <!-- Main content -->
+    <main class="cp-content-wrap" id="cpContent" style="padding:0">
+      <div class="cp-loading" style="margin-top:60px"><div class="cp-spinner"></div><span>Initializing…</span></div>
+    </main>
+
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="cp-toast" id="cpToast"></div>
+
+<script src="assets/js/admin.js"></script>
+<script>
+/* ═══════════════════════════════════════════════════════════════
+   CONTROL PANEL — New admin.html inlined logic
+   Overrides the legacy "Admin Panel" naming and wires in the
+   new Construction studio section.
+═══════════════════════════════════════════════════════════════ */
+
+/* ── Compat shim: admin.js callbacks use getElementById('admContent')
+      but the new layout uses id="cpContent".  Redirect transparently. ── */
+(function() {
+  var _origGet = document.getElementById.bind(document);
+  document.getElementById = function(id) {
+    return _origGet(id === 'admContent' ? 'cpContent' : id);
+  };
+})();
+
+/* ── Redirect old admToast → cpToast ─────────────────────────── */
+function admToast(msg, type) { cpToast(msg, type); }
+function cpToast(msg, type) {
+  var t = document.getElementById('cpToast');
+  if (!t) return;
+  t.textContent = msg;
+  t.className = 'cp-toast ' + (type || 'ok');
+  t.style.display = 'block';
+  clearTimeout(t._timer);
+  t._timer = setTimeout(function(){ t.style.display = 'none'; }, 3500);
+}
+
+/* ── Patch loadSection to add Construction tab ──────────────── */
+var _origLoadSection = (typeof loadSection === 'function') ? loadSection : null;
+function loadSection(section) {
+  document.querySelectorAll('.cp-nav-item').forEach(function(n){
+    n.classList.toggle('active', n.dataset.section === section);
+  });
+  var content = document.getElementById('cpContent');
+  content.style.padding = (section === 'construction') ? '0' : '26px';
+  content.style.overflow = (section === 'construction') ? 'hidden' : 'auto';
+  content.innerHTML = '<div class="cp-loading" style="margin-top:60px"><div class="cp-spinner"></div><span>Loading…</span></div>';
+
+  if (section === 'construction') {
+    renderConstruction(content);
+    return;
+  }
+
+  if (section === 'edit') {
+    content.style.padding = '0';
+    content.style.overflow = 'hidden';
+    content.style.display = 'flex';
+    content.style.flexDirection = 'column';
+    renderEditStudio(content);
+    return;
+  }
+
+  // Delegate to original admin.js section renderers
+  var fns = {
+    dashboard:  (typeof renderDashboard  !== 'undefined') ? renderDashboard  : null,
+    users:      (typeof renderUsers      !== 'undefined') ? renderUsers      : null,
+    portals:    (typeof renderPortals    !== 'undefined') ? renderPortals    : null,
+    teams:      (typeof renderTeams      !== 'undefined') ? renderTeams      : null,
+    sessions:   (typeof renderSessions   !== 'undefined') ? renderSessions   : null,
+    sync:       (typeof renderSyncRooms  !== 'undefined') ? renderSyncRooms  : null,
+    siteconfig: (typeof renderSiteConfig !== 'undefined') ? renderSiteConfig : null,
+    features:   renderFeatureManagerCP,
+    firestore:  (typeof renderFirestoreExplorer !== 'undefined') ? renderFirestoreExplorer : null,
+    security:   (typeof renderSecurity   !== 'undefined') ? renderSecurity   : null,
+    logs:       (typeof renderActivityLogs !== 'undefined') ? renderActivityLogs : null,
+  };
+  var fn = fns[section];
+  if (fn) { fn(content); }
+  else { content.innerHTML = '<div class="cp-empty">Section not found.</div>'; }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   CONSTRUCTION STUDIO
+   Three-pane layout:
+     LEFT  — Tool palette (Tool list, Main list, Account list)
+     CENTER — Drop canvas where dev drags components
+     RIGHT  — Live preview bubble
+   Bottom bar — Save Draft / Push Live
+══════════════════════════════════════════════════════════════ */
+
+/* ── Tool palette definitions ───────────────────────────────── */
+var CP_TOOLS = {
+  'Tool List': [
+    { id:'sbProj',        icon:'📁', name:'My Projects',      sub:'File browser sidebar' },
+    { id:'sbCert',        icon:'🎓', name:'Certificates',     sub:'Certificate viewer' },
+    { id:'sbMailer',      icon:'📧', name:'Cert Mailer',      sub:'Email dispatch tool' },
+    { id:'sbPortal',      icon:'🏫', name:'College Portal',   sub:'Portal viewer embed' },
+    { id:'sbSync',        icon:'🔄', name:'Data Sync',        sub:'Real-time sync rooms' },
+    { id:'sbTeams',       icon:'👥', name:'My Teams',         sub:'Team collaboration' },
+    { id:'sbLiveClasses', icon:'📡', name:'Sessions',         sub:'Live class streams' },
+    { id:'sbFollowup',    icon:'📂', name:'Followup Tracker', sub:'Task follow-up list' },
+    { id:'sbTp',          icon:'🤝', name:'Training Partners',sub:'Partner directory' },
+    { id:'sbImgComp',     icon:'🖼️', name:'Image Resizer',   sub:'Resize & compress' },
+    { id:'sbFileConv',    icon:'🔄', name:'File Converter',   sub:'Format conversion' },
+    { id:'sbImgEdit',     icon:'🎨', name:'Image Editor',     sub:'Basic image editing' },
+    { id:'sbDrafts',      icon:'✉️', name:'Draft Proposals', sub:'Proposal composer' },
+  ],
+  'Main List': [
+    { id:'sbHome',    icon:'🏠', name:'Dashboard',  sub:'Home landing page' },
+    { id:'sbAI',      icon:'🤖', name:'NOVA AI',    sub:'AI assistant panel' },
+    { id:'sbWorkbook',icon:'📚', name:'Workbook',   sub:'Study workbook' },
+    { id:'sbDrive',   icon:'☁️', name:'Drive',     sub:'Cloud file manager' },
+    { id:'sbNotif',   icon:'🔔', name:'Notifications',sub:'Notification center' },
+  ],
+  'Account List': [
+    { id:'sbProfile',  icon:'👤', name:'My Profile', sub:'User profile page' },
+    { id:'sbSettings', icon:'⚙️', name:'Settings',  sub:'Account settings' },
+    { id:'sbHelp',     icon:'📖', name:'Help & Guide',sub:'Docs & tutorials' },
+  ],
+};
+
+/* ── Canvas state ───────────────────────────────────────────── */
+var CP_CANVAS = [];  // array of { id, icon, name, sub, props:{label, visible, style:{color,bg,fontSize,bold}} }
+var CP_SELECTED = null;
+var CP_DIRTY = false;
+
+function renderConstruction(container) {
+  // Load saved canvas from Firestore
+  fbDb.collection('nova_config').doc('cp_construction').get().then(function(doc){
+    if (doc.exists && doc.data().canvas) {
+      CP_CANVAS = doc.data().canvas;
+    }
+    _renderStudio(container);
+  }).catch(function(){
+    _renderStudio(container);
+  });
+}
+
+function _renderStudio(container) {
+  container.innerHTML = '';
+  container.style.display = 'flex';
+  container.style.flexDirection = 'column';
+  container.style.height = '100%';
+
+  /* ── Build HTML ── */
+  var html =
+    '<div class="cp-studio-layout" style="flex:1;overflow:hidden">' +
+
+      /* LEFT: Tool palette */
+      '<div class="cp-tool-palette">' +
+        '<div class="cp-tool-palette-header">🔧 Component Library<br><span style="font-size:.6rem;color:var(--cp-muted);font-weight:400">Drag components to the canvas →</span></div>' +
+        '<div class="cp-tool-palette-body" id="cpToolPaletteBody">' +
+          _buildToolPalette() +
+        '</div>' +
+      '</div>' +
+
+      /* CENTER: Canvas */
+      '<div class="cp-canvas-area">' +
+        '<div class="cp-canvas-topbar">' +
+          '<span class="cp-canvas-topbar-title">🖼️ Construction Canvas</span>' +
+          '<span style="font-size:.7rem;color:var(--cp-muted)">Dropped components will appear here</span>' +
+          '<button class="cp-btn-sm" onclick="CP_CANVAS=[];CP_DIRTY=true;_refreshCanvas()" style="margin-left:8px">🗑 Clear</button>' +
+        '</div>' +
+        '<div class="cp-canvas-body">' +
+          '<div class="cp-drop-zone" id="cpDropZone">' +
+            '<div class="cp-drop-zone-empty" id="cpDropZoneEmpty" style="' + (CP_CANVAS.length ? 'display:none' : '') + '">' +
+              '<div class="cp-dz-icon">🏗️</div>' +
+              '<p>Drag components from the left panel<br>and drop them here to start building</p>' +
+            '</div>' +
+            '<div id="cpCanvasBlocks">' + _buildCanvasBlocks() + '</div>' +
+          '</div>' +
+
+          /* RIGHT: Live preview */
+          '<div class="cp-preview-bubble">' +
+            '<div class="cp-preview-title">Live Preview</div>' +
+            '<div style="font-size:.68rem;color:var(--cp-muted);margin-bottom:10px">How users will see the sidebar</div>' +
+            '<div class="cp-preview-sim">' +
+              '<div class="cp-preview-sim-nav">' +
+                '<div class="cp-preview-sim-dot" style="background:#f05252"></div>' +
+                '<div class="cp-preview-sim-dot" style="background:var(--cp-amber)"></div>' +
+                '<div class="cp-preview-sim-dot" style="background:var(--cp-green)"></div>' +
+              '</div>' +
+              '<div class="cp-preview-sim-body" id="cpPreviewBody">' +
+                _buildPreview() +
+              '</div>' +
+            '</div>' +
+            '<div style="margin-top:12px;font-size:.65rem;color:var(--cp-muted);line-height:1.6">' +
+              '<b style="color:var(--cp-lime-d)">💡 How it works:</b><br>' +
+              'Edit each component\'s label, style, visibility in the canvas. Click <b>Push Live</b> to make it live for all users instantly.' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+
+    '</div>' +
+
+    /* Footer */
+    '<div class="cp-studio-footer">' +
+      '<div class="cp-studio-footer-status" id="cpStudioStatus">Drag components from the left panel to start building</div>' +
+      '<button class="cp-btn-sec" onclick="_csSaveDraft()">💾 Save Draft</button>' +
+      '<button class="cp-btn-pri" onclick="_csPushLive()" style="display:flex;align-items:center;gap:6px">🚀 Push Live</button>' +
+    '</div>';
+
+  container.innerHTML = html;
+  _bindDropZone();
+  _bindPaletteDrag();
+}
+
+function _buildToolPalette() {
+  var html = '';
+  Object.keys(CP_TOOLS).forEach(function(group){
+    html += '<div class="cp-tool-palette-section">' + group + '</div>';
+    CP_TOOLS[group].forEach(function(t){
+      html +=
+        '<div class="cp-tool-item" draggable="true" data-tool-id="' + t.id + '" data-tool-icon="' + t.icon + '" data-tool-name="' + t.name + '" data-tool-sub="' + t.sub + '">' +
+          '<span class="cp-tool-item-ic">' + t.icon + '</span>' +
+          '<div class="cp-tool-item-info">' +
+            '<div class="cp-tool-item-name">' + t.name + '</div>' +
+            '<div class="cp-tool-item-sub">' + t.sub + '</div>' +
+          '</div>' +
+          '<span class="cp-tool-item-drag">⠿</span>' +
+        '</div>';
+    });
+  });
+  return html;
+}
+
+function _buildCanvasBlocks() {
+  if (!CP_CANVAS.length) return '';
+  return CP_CANVAS.map(function(item, i){ return _buildBlock(item, i); }).join('');
+}
+
+function _buildBlock(item, idx) {
+  var props = item.props || {};
+  var style = props.style || {};
+  var label = props.label || item.name;
+  var visible = props.visible !== false;
+  var isSelected = CP_SELECTED === item.id;
+
+  return '<div class="cp-canvas-block' + (isSelected ? ' selected' : '') + '" data-block-id="' + item.id + '" data-block-idx="' + idx + '">' +
+    '<div class="cp-canvas-block-drag" title="Drag to reorder">⠿</div>' +
+    '<div class="cp-canvas-block-body">' +
+      '<div class="cp-canvas-block-header">' +
+        '<span class="cp-canvas-block-icon">' + item.icon + '</span>' +
+        '<span class="cp-canvas-block-title">' + label + '</span>' +
+        '<span class="cp-badge ' + (visible ? 'cp-badge-green' : 'cp-badge-amber') + '" style="font-size:.58rem;margin-right:4px">' + (visible ? '● Visible' : '○ Hidden') + '</span>' +
+        '<div class="cp-canvas-block-actions">' +
+          '<button onclick="cpToggleEdit(\'' + item.id + '\')">' + (isSelected ? '✕ Close' : '✏️ Edit') + '</button>' +
+          '<button class="del-btn" onclick="cpRemoveBlock(\'' + item.id + '\')">🗑</button>' +
+        '</div>' +
+      '</div>' +
+      '<div class="cp-canvas-block-props' + (isSelected ? ' show' : '') + '" id="cpProps_' + item.id + '">' +
+        '<div class="cp-prop-row">' +
+          '<span class="cp-prop-label">Label</span>' +
+          '<div class="cp-prop-control"><input type="text" value="' + label + '" oninput="cpSetProp(\'' + item.id + '\',\'label\',this.value)" placeholder="Display name"></div>' +
+        '</div>' +
+        '<div class="cp-prop-row">' +
+          '<span class="cp-prop-label">Visible</span>' +
+          '<div class="cp-prop-control">' +
+            '<label class="cp-toggle"><input type="checkbox" ' + (visible ? 'checked' : '') + ' onchange="cpSetProp(\'' + item.id + '\',\'visible\',this.checked)"><span class="cp-toggle-slider"></span></label>' +
+          '</div>' +
+        '</div>' +
+        '<div class="cp-prop-row">' +
+          '<span class="cp-prop-label">Font Size</span>' +
+          '<div class="cp-prop-control"><select onchange="cpSetStyle(\'' + item.id + '\',\'fontSize\',this.value)">' +
+            ['0.75rem','0.8rem','0.85rem','0.9rem','1rem'].map(function(s){
+              return '<option value="'+s+'"'+(style.fontSize===s?' selected':'')+'>'+s+'</option>';
+            }).join('') +
+          '</select></div>' +
+        '</div>' +
+        '<div class="cp-prop-row">' +
+          '<span class="cp-prop-label">Bold</span>' +
+          '<div class="cp-prop-control">' +
+            '<label class="cp-toggle"><input type="checkbox" ' + (style.bold ? 'checked' : '') + ' onchange="cpSetStyle(\'' + item.id + '\',\'bold\',this.checked)"><span class="cp-toggle-slider"></span></label>' +
+          '</div>' +
+        '</div>' +
+        '<div class="cp-prop-row">' +
+          '<span class="cp-prop-label">Text Color</span>' +
+          '<div class="cp-prop-control cp-prop-color">' +
+            '<input type="color" value="' + (style.color || '#e8eaf0') + '" oninput="cpSetStyle(\'' + item.id + '\',\'color\',this.value)">' +
+            '<span>' + (style.color || '#e8eaf0') + '</span>' +
+          '</div>' +
+        '</div>' +
+        '<div class="cp-prop-row">' +
+          '<span class="cp-prop-label">Background</span>' +
+          '<div class="cp-prop-control cp-prop-color">' +
+            '<input type="color" value="' + (style.bg || '#1a1e2a') + '" oninput="cpSetStyle(\'' + item.id + '\',\'bg\',this.value)">' +
+            '<span>' + (style.bg || '#1a1e2a') + '</span>' +
+          '</div>' +
+        '</div>' +
+        '<div class="cp-prop-row">' +
+          '<span class="cp-prop-label">Icon</span>' +
+          '<div class="cp-prop-control"><input type="text" value="' + item.icon + '" oninput="cpSetIcon(\'' + item.id + '\',this.value)" placeholder="Emoji icon" style="font-size:1rem"></div>' +
+        '</div>' +
+        '<div class="cp-prop-row">' +
+          '<span class="cp-prop-label">Position</span>' +
+          '<div class="cp-prop-control" style="display:flex;gap:5px">' +
+            '<button class="cp-btn-sm" onclick="cpMoveBlock(\'' + item.id + '\',-1)" ' + (idx===0?'disabled':'') + '>↑ Up</button>' +
+            '<button class="cp-btn-sm" onclick="cpMoveBlock(\'' + item.id + '\',1)" ' + (idx===CP_CANVAS.length-1?'disabled':'') + '>↓ Down</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+    '</div>' +
+  '</div>';
+}
+
+function _buildPreview() {
+  if (!CP_CANVAS.length) {
+    return '<div style="text-align:center;padding:20px;color:var(--cp-muted);font-size:.7rem">No components yet</div>';
+  }
+  return CP_CANVAS.filter(function(item){ return item.props && item.props.visible !== false; })
+    .map(function(item){
+      var props = item.props || {};
+      var style = props.style || {};
+      var label = props.label || item.name;
+      return '<div style="display:flex;align-items:center;gap:7px;padding:6px 8px;border-radius:6px;margin-bottom:2px;background:' + (style.bg || 'transparent') + ';font-size:' + (style.fontSize || '0.75rem') + ';font-weight:' + (style.bold ? '700' : '500') + ';color:' + (style.color || 'var(--cp-muted)') + '">' +
+        '<span style="font-size:.9rem">' + item.icon + '</span>' +
+        '<span>' + label + '</span>' +
+      '</div>';
+    }).join('') || '<div style="text-align:center;padding:20px;color:var(--cp-muted);font-size:.7rem">All hidden</div>';
+}
+
+/* ── Drag from palette ──────────────────────────────────────── */
+var _dragToolData = null;
+
+function _bindPaletteDrag() {
+  document.querySelectorAll('.cp-tool-item').forEach(function(el){
+    el.addEventListener('dragstart', function(e){
+      _dragToolData = { id: el.dataset.toolId, icon: el.dataset.toolIcon, name: el.dataset.toolName, sub: el.dataset.toolSub };
+      e.dataTransfer.effectAllowed = 'copy';
+      el.style.opacity = '.4';
+    });
+    el.addEventListener('dragend', function(){
+      el.style.opacity = '';
+    });
+  });
+}
+
+function _bindDropZone() {
+  var zone = document.getElementById('cpDropZone');
+  if (!zone) return;
+
+  zone.addEventListener('dragover', function(e){
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+    zone.classList.add('drag-over');
+  });
+  zone.addEventListener('dragleave', function(e){
+    if (!zone.contains(e.relatedTarget)) zone.classList.remove('drag-over');
+  });
+  zone.addEventListener('drop', function(e){
+    e.preventDefault();
+    zone.classList.remove('drag-over');
+    if (!_dragToolData) return;
+
+    // check for duplicates
+    var exists = CP_CANVAS.find(function(c){ return c.id === _dragToolData.id; });
+    if (exists) { cpToast('Component already on canvas. Edit it there!', 'info'); _dragToolData = null; return; }
+
+    CP_CANVAS.push({
+      id:   _dragToolData.id,
+      icon: _dragToolData.icon,
+      name: _dragToolData.name,
+      sub:  _dragToolData.sub,
+      props: { label: _dragToolData.name, visible: true, style: {} }
+    });
+    CP_DIRTY = true;
+    _dragToolData = null;
+    _refreshCanvas();
+    cpToast('Component added to canvas!', 'ok');
+  });
+}
+
+function _refreshCanvas() {
+  var blocksEl = document.getElementById('cpCanvasBlocks');
+  var emptyEl  = document.getElementById('cpDropZoneEmpty');
+  var previewEl = document.getElementById('cpPreviewBody');
+  var statusEl  = document.getElementById('cpStudioStatus');
+
+  if (blocksEl)  blocksEl.innerHTML  = _buildCanvasBlocks();
+  if (emptyEl)   emptyEl.style.display = CP_CANVAS.length ? 'none' : 'flex';
+  if (previewEl) previewEl.innerHTML = _buildPreview();
+  if (statusEl)  statusEl.innerHTML = CP_DIRTY
+    ? '<b style="color:var(--cp-amber)">⚠ Unsaved changes</b> — ' + CP_CANVAS.length + ' component(s) on canvas'
+    : CP_CANVAS.length + ' component(s) on canvas. Click <b>Push Live</b> to apply changes.';
+}
+
+/* ── Block actions ──────────────────────────────────────────── */
+function cpToggleEdit(id) {
+  CP_SELECTED = (CP_SELECTED === id) ? null : id;
+  _refreshCanvas();
+}
+
+function cpRemoveBlock(id) {
+  CP_CANVAS = CP_CANVAS.filter(function(c){ return c.id !== id; });
+  if (CP_SELECTED === id) CP_SELECTED = null;
+  CP_DIRTY = true;
+  _refreshCanvas();
+}
+
+function cpSetProp(id, key, val) {
+  var item = CP_CANVAS.find(function(c){ return c.id === id; });
+  if (!item) return;
+  if (!item.props) item.props = {};
+  item.props[key] = val;
+  CP_DIRTY = true;
+  // only refresh preview + status, not full refresh (avoid losing focus)
+  var previewEl = document.getElementById('cpPreviewBody');
+  var statusEl  = document.getElementById('cpStudioStatus');
+  if (previewEl) previewEl.innerHTML = _buildPreview();
+  if (statusEl) statusEl.innerHTML = '<b style="color:var(--cp-amber)">⚠ Unsaved changes</b>';
+  // refresh just the block header for visible badge
+  if (key === 'visible') {
+    var badge = document.querySelector('[data-block-id="'+id+'"] .cp-badge');
+    if (badge) {
+      badge.className = 'cp-badge ' + (val ? 'cp-badge-green' : 'cp-badge-amber');
+      badge.textContent = val ? '● Visible' : '○ Hidden';
+    }
+  }
+}
+
+function cpSetStyle(id, key, val) {
+  var item = CP_CANVAS.find(function(c){ return c.id === id; });
+  if (!item) return;
+  if (!item.props) item.props = {};
+  if (!item.props.style) item.props.style = {};
+  item.props.style[key] = (key === 'bold') ? val : val;
+  CP_DIRTY = true;
+  var previewEl = document.getElementById('cpPreviewBody');
+  if (previewEl) previewEl.innerHTML = _buildPreview();
+  // update color hex display
+  if (key === 'color' || key === 'bg') {
+    var colorSpans = document.querySelectorAll('#cpProps_' + id + ' .cp-prop-color span');
+    colorSpans.forEach(function(s){ if (s.textContent.startsWith('#')) s.textContent = val; });
+  }
+}
+
+function cpSetIcon(id, val) {
+  var item = CP_CANVAS.find(function(c){ return c.id === id; });
+  if (!item) return;
+  item.icon = val;
+  CP_DIRTY = true;
+  var previewEl = document.getElementById('cpPreviewBody');
+  if (previewEl) previewEl.innerHTML = _buildPreview();
+}
+
+function cpMoveBlock(id, dir) {
+  var idx = CP_CANVAS.findIndex(function(c){ return c.id === id; });
+  if (idx < 0) return;
+  var newIdx = idx + dir;
+  if (newIdx < 0 || newIdx >= CP_CANVAS.length) return;
+  var tmp = CP_CANVAS[idx];
+  CP_CANVAS[idx] = CP_CANVAS[newIdx];
+  CP_CANVAS[newIdx] = tmp;
+  CP_DIRTY = true;
+  _refreshCanvas();
+}
+
+/* ── Save & Push ────────────────────────────────────────────── */
+function _csSaveDraft() {
+  fbDb.collection('nova_config').doc('cp_construction').set({
+    canvas: CP_CANVAS,
+    savedAt: Date.now(),
+    savedBy: (typeof ADMIN !== 'undefined' && ADMIN) ? ADMIN.email : 'admin'
+  }).then(function(){
+    CP_DIRTY = false;
+    cpToast('Draft saved!', 'ok');
+    _refreshCanvas();
+  }).catch(function(e){ cpToast('Save error: ' + e.message, 'err'); });
+}
+
+function _csPushLive() {
+  var visible = CP_CANVAS.filter(function(c){ return c.props && c.props.visible !== false; });
+  if (!visible.length) {
+    if (!confirm('No visible components! Push anyway (will hide everything)?')) return;
+  }
+
+  // Build Feature Manager format for live apply
+  var featureList = CP_CANVAS.map(function(c){
+    return {
+      id:         c.id,
+      label:      (c.props && c.props.label) ? c.props.label : c.name,
+      comingSoon: false,
+      hidden:     !(c.props && c.props.visible !== false),
+      icon:       c.icon,
+      style:      (c.props && c.props.style) ? c.props.style : {}
+    };
+  });
+
+  var batch = fbDb.batch();
+
+  // Save construction canvas
+  batch.set(fbDb.collection('nova_config').doc('cp_construction'), {
+    canvas:   CP_CANVAS,
+    pushedAt: Date.now(),
+    pushedBy: (typeof ADMIN !== 'undefined' && ADMIN) ? ADMIN.email : 'admin'
+  });
+
+  // Push to features (live) — merges with existing nova_config/features
+  batch.set(fbDb.collection('nova_config').doc('features'), {
+    list:       featureList,
+    updatedAt:  Date.now(),
+    updatedBy:  (typeof ADMIN !== 'undefined' && ADMIN) ? ADMIN.email : 'admin',
+    source:     'construction'
+  });
+
+  batch.commit().then(function(){
+    CP_DIRTY = false;
+    cpToast('🚀 Pushed live! ' + visible.length + ' components now visible to all users.', 'ok');
+    _refreshCanvas();
+    // log action
+    if (typeof logAdminAction === 'function') logAdminAction('push_live', 'construction canvas → ' + visible.length + ' components');
+  }).catch(function(e){ cpToast('Push error: ' + e.message, 'err'); });
+}
+
+/* ══════════════════════════════════════════════════════════════
+   FEATURE MANAGER (dark theme wrapper for Control Panel)
+══════════════════════════════════════════════════════════════ */
+function renderFeatureManagerCP(container) {
+  // delegate to original admin.js renderFeatureManager
+  if (typeof renderFeatureManager === 'function') {
+    renderFeatureManager(container);
+    // after render, inject dark-theme overrides
+    setTimeout(function(){
+      container.querySelectorAll('[style*="background:#f0fdf4"]').forEach(function(el){
+        el.style.background = 'rgba(49,196,141,.08)';
+        el.style.borderColor = 'rgba(49,196,141,.3)';
+        el.style.color = 'var(--cp-green)';
+      });
+      container.querySelectorAll('[style*="background:#fffbf5"]').forEach(function(el){
+        el.style.background = 'rgba(246,166,9,.05)';
+        el.style.borderColor = 'rgba(246,166,9,.3)';
+      });
+    }, 400);
+  } else {
+    container.innerHTML = '<div class="cp-empty">Feature Manager not loaded. Ensure admin.js is loaded.</div>';
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   LOGIN / AUTH  (mirrors admin.js logic with new IDs)
+══════════════════════════════════════════════════════════════ */
+var _DEV_EMAIL = 'ghost@nova.dev';
+var _DEV_HASH  = '008d5fac13ddd435e7833c3fc6891b6fa1b66e8c56fddf03c8e9cabe4fff1b74';
+var _devMode   = false;
+
+function _sha256(str){
+  return crypto.subtle.digest('SHA-256',new TextEncoder().encode(str)).then(function(buf){
+    return Array.from(new Uint8Array(buf)).map(function(b){return b.toString(16).padStart(2,'0');}).join('');
+  });
+}
+
+var ADMIN = null;
+
+/* ── Override admin.js auth helpers so they target cpShell, not the legacy adminShell ── */
+function showLoginScreen(msg) {
+  // New layout has no inline login form — redirect to main app
+  console.warn('[Admin] showLoginScreen:', msg);
+  window.location.href = 'index.html';
+}
+function hideLoginScreen() {
+  // Show the new cpShell panel instead of the legacy adminShell shim
+  document.getElementById('cpShell').style.display = 'flex';
+}
+function renderAdminShell() {
+  // Name / avatar already handled by _enterPanel; keep in sync for admin.js compat
+  if (!ADMIN) return;
+  var nameEl   = document.getElementById('adminUserName');
+  var avatarEl = document.getElementById('adminUserAvatar');
+  if (nameEl)   nameEl.textContent = (ADMIN.firstName||'') + ' ' + (ADMIN.lastName||'');
+  if (avatarEl) {
+    if (ADMIN.avatar) avatarEl.style.backgroundImage = 'url(' + ADMIN.avatar + ')';
+    else avatarEl.textContent = ((ADMIN.firstName||'?')[0]+(ADMIN.lastName||'')[0]).toUpperCase();
+  }
+}
+
+document.addEventListener('DOMContentLoaded', function(){
+  // ── Ghost URL param fast-path (set by app.js redirect) ─────────────
+  var urlParams = new URLSearchParams(window.location.search);
+  var ghostParam = urlParams.get('ghost');
+  if (ghostParam) {
+    // Verify hash matches ghost creds
+    var _ghashes = ['8d1cfb8ddcb916235d00ea11fc2bcfb71e0b3ad27fddba4ff7a0e0cad7cd64e5',
+                    'e72d07106a8e903022d6e288a983a8d21be8cc118c8078095c5cf1d2edebdf0c'];
+    if (ghostParam === _ghashes[0].slice(0,16)) {
+      _devMode = true;
+      ADMIN = { email: _DEV_EMAIL, firstName: 'Ghost', lastName: 'Dev', isAdmin: true };
+      _enterPanel(ADMIN);
+      // Clean URL
+      history.replaceState(null,'',window.location.pathname);
+      return;
+    }
+  }
+
+  fbAuth.onAuthStateChanged(function(user){
+    if (!user){
+      // Not logged in — redirect to main app login
+      window.location.href = 'index.html';
+      return;
+    }
+
+    // ── Dev email fast-path ── No Firestore check; bypass runs for ghost@nova.dev
+    if (user.email && user.email.toLowerCase() === _DEV_EMAIL.toLowerCase()) {
+      _devMode = true;
+      ADMIN = { email: user.email, firstName: 'Ghost', lastName: 'Dev', isAdmin: true };
+      _enterPanel(ADMIN);
+      return;
+    }
+
+    if (_devMode){ _enterPanel(ADMIN || { email: user.email, isAdmin: true }); return; }
+
+    fbDb.collection('users').doc(user.email).get().then(function(doc){
+      if (!doc.exists || !doc.data().isAdmin){
+        // Not admin — redirect back to app
+        window.location.href = 'index.html';
+        return;
+      }
+      ADMIN = Object.assign({ email: user.email }, doc.data());
+      _enterPanel(ADMIN);
+    }).catch(function(e){
+      console.error('Admin access check failed:', e.message);
+      window.location.href = 'index.html';
+    });
+  });
+});
+
+function _showLogin(msg){
+  // No separate login — redirect to main app
+  window.location.href = 'index.html';
+}
+
+function _enterPanel(admin){
+  document.getElementById('cpShell').style.display = 'flex';
+  // Set user info
+  if (admin){
+    var nameEl = document.getElementById('adminUserName');
+    var avatarEl = document.getElementById('adminUserAvatar');
+    if (nameEl) nameEl.textContent = (admin.firstName||'')+ ' ' +(admin.lastName||'');
+    if (avatarEl){
+      if (admin.avatar){ avatarEl.style.backgroundImage='url('+admin.avatar+')'; }
+      else { avatarEl.textContent = ((admin.firstName||'?')[0]+(admin.lastName||'')[0]).toUpperCase(); }
+    }
+  }
+  loadSection('dashboard');
+}
+
+/* adminDoLogin removed — login handled by main app */
+
+function adminDoLogout(){
+  _devMode=false;
+  fbAuth.signOut().then(function(){ location.reload(); });
+}
+
+function quickBroadcast(){
+  var msg = prompt('Broadcast message to all users:');
+  if (!msg||!msg.trim()) return;
+  fbDb.collection('nova_config').doc('broadcast').set({
+    message: msg.trim(),
+    ts: Date.now(),
+    by: ADMIN ? ADMIN.email : 'admin'
+  },{merge:true}).then(function(){
+    cpToast('📢 Broadcast sent!', 'ok');
+  }).catch(function(e){ cpToast('Error: '+e.message,'err'); });
+}
+
+
+</script>
+
+/* ══════════════════════════════════════════════════════════════
+   EDIT STUDIO CSS
+══════════════════════════════════════════════════════════════ */
+<style>
+/* ── Edit Studio Layout ── */
+.es-layout {
+  display: flex;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--cp-bg);
+}
+
+/* LEFT: function list palette */
+.es-palette {
+  width: 220px;
+  flex-shrink: 0;
+  border-right: 1.5px solid var(--cp-border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
+}
+.es-palette-header {
+  padding: 14px 14px 8px;
+  font-size: .72rem;
+  font-weight: 800;
+  color: var(--cp-lime);
+  border-bottom: 1px solid var(--cp-border);
+  letter-spacing: .03em;
+}
+.es-palette-sub {
+  font-size: .6rem;
+  color: var(--cp-muted);
+  font-weight: 400;
+  margin-top: 3px;
+  display: block;
+}
+.es-palette-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.es-fn-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 11px;
+  border-radius: 9px;
+  background: var(--cp-surface);
+  border: 1.5px solid var(--cp-border);
+  cursor: grab;
+  transition: all .13s;
+  user-select: none;
+}
+.es-fn-item:hover { background: var(--cp-surface2); border-color: var(--cp-violet); }
+.es-fn-item.dragging { opacity: .4; }
+.es-fn-item-ic { font-size: 1.1rem; flex-shrink: 0; }
+.es-fn-item-info { flex: 1; min-width: 0; }
+.es-fn-item-name { font-size: .76rem; font-weight: 700; color: var(--cp-body); }
+.es-fn-item-sub { font-size: .6rem; color: var(--cp-muted); margin-top: 1px; }
+.es-fn-drag-handle { font-size: .85rem; color: var(--cp-border); flex-shrink: 0; }
+
+/* DROP TAB area */
+.es-drop-tab-wrap {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+}
+.es-droptab {
+  margin: 14px 14px 0;
+  border-radius: 12px 12px 0 0;
+  border: 2px dashed var(--cp-violet);
+  border-bottom: 1px solid var(--cp-border);
+  background: rgba(157,113,248,.05);
+  min-height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 4px;
+  transition: all .15s;
+  padding: 10px 14px;
+  flex-shrink: 0;
+}
+.es-droptab.drag-over {
+  background: rgba(157,113,248,.15);
+  border-color: #9d71f8;
+  box-shadow: 0 0 0 3px rgba(157,113,248,.2);
+}
+.es-droptab-empty-text {
+  font-size: .75rem;
+  color: var(--cp-muted);
+  text-align: center;
+  line-height: 1.5;
+}
+.es-droptab-active-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: .78rem;
+  font-weight: 700;
+  color: #9d71f8;
+}
+.es-droptab-change {
+  font-size: .6rem;
+  color: var(--cp-muted);
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+/* CANVAS (where the function UI appears) */
+.es-canvas-area {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 14px;
+  margin: 0 14px 14px;
+  border: 1.5px solid var(--cp-border);
+  border-radius: 0 0 12px 12px;
+  border-top: none;
+  background: #0d0f18;
+  position: relative;
+}
+.es-canvas-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  min-height: 200px;
+  color: var(--cp-muted);
+  font-size: .75rem;
+  text-align: center;
+  gap: 8px;
+}
+.es-canvas-empty-icon { font-size: 2.5rem; opacity: .3; }
+
+/* ── Rendered function UI mock ── */
+.es-fn-render {
+  width: 100%;
+  height: 100%;
+}
+.es-fn-render-title {
+  font-size: .68rem;
+  font-weight: 700;
+  color: var(--cp-muted);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.es-btn-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 10px;
+  background: rgba(255,255,255,.02);
+  border-radius: 10px;
+  border: 1px solid var(--cp-border);
+  min-height: 120px;
+  position: relative;
+}
+
+/* Draggable button elements */
+.es-ui-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: .78rem;
+  font-weight: 600;
+  cursor: move;
+  transition: box-shadow .13s;
+  border: 2px solid transparent;
+  user-select: none;
+}
+.es-ui-btn:hover { box-shadow: 0 0 0 2px #9d71f8; }
+.es-ui-btn.es-selected {
+  box-shadow: 0 0 0 2.5px #9d71f8;
+  z-index: 2;
+}
+.es-ui-btn .es-btn-grip {
+  position: absolute;
+  top: -8px;
+  right: -6px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #9d71f8;
+  font-size: .55rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity .1s;
+}
+.es-ui-btn:hover .es-btn-grip { opacity: 1; }
+
+/* RIGHT: Properties panel */
+.es-props {
+  width: 230px;
+  flex-shrink: 0;
+  border-left: 1.5px solid var(--cp-border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
+}
+.es-props-header {
+  padding: 14px 14px 8px;
+  font-size: .72rem;
+  font-weight: 800;
+  color: var(--cp-violet, #9d71f8);
+  border-bottom: 1px solid var(--cp-border);
+}
+.es-props-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+}
+.es-props-empty {
+  color: var(--cp-muted);
+  font-size: .72rem;
+  text-align: center;
+  margin-top: 30px;
+  line-height: 1.7;
+}
+.es-prop-section {
+  font-size: .62rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--cp-muted);
+  margin: 14px 0 6px;
+}
+.es-prop-section:first-child { margin-top: 0; }
+.es-prop-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.es-prop-label {
+  font-size: .7rem;
+  color: var(--cp-muted);
+  flex-shrink: 0;
+  min-width: 60px;
+}
+.es-prop-control {
+  flex: 1;
+}
+.es-prop-control input[type=text],
+.es-prop-control input[type=number],
+.es-prop-control select {
+  width: 100%;
+  background: var(--cp-surface2);
+  border: 1.5px solid var(--cp-border);
+  border-radius: 6px;
+  color: var(--cp-body);
+  padding: 5px 8px;
+  font-size: .7rem;
+  outline: none;
+}
+.es-prop-control input[type=text]:focus,
+.es-prop-control input[type=number]:focus,
+.es-prop-control select:focus {
+  border-color: #9d71f8;
+}
+.es-prop-color-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.es-prop-color-row input[type=color] {
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  background: none;
+  padding: 0;
+}
+.es-prop-color-row span {
+  font-size: .65rem;
+  color: var(--cp-muted);
+  font-family: monospace;
+}
+
+/* Footer */
+.es-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  border-top: 1.5px solid var(--cp-border);
+  background: var(--cp-surface);
+  flex-shrink: 0;
+  gap: 10px;
+}
+.es-footer-status {
+  flex: 1;
+  font-size: .72rem;
+  color: var(--cp-muted);
+}
+
+/* Ordering buttons strip */
+.es-order-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 10px;
+  background: rgba(157,113,248,.04);
+  border-radius: 8px;
+  border: 1px dashed rgba(157,113,248,.25);
+  margin-top: 10px;
+}
+.es-order-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  background: var(--cp-surface2);
+  border: 1.5px solid var(--cp-border);
+  border-radius: 7px;
+  cursor: grab;
+  font-size: .72rem;
+  font-weight: 600;
+  color: var(--cp-body);
+}
+.es-order-item.drag-over-order { border-color: #9d71f8; background: rgba(157,113,248,.12); }
+
+/* ══════════════════════════════════════════════════════════════
+   EDIT STUDIO — FULL FUNCTION UI SIMULATION
+   Faithful pixel‑level replica of each NOVA Studio page so the
+   developer sees buttons in their real context, not abstract chips
+══════════════════════════════════════════════════════════════ */
+.es-sim-wrap{width:100%;min-height:460px;display:flex;flex-direction:column;font-family:'Bricolage Grotesque',system-ui,sans-serif;font-size:13px;border-radius:8px;overflow:hidden;border:1.5px solid rgba(255,255,255,.06);user-select:none}
+
+/* ── Topbar ─── */
+.es-sim-topbar{display:flex;align-items:center;gap:6px;padding:7px 12px;background:#fff;border-bottom:1.5px solid #e8ecf0;flex-shrink:0;flex-wrap:wrap;min-height:42px}
+.es-sim-back{padding:4px 9px;background:none;border:1.5px solid #d1d9e6;border-radius:7px;font-size:.68rem;font-weight:600;color:#7b8699;cursor:default;flex-shrink:0;white-space:nowrap}
+.es-sim-tabs{display:flex;gap:2px;margin:0 4px;flex-shrink:0}
+.es-sim-tab{padding:5px 11px;font-size:.7rem;font-weight:600;border-radius:7px;cursor:default;color:#8b95a6}
+.es-sim-tab.active{background:rgba(200,241,53,.18);color:#5a7200;font-weight:700}
+.es-sim-title{font-size:.82rem;font-weight:800;color:#1a2035;flex-shrink:0}
+.es-sim-spacer{flex:1;min-width:6px}
+.es-sim-sep{width:1px;height:18px;background:#e2e8f0;flex-shrink:0}
+
+/* ── Editable button group ─── */
+.es-sim-btn-group{display:flex;align-items:center;gap:4px;flex-wrap:nowrap;position:relative}
+.es-sim-btn-group-label{font-size:.5rem;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#b8bfcc;margin-right:2px;white-space:nowrap}
+/* The actual editable button */
+.es-sim-btn{display:inline-flex;align-items:center;gap:5px;border-radius:7px;font-size:.7rem;font-weight:600;cursor:pointer;border:2px solid transparent;outline:none;transition:box-shadow .12s,transform .1s,outline .1s;position:relative;white-space:nowrap;font-family:inherit}
+.es-sim-btn:hover{outline:2px dashed rgba(157,113,248,.7);outline-offset:2px;transform:translateY(-1px);z-index:2}
+.es-sim-btn.es-sim-dragging{opacity:.35;transform:scale(.95)}
+.es-sim-btn.es-sim-drag-over{outline:2.5px solid #9d71f8 !important;outline-offset:3px;background-color:rgba(157,113,248,.08) !important}
+.es-sim-btn.es-sim-selected{outline:2.5px solid #9d71f8 !important;outline-offset:2px;box-shadow:0 0 0 5px rgba(157,113,248,.16),0 3px 12px rgba(0,0,0,.14);z-index:3}
+/* "EDIT" badge that appears on hover */
+.es-sim-btn-tip{position:absolute;top:-11px;left:50%;transform:translateX(-50%);font-size:.44rem;background:#9d71f8;color:#fff;padding:1px 5px;border-radius:4px;font-weight:800;letter-spacing:.05em;opacity:0;transition:opacity .12s;pointer-events:none;white-space:nowrap;z-index:10}
+.es-sim-btn:hover .es-sim-btn-tip,.es-sim-btn.es-sim-selected .es-sim-btn-tip{opacity:1}
+.es-sim-btn.es-sim-selected .es-sim-btn-tip{background:#7c4cf5;content:'● EDITING'}
+
+/* ── Toolbar (row below topbar) ─── */
+.es-sim-toolbar{display:flex;align-items:center;gap:5px;padding:5px 12px;background:#f8fafc;border-bottom:1px solid #e8ecf0;flex-shrink:0;flex-wrap:wrap;min-height:36px}
+.es-sim-toolbar-static{display:flex;align-items:center;gap:4px}
+.es-sim-tbar-btn{padding:3px 8px;background:#fff;border:1.5px solid #dde3ec;border-radius:5px;font-size:.62rem;font-weight:600;color:#64748b;cursor:default;white-space:nowrap}
+.es-sim-tbar-btn.active{background:rgba(200,241,53,.15);color:#4d6400;border-color:#b5d825}
+.es-sim-zoom{display:flex;align-items:center;gap:3px;margin:0 5px;font-size:.6rem;font-weight:700;color:#94a3b8}
+.es-sim-zoom-track{width:55px;height:5px;background:#e2e8f0;border-radius:3px;position:relative}
+.es-sim-zoom-thumb{position:absolute;left:30%;top:-3px;width:11px;height:11px;background:#94a3b8;border-radius:50%;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.es-sim-toolbar-sep{width:1px;height:16px;background:#e2e8f0;margin:0 4px;flex-shrink:0}
+
+/* ── Body ─── */
+.es-sim-body{flex:1;display:flex;overflow:hidden;background:#e8ecf2;min-height:260px}
+/* Sidebar */
+.es-sim-sidebar{width:200px;flex-shrink:0;background:#f8fafc;border-right:1px solid #e2e8f0;padding:10px 8px;display:flex;flex-direction:column;gap:4px;overflow:hidden}
+.es-sim-sb-sect{font-size:.55rem;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:#94a3b8;padding:6px 5px 3px}
+.es-sim-sb-item{padding:7px 9px;background:#fff;border:1.5px solid #e8ecf0;border-radius:7px;font-size:.64rem;font-weight:600;color:#48556a;display:flex;align-items:center;gap:7px}
+.es-sim-sb-item.collapsed{background:transparent;border-style:dashed;color:#a0aab8}
+/* Main area */
+.es-sim-main{flex:1;overflow:hidden;display:flex;flex-direction:column}
+.es-sim-canvas{flex:1;background:#8b939f;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative}
+.es-sim-canvas-inner{background:#fff;box-shadow:0 6px 24px rgba(0,0,0,.28);border-radius:3px}
+/* Edit indicator strip */
+
+/* ══ Edit Studio Tab Buttons ══ */
+.es-tab-btn{flex:1;padding:8px 4px;background:none;border:none;border-bottom:2.5px solid transparent;cursor:pointer;font-size:.68rem;font-weight:700;color:var(--cp-muted);font-family:inherit;transition:all .15s;white-space:nowrap;min-width:32px}
+.es-tab-btn:hover{color:var(--cp-body);background:rgba(255,255,255,.04)}
+.es-tab-btn.es-tab-active{color:#9d71f8;border-bottom-color:#9d71f8;background:rgba(157,113,248,.06)}
+.es-tab-btn.es-tab-danger{color:#f87171}
+.es-tab-btn.es-tab-danger.es-tab-active{color:#ef4444;border-bottom-color:#ef4444;background:rgba(239,68,68,.06)}
+.es-uix-section{font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--cp-muted);margin:14px 0 6px;padding-bottom:4px;border-bottom:1px solid var(--cp-border)}
+.es-uix-section:first-child{margin-top:0}
+.es-uix-row{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+.es-uix-label{font-size:.68rem;color:var(--cp-muted);flex-shrink:0;min-width:64px;line-height:1.4}
+.es-uix-ctrl{flex:1}
+.es-uix-ctrl input[type=text],.es-uix-ctrl input[type=number],.es-uix-ctrl select,.es-uix-ctrl textarea{width:100%;background:var(--cp-surface2);border:1.5px solid var(--cp-border);border-radius:6px;color:var(--cp-body);padding:5px 8px;font-size:.7rem;outline:none;font-family:inherit;resize:vertical}
+.es-uix-ctrl input:focus,.es-uix-ctrl select:focus,.es-uix-ctrl textarea:focus{border-color:#9d71f8}
+.es-color-row{display:flex;align-items:center;gap:6px}
+.es-color-row input[type=color]{width:28px;height:28px;border:none;border-radius:6px;cursor:pointer;background:none;padding:0}
+.es-color-row span{font-size:.62rem;color:var(--cp-muted);font-family:monospace}
+.es-uix-toggle{display:flex;align-items:center;gap:8px}
+.es-uix-toggle input[type=checkbox]{accent-color:#9d71f8;width:15px;height:15px;cursor:pointer}
+.es-html-editor{width:100%;min-height:110px;background:#1a1d2e;border:1.5px solid var(--cp-border);border-radius:8px;color:#c8f135;padding:10px;font-family:'DM Mono',monospace;font-size:.66rem;outline:none;resize:vertical;line-height:1.6;box-sizing:border-box}
+.es-html-editor:focus{border-color:#9d71f8}
+.es-danger-card{background:rgba(239,68,68,.06);border:1.5px solid rgba(239,68,68,.25);border-radius:10px;padding:14px;margin-bottom:12px}
+.es-danger-title{font-size:.72rem;font-weight:800;color:#ef4444;margin-bottom:5px}
+.es-danger-desc{font-size:.65rem;color:var(--cp-muted);line-height:1.6;margin-bottom:10px}
+.es-danger-btn{padding:7px 14px;border-radius:8px;border:1.5px solid #ef4444;background:none;color:#ef4444;font-size:.7rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s;width:100%}
+.es-danger-btn:hover{background:#ef4444;color:#fff}
+.es-danger-btn.destructive{background:#ef4444;color:#fff}
+.es-danger-btn.destructive:hover{background:#dc2626}
+
+.es-sim-edit-strip{background:rgba(157,113,248,.12);border-top:1.5px solid rgba(157,113,248,.3);border-bottom:1.5px solid rgba(157,113,248,.3);padding:3px 12px;display:flex;align-items:center;gap:6px;flex-shrink:0}
+.es-sim-edit-strip-dot{width:6px;height:6px;border-radius:50%;background:#9d71f8;animation:es-pulse 1.4s ease-in-out infinite}
+@keyframes es-pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.8)}}
+.es-sim-edit-strip-txt{font-size:.6rem;font-weight:700;color:#9d71f8;letter-spacing:.05em}
+/* Placeholder rows */
+.es-sim-ph{height:8px;background:#d1d8e4;border-radius:3px;margin-bottom:6px}
+.es-sim-ph.w60{width:60%}.es-sim-ph.w80{width:80%}.es-sim-ph.w100{width:100%}.es-sim-ph.w40{width:40%}
+.es-sim-ph.h12{height:12px}.es-sim-ph.h6{height:6px}
+.es-sim-ph.accent{background:rgba(200,241,53,.4)}
+/* Table sim */
+.es-sim-table{width:100%;border-collapse:collapse;font-size:.64rem}
+.es-sim-table th{background:#f1f5f9;border-bottom:1.5px solid #e2e8f0;padding:5px 9px;text-align:left;font-size:.56rem;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em}
+.es-sim-table td{padding:6px 9px;border-bottom:1px solid #f1f5f9;color:#475569}
+.es-sim-table tr:nth-child(even) td{background:#fafbfd}
+/* Card/email item sim */
+.es-sim-list-item{display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid #f0f4f8}
+.es-sim-avatar{width:26px;height:26px;border-radius:7px;flex-shrink:0}
+.es-sim-text-wrap{flex:1}
+.es-sim-text-row{height:7px;background:#d1d9e6;border-radius:3px;margin-bottom:4px}
+.es-sim-text-row.sub{height:6px;background:#e4eaf2;width:65%}
+/* Live badge */
+.es-sim-live-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 7px;background:rgba(220,38,38,.1);border:1px solid rgba(220,38,38,.3);border-radius:20px;font-size:.55rem;font-weight:800;color:#dc2626}
+.es-sim-live-dot{width:5px;height:5px;border-radius:50%;background:#dc2626;animation:es-pulse 1s infinite}
+/* Content area headings */
+.es-sim-content-head{padding:10px 14px;background:#fff;border-bottom:1px solid #edf0f5;display:flex;align-items:center;gap:8px;font-size:.7rem;font-weight:700;color:#334155;flex-shrink:0}
+/* Image editor panels */
+.es-sim-img-panel{flex:1;background:#1a1a2e;display:flex;align-items:center;justify-content:center;position:relative}
+.es-sim-img-placeholder{width:120px;height:90px;background:#2a2d4a;border:2px dashed #3b4060;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;color:#4a5280}
+/* Draft/proposal area */
+.es-sim-textarea-mock{background:#fff;border:1.5px solid #e2e8f0;border-radius:8px;padding:10px;margin:10px}
+</style>
+
+<!-- ══════════════════════════════════════════════════════════
+     EDIT STUDIO JAVASCRIPT
+══════════════════════════════════════════════════════════════ -->
+<script>
+/* ── State ── */
+/* ══ UIX EDITOR STATE — full UI/UX overrides per function ══ */
+var ES_ACTIVE_TAB = 'buttons';  // current right-panel tab
+var ES_UIX = {};  // map: fnId → { theme, layout, typography, sections, customHtml }
+
+/* Default UIX config for a function */
+function _esUixDefaults(fnId) {
+  return {
+    theme: {
+      topbarBg:    '#ffffff',
+      topbarBorder:'#e8ecf0',
+      bodyBg:      '#e8ecf2',
+      sidebarBg:   '#f8fafc',
+      accentColor: '#c8f135',
+      accentText:  '#0d0f12',
+    },
+    layout: {
+      showTopbar:   true,
+      showToolbar:  true,
+      showSidebar:  true,
+      topbarHeight: 42,
+      sidebarWidth: 200,
+      borderRadius: 8,
+      gap:          6,
+    },
+    typography: {
+      fontFamily:   'Bricolage Grotesque',
+      baseFontSize: 13,
+      titleWeight:  800,
+      bodyWeight:   600,
+      mutedColor:   '#7b8699',
+      headingColor: '#1a2035',
+    },
+    sections: {
+      showBackBtn:  true,
+      showTitle:    true,
+      showSearch:   false,
+      showStats:    true,
+      showFilters:  true,
+      showPagination: true,
+    },
+    customHtml: {
+      topbarExtra:  '',
+      bodyHeader:   '',
+      bodyFooter:   '',
+      sidebarExtra: '',
+    }
+  };
+}
+
+function _esGetUix(fnId) {
+  if (!ES_UIX[fnId]) ES_UIX[fnId] = _esUixDefaults(fnId);
+  return ES_UIX[fnId];
+}
+
+var ES_ACTIVE_FN = null;   // currently loaded function id
+var ES_BUTTONS   = [];     // [ {id, label, icon, color, bg, size, order} ]
+var ES_SELECTED  = null;   // selected button id
+var ES_DIRTY     = false;
+
+/* ── Function catalogue — mirrors the sidebar tools ── */
+/* slot: 'topbar' | 'toolbar' | 'sidebar' — controls where in the
+   UI simulation the button is rendered.  Saved overrides preserve slot. */
+var ES_FUNCTIONS = [
+  { id:'sbCert',        icon:'🎓', name:'Certificates',      sub:'Certificate builder & viewer',
+    buttons: [
+      {id:'save',    label:'Save',             icon:'💾', color:'#0d0f12', bg:'#c8f135', size:'md', slot:'topbar'},
+      {id:'load',    label:'Load',             icon:'📂', color:'#e8eaf0', bg:'#2a2e3e', size:'md', slot:'topbar'},
+      {id:'saveprj', label:'Save to Projects', icon:'📁', color:'#16a34a', bg:'#f0fdf4',  size:'md', slot:'topbar'},
+      {id:'xverify', label:'Cross Verify',     icon:'🔍', color:'#16a34a', bg:'#f0fdf4',  size:'md', slot:'topbar'},
+      {id:'genall',  label:'Generate All',     icon:'⚡', color:'#0d0f12', bg:'#f5a623', size:'md', slot:'topbar'},
+      {id:'dlpng',   label:'Download PNG',     icon:'⬇', color:'#e8eaf0', bg:'#2a2e3e', size:'sm', slot:'toolbar'},
+      {id:'dlzip',   label:'Download ZIP',     icon:'📦', color:'#0d0f12', bg:'#c8f135', size:'sm', slot:'toolbar'},
+      {id:'todrive', label:'Save to Drive',    icon:'☁️', color:'#1a73e8', bg:'#ffffff',  size:'sm', slot:'toolbar'},
+      {id:'addtext', label:'+ Add Text',       icon:'✍️', color:'#e8eaf0', bg:'#2a2e3e', size:'sm', slot:'sidebar'},
+    ]
+  },
+  { id:'sbMailer',      icon:'📧', name:'Cert Mailer',       sub:'Bulk email dispatch for certificates',
+    buttons: [
+      {id:'loadcsv',   label:'Load CSV',       icon:'📄', color:'#e8eaf0', bg:'#2a2e3e', size:'md', slot:'topbar'},
+      {id:'preview',   label:'Preview',        icon:'👁',  color:'#e8eaf0', bg:'#3b4fc8', size:'md', slot:'topbar'},
+      {id:'sendall',   label:'Send All',       icon:'🚀', color:'#0d0f12', bg:'#c8f135', size:'md', slot:'topbar'},
+      {id:'testemail', label:'Test Email',     icon:'✉️', color:'#e8eaf0', bg:'#2a2e3e', size:'sm', slot:'topbar'},
+    ]
+  },
+  { id:'sbPortal',      icon:'🏫', name:'College Portal',    sub:'Portal viewer embed',
+    buttons: [
+      {id:'refresh',  label:'Refresh',         icon:'🔄', color:'#e8eaf0', bg:'#2a2e3e', size:'md', slot:'topbar'},
+      {id:'export',   label:'Export',          icon:'📤', color:'#0d0f12', bg:'#c8f135', size:'md', slot:'topbar'},
+      {id:'addrow',   label:'+ Add Row',       icon:'➕', color:'#e8eaf0', bg:'#3b4fc8', size:'sm', slot:'topbar'},
+    ]
+  },
+  { id:'sbSync',        icon:'🔄', name:'Data Sync',         sub:'Real-time sync rooms',
+    buttons: [
+      {id:'syncnow',   label:'Sync Now',        icon:'⚡', color:'#0d0f12', bg:'#c8f135', size:'md', slot:'topbar'},
+      {id:'conntest',  label:'Test Connection', icon:'🔗', color:'#e8eaf0', bg:'#2a2e3e', size:'md', slot:'topbar'},
+      {id:'clearcache',label:'Clear Cache',     icon:'🗑',  color:'#ffffff', bg:'#c0392b', size:'sm', slot:'topbar'},
+    ]
+  },
+  { id:'sbTeams',       icon:'👥', name:'My Teams',          sub:'Team collaboration hub',
+    buttons: [
+      {id:'newteam',  label:'New Team',         icon:'➕', color:'#0d0f12', bg:'#c8f135', size:'md', slot:'topbar'},
+      {id:'invite',   label:'Invite',           icon:'📨', color:'#e8eaf0', bg:'#3b4fc8', size:'md', slot:'topbar'},
+      {id:'settings', label:'Settings',         icon:'⚙️', color:'#e8eaf0', bg:'#2a2e3e', size:'sm', slot:'topbar'},
+    ]
+  },
+  { id:'sbLiveClasses', icon:'📡', name:'Sessions',          sub:'Live class streams',
+    buttons: [
+      {id:'startlive', label:'Go Live',         icon:'🔴', color:'#ffffff', bg:'#e53e3e', size:'md', slot:'topbar'},
+      {id:'schedule',  label:'Schedule',        icon:'📅', color:'#e8eaf0', bg:'#2a2e3e', size:'md', slot:'topbar'},
+      {id:'recordings',label:'Recordings',      icon:'🎬', color:'#e8eaf0', bg:'#3b4fc8', size:'sm', slot:'topbar'},
+    ]
+  },
+  { id:'sbFollowup',    icon:'📂', name:'Followup Tracker',  sub:'Task follow-up list',
+    buttons: [
+      {id:'addtask',  label:'Add Task',         icon:'➕', color:'#0d0f12', bg:'#c8f135', size:'md', slot:'topbar'},
+      {id:'export2',  label:'Export',           icon:'📤', color:'#e8eaf0', bg:'#2a2e3e', size:'md', slot:'topbar'},
+      {id:'markdone', label:'Mark Done',        icon:'✅', color:'#ffffff', bg:'#2e7d32', size:'sm', slot:'topbar'},
+    ]
+  },
+  { id:'sbTp',          icon:'🤝', name:'Training Partners', sub:'Partner directory',
+    buttons: [
+      {id:'addpartner',label:'Add Partner',     icon:'➕', color:'#0d0f12', bg:'#c8f135', size:'md', slot:'topbar'},
+      {id:'search',    label:'Search',          icon:'🔍', color:'#e8eaf0', bg:'#2a2e3e', size:'md', slot:'topbar'},
+    ]
+  },
+  { id:'sbImgComp',     icon:'🖼️', name:'Image Resizer',    sub:'Resize & compress images',
+    buttons: [
+      {id:'upload',   label:'Upload',           icon:'⬆',  color:'#0d0f12', bg:'#c8f135', size:'md', slot:'topbar'},
+      {id:'resize',   label:'Resize',           icon:'📐', color:'#e8eaf0', bg:'#3b4fc8', size:'md', slot:'topbar'},
+      {id:'dlimg',    label:'Download',         icon:'⬇',  color:'#e8eaf0', bg:'#2a2e3e', size:'sm', slot:'topbar'},
+    ]
+  },
+  { id:'sbFileConv',    icon:'🔄', name:'File Converter',    sub:'Format conversion',
+    buttons: [
+      {id:'uploadf',  label:'Upload File',      icon:'⬆',  color:'#0d0f12', bg:'#c8f135', size:'md', slot:'topbar'},
+      {id:'convert',  label:'Convert',          icon:'⚡', color:'#e8eaf0', bg:'#3b4fc8', size:'md', slot:'topbar'},
+      {id:'dlfile',   label:'Download',         icon:'⬇',  color:'#e8eaf0', bg:'#2a2e3e', size:'sm', slot:'topbar'},
+    ]
+  },
+  { id:'sbImgEdit',     icon:'🎨', name:'Image Editor',      sub:'Basic image editing',
+    buttons: [
+      {id:'openimg',  label:'Open Image',       icon:'📂', color:'#0d0f12', bg:'#c8f135', size:'md', slot:'topbar'},
+      {id:'crop',     label:'Crop',             icon:'✂️', color:'#e8eaf0', bg:'#2a2e3e', size:'md', slot:'toolbar'},
+      {id:'filter',   label:'Filter',           icon:'🎨', color:'#e8eaf0', bg:'#3b4fc8', size:'md', slot:'toolbar'},
+      {id:'saveedit', label:'Save',             icon:'💾', color:'#ffffff', bg:'#2e7d32', size:'sm', slot:'toolbar'},
+    ]
+  },
+  { id:'sbDrafts',      icon:'✉️', name:'Draft Proposals',  sub:'Proposal composer',
+    buttons: [
+      {id:'newdraft', label:'New Draft',        icon:'➕', color:'#0d0f12', bg:'#c8f135', size:'md', slot:'topbar'},
+      {id:'savdraft', label:'Save Draft',       icon:'💾', color:'#e8eaf0', bg:'#2a2e3e', size:'md', slot:'topbar'},
+      {id:'sendprop', label:'Send',             icon:'🚀', color:'#e8eaf0', bg:'#3b4fc8', size:'sm', slot:'topbar'},
+    ]
+  },
+];
+
+/* ── Drag state for palette → drop-tab ── */
+var _esDragFnId = null;
+
+/* ── Snapshot of factory defaults for reset ── */
+var _ES_DEFAULTS = ES_FUNCTIONS.map(function(fn){
+  return { id: fn.id, buttons: fn.buttons.map(function(b){ return Object.assign({}, b); }) };
+});
+
+/* ── RENDER ── */
+function renderEditStudio(container) {
+  // Load saved customisations from Firestore
+  fbDb.collection('nova_config').doc('es_button_overrides').get()
+    .then(function(doc){
+      var saved = (doc.exists && doc.data().overrides) ? doc.data().overrides : {};
+      _esApplySaved(saved);
+      _esRenderLayout(container);
+    })
+    .catch(function(){
+      _esRenderLayout(container);
+    });
+}
+
+function _esApplySaved(saved) {
+  ES_FUNCTIONS.forEach(function(fn){
+    if (saved[fn.id]) {
+      fn.buttons = saved[fn.id].map(function(sb){
+        var orig = fn.buttons.find(function(b){ return b.id === sb.id; }) || {};
+        return Object.assign({}, orig, sb);
+      });
+    }
+  });
+}
+
+function _esRenderLayout(container) {
+  container.innerHTML = '';
+  container.style.display = 'flex';
+  container.style.flexDirection = 'column';
+  container.style.height = '100%';
+  container.style.minHeight = '0';
+
+  /* Outer wrapper fills available height */
+  var wrapper = document.createElement('div');
+  wrapper.style.cssText = 'flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column;';
+
+  var innerHTML =
+    '<div class="es-layout" style="flex:1;min-height:0;overflow:hidden">' +
+
+      /* LEFT palette */
+      '<div class="es-palette">' +
+        '<div class="es-palette-header">📋 Functions<span class="es-palette-sub">Drag a function into the Edit tab ↓</span></div>' +
+        '<div class="es-palette-body" id="esPaletteBody">' +
+          _esBuildPalette() +
+        '</div>' +
+      '</div>' +
+
+      /* CENTER: drop-tab + canvas + props */
+      '<div class="es-drop-tab-wrap" style="display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden;">' +
+
+        /* Drop tab */
+        '<div class="es-droptab" id="esDropTab">' +
+          '<div id="esDropTabInner">' + _esDropTabContent() + '</div>' +
+        '</div>' +
+
+        /* Canvas + Props row */
+        '<div style="flex:1;min-height:0;overflow:hidden;display:flex;">' +
+
+          /* Canvas wrapper */
+          '<div style="flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column;margin:0 0 0 14px;">' +
+            '<div class="es-canvas-topbar-row" style="font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--cp-muted);padding:7px 12px;border:1.5px solid var(--cp-border);border-bottom:1px solid var(--cp-border);border-top:none;background:rgba(157,113,248,.04);display:flex;align-items:center;gap:8px;flex-shrink:0;">' +
+              '<span style="color:var(--cp-violet,#9d71f8)">🎨 Live UI Preview</span>' +
+              '<span style="color:var(--cp-muted);font-weight:400;font-size:.6rem;">Click button → select · Drag to reorder · Use "Position Zone" in right panel to move between zones</span>' +
+              '<button class="cp-btn-sm" onclick="_esResetOrder()" style="margin-left:auto">↺ Reset</button>' +
+            '</div>' +
+            '<div id="esCanvasArea" class="es-canvas-area" style="margin:0;border-radius:0 0 0 0;">' + _esCanvasContent() + '</div>' +
+          '</div>' +
+
+          /* Props panel — full UI/UX editor */
+          '<div class="es-props" id="esPropsPanel" style="width:280px">' +
+            '<div class="es-props-header" style="padding:0">' +
+              '<div id="esTabBar" style="display:flex;border-bottom:1.5px solid var(--cp-border);overflow-x:auto">' +
+                '<button class="es-tab-btn es-tab-active" data-tab="buttons" onclick="esSetTab(\'buttons\')" title="Buttons">🔘</button>' +
+                '<button class="es-tab-btn" data-tab="theme" onclick="esSetTab(\'theme\')" title="Theme & Colors">🎨</button>' +
+                '<button class="es-tab-btn" data-tab="layout" onclick="esSetTab(\'layout\')" title="Layout">📐</button>' +
+                '<button class="es-tab-btn" data-tab="type" onclick="esSetTab(\'type\')" title="Typography">Aa</button>' +
+                '<button class="es-tab-btn" data-tab="sections" onclick="esSetTab(\'sections\')" title="Sections">👁</button>' +
+                '<button class="es-tab-btn" data-tab="html" onclick="esSetTab(\'html\')" title="Custom HTML">‹/›</button>' +
+                '<button class="es-tab-btn es-tab-danger" data-tab="danger" onclick="esSetTab(\'danger\')" title="Danger Zone">⚠️</button>' +
+              '</div>' +
+            '</div>' +
+            '<div class="es-props-body" id="esPropsBody">' +
+              '<div class="es-props-empty">Click a button on the canvas to edit its properties</div>' +
+            '</div>' +
+          '</div>' +
+
+        '</div>' +
+
+      '</div>' +
+
+    '</div>' +
+
+    /* Footer */
+    '<div class="es-footer" id="esFooter">' +
+      '<div class="es-footer-status" id="esStatus">Drag a function from the left panel into the Edit tab to begin</div>' +
+      '<span style="font-size:.62rem;color:var(--cp-muted)">7 editors: Buttons · Theme · Layout · Typography · Sections · HTML · Danger</span>' +
+      '<button class="cp-btn-sec" onclick="_esSaveDraft()">💾 Save Draft</button>' +
+      '<button class="cp-btn-pri" onclick="_esComplete()" style="background:#9d71f8;color:#fff;border:none">✅ Complete & Go Live</button>' +
+    '</div>';
+
+  wrapper.innerHTML = innerHTML;
+  container.appendChild(wrapper);
+
+  _esBindPaletteDrag();
+  _esBindDropTab();
+  _esBindCanvasDrag();
+}
+
+/* ══════════════════════════════════════════════════════════════
+   EDIT STUDIO — SIMULATION HELPERS & PER-FUNCTION BUILDERS
+══════════════════════════════════════════════════════════════ */
+
+/** Size string → inline padding + font-size */
+function _esSimSize(size) {
+  if (size === 'sm') return 'padding:4px 9px;font-size:.64rem;';
+  if (size === 'lg') return 'padding:9px 20px;font-size:.82rem;';
+  return 'padding:5px 12px;font-size:.7rem;';
+}
+
+/** Render one editable button inside a simulation */
+function _esSimBtn(btn) {
+  var sel = (ES_SELECTED === btn.id);
+  return '<div class="es-sim-btn' + (sel ? ' es-sim-selected' : '') + '" ' +
+    'data-btn-id="' + btn.id + '" draggable="true" ' +
+    'onclick="esSelectBtn(\'' + btn.id + '\')" ' +
+    'style="' + _esSimSize(btn.size) +
+      'background:' + btn.bg + ';' +
+      'color:' + btn.color + ';' +
+      'border-radius:' + (btn.radius || 7) + 'px;' +
+      'font-weight:' + (btn.bold ? '800' : '600') + ';">' +
+    '<span class="es-sim-btn-tip">' + (sel ? '● EDITING' : '✏ EDIT') + '</span>' +
+    (btn.icon ? '<span>' + btn.icon + ' </span>' : '') +
+    '<span>' + btn.label + '</span>' +
+  '</div>';
+}
+
+/** Render all buttons for a given slot as a group */
+function _esSimGroup(fn, slot) {
+  var btns = fn.buttons.filter(function(b){ return (b.slot || 'topbar') === slot; });
+  if (!btns.length) return '';
+  return '<div class="es-sim-btn-group" data-sim-slot="' + slot + '">' + btns.map(_esSimBtn).join('') + '</div>';
+}
+
+/* ─── Edit hint strip ─── */
+var _esHintStrip = '<div class="es-sim-edit-strip">' +
+  '<div class="es-sim-edit-strip-dot"></div>' +
+  '<span class="es-sim-edit-strip-txt">EDITABLE ZONE — click any button to select · drag to reorder within zone · use Position Zone in panel to move between zones</span>' +
+  '</div>';
+
+/* ─── CERTIFICATES ─── */
+function _esCertSim(fn) {
+  return '<div class="es-sim-wrap">' +
+    '<div class="es-sim-topbar">' +
+      '<div class="es-sim-back">← Dashboard</div>' +
+      '<div class="es-sim-tabs"><div class="es-sim-tab active">🎓 Certificates</div><div class="es-sim-tab">🏫 College Portal</div></div>' +
+      '<div class="es-sim-spacer"></div>' +
+      _esSimGroup(fn, 'topbar') +
+    '</div>' +
+    '<div class="es-sim-toolbar">' +
+      '<div class="es-sim-toolbar-static">' +
+        '<div class="es-sim-tbar-btn active">▶ Select</div>' +
+        '<div class="es-sim-tbar-btn">✏ Text</div>' +
+        '<div class="es-sim-toolbar-sep"></div>' +
+        '<span style="font-size:.57rem;font-weight:700;color:#94a3b8;margin-right:2px">ZOOM</span>' +
+        '<div style="width:15px;height:15px;background:#fff;border:1.5px solid #dde3ec;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:.7rem;color:#64748b;cursor:default">−</div>' +
+        '<div style="width:52px;height:5px;background:#e2e8f0;border-radius:3px;position:relative;margin:0 2px"><div style="position:absolute;left:24%;top:-3px;width:11px;height:11px;background:#94a3b8;border-radius:50%;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.2)"></div></div>' +
+        '<div style="width:15px;height:15px;background:#fff;border:1.5px solid #dde3ec;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:.7rem;color:#64748b;cursor:default">+</div>' +
+        '<span style="font-size:.6rem;font-weight:700;color:#94a3b8;min-width:28px;margin-left:2px">24%</span>' +
+        '<div class="es-sim-tbar-btn" style="margin-left:2px">⊡ Fit</div>' +
+      '</div>' +
+      '<div class="es-sim-spacer"></div>' +
+      _esSimGroup(fn, 'toolbar') +
+    '</div>' +
+    _esHintStrip +
+    '<div class="es-sim-body">' +
+      '<div class="es-sim-sidebar">' +
+        '<div class="es-sim-sb-sect">Background / Template</div>' +
+        '<div class="es-sim-sb-item">🖼️ Upload Template</div>' +
+        '<div class="es-sim-sb-item collapsed">Image Fit</div>' +
+        '<div class="es-sim-sb-item collapsed">BG Opacity · BG Color</div>' +
+        '<div class="es-sim-sb-sect">Logo</div>' +
+        '<div class="es-sim-sb-item collapsed">Optional Logo</div>' +
+        '<div class="es-sim-sb-sect">Text Elements</div>' +
+        '<div class="es-sim-sb-item">' + (_esSimGroup(fn,'sidebar') || '<span style="font-size:.62rem;color:#94a3b8">✍️ + Add Text</span>') + '</div>' +
+        '<div class="es-sim-sb-sect">CSV / Bulk Generate</div>' +
+        '<div class="es-sim-sb-item collapsed">Upload CSV ▾</div>' +
+      '</div>' +
+      '<div class="es-sim-main">' +
+        '<div class="es-sim-canvas">' +
+          '<div class="es-sim-canvas-inner" style="width:240px;height:180px"></div>' +
+        '</div>' +
+      '</div>' +
+    '</div>' +
+  '</div>';
+}
+
+/* ─── CERT MAILER ─── */
+function _esMailerSim(fn) {
+  var rows = [['Priya Patel','#e0f2fe','#16a34a','✅ Sent'],['Rahul Sharma','#d1fae5','#f59e0b','⏳ Queue'],['Ananya Singh','#fce7f3','#16a34a','✅ Sent'],['Vikram Mehta','#fef3c7','#f59e0b','⏳ Queue']];
+  return '<div class="es-sim-wrap">' +
+    '<div class="es-sim-topbar">' +
+      '<div class="es-sim-back">← Dashboard</div>' +
+      '<div class="es-sim-title">📧 Cert Mailer</div>' +
+      '<div class="es-sim-spacer"></div>' +
+      _esSimGroup(fn, 'topbar') +
+    '</div>' +
+    _esHintStrip +
+    '<div class="es-sim-body" style="flex-direction:column">' +
+      '<div class="es-sim-content-head">📬 Email Queue — 4 recipients</div>' +
+      rows.map(function(r){ return '<div class="es-sim-list-item"><div class="es-sim-avatar" style="background:' + r[1] + '"></div><div class="es-sim-text-wrap"><div class="es-sim-text-row" style="width:75%"></div><div class="es-sim-text-row sub"></div></div><span style="font-size:.6rem;font-weight:700;color:' + r[2] + '">' + r[3] + '</span></div>'; }).join('') +
+    '</div>' +
+  '</div>';
+}
+
+/* ─── COLLEGE PORTAL ─── */
+function _esPortalSim(fn) {
+  return '<div class="es-sim-wrap">' +
+    '<div class="es-sim-topbar">' +
+      '<div class="es-sim-back">← Dashboard</div>' +
+      '<div class="es-sim-title">🏫 College Portal</div>' +
+      '<div class="es-sim-spacer"></div>' +
+      _esSimGroup(fn, 'topbar') +
+    '</div>' +
+    _esHintStrip +
+    '<div class="es-sim-body" style="flex-direction:column">' +
+      '<table class="es-sim-table">' +
+        '<thead><tr><th>#</th><th>College</th><th>Slug</th><th>Students</th><th>Status</th></tr></thead>' +
+        '<tbody>' +
+        [['ABC Institute','abc-inst','42','Live'],['XYZ College','xyz-col','28','Draft'],['Tech Academy','tech-acad','60','Live']].map(function(r,i){
+          return '<tr><td>' + (i+1) + '</td><td style="font-weight:600">' + r[0] + '</td><td style="font-family:monospace;font-size:.6rem;color:#64748b">' + r[1] + '</td><td>' + r[2] + '</td><td><span style="font-size:.58rem;font-weight:700;color:' + (r[3]==='Live'?'#16a34a':'#f59e0b') + '">● ' + r[3] + '</span></td></tr>';
+        }).join('') +
+        '</tbody>' +
+      '</table>' +
+    '</div>' +
+  '</div>';
+}
+
+/* ─── DATA SYNC ─── */
+function _esSyncSim(fn) {
+  return '<div class="es-sim-wrap">' +
+    '<div class="es-sim-topbar">' +
+      '<div class="es-sim-back">← Dashboard</div>' +
+      '<div class="es-sim-title">🔄 Data Sync</div>' +
+      '<div class="es-sim-spacer"></div>' +
+      _esSimGroup(fn, 'topbar') +
+    '</div>' +
+    _esHintStrip +
+    '<div class="es-sim-body" style="padding:12px;flex-direction:column;gap:8px;overflow:auto">' +
+      ['BMS Batch 2024 — Room A','Finance Batch — Room B'].map(function(name,i){
+        return '<div style="background:#fff;border:1.5px solid #e2e8f0;border-radius:9px;padding:12px 14px">' +
+          '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">' +
+            '<span style="font-size:.7rem;font-weight:700;color:#1e293b">' + name + '</span>' +
+            (i===0 ? '<span class="es-sim-live-badge"><span class="es-sim-live-dot"></span>LIVE</span>' : '<span style="font-size:.55rem;font-weight:700;color:#94a3b8;border:1px solid #e2e8f0;padding:1px 5px;border-radius:10px">IDLE</span>') +
+          '</div>' +
+          '<div class="es-sim-ph w80 h6"></div>' +
+          '<div class="es-sim-ph w50 h6" style="margin-top:5px"></div>' +
+        '</div>';
+      }).join('') +
+    '</div>' +
+  '</div>';
+}
+
+/* ─── MY TEAMS ─── */
+function _esTeamsSim(fn) {
+  return '<div class="es-sim-wrap">' +
+    '<div class="es-sim-topbar">' +
+      '<div class="es-sim-back">← Dashboard</div>' +
+      '<div class="es-sim-title">👥 My Teams</div>' +
+      '<div class="es-sim-spacer"></div>' +
+      _esSimGroup(fn, 'topbar') +
+    '</div>' +
+    _esHintStrip +
+    '<div class="es-sim-body" style="padding:12px;flex-direction:column;gap:7px;overflow:auto">' +
+      [['Alpha Squad','3 members','#e0f2fe','🔵'],['Beta Crew','5 members','#d1fae5','🟢'],['Gamma Force','2 members','#f3e8ff','🟣']].map(function(t){
+        return '<div style="background:#fff;border:1.5px solid #e2e8f0;border-radius:9px;padding:10px 14px;display:flex;align-items:center;gap:10px">' +
+          '<div style="width:32px;height:32px;border-radius:8px;background:' + t[2] + ';display:flex;align-items:center;justify-content:center;font-size:.95rem">' + t[3] + '</div>' +
+          '<div><div style="font-size:.7rem;font-weight:700;color:#1e293b">' + t[0] + '</div><div style="font-size:.6rem;color:#94a3b8;margin-top:1px">' + t[1] + '</div></div>' +
+        '</div>';
+      }).join('') +
+    '</div>' +
+  '</div>';
+}
+
+/* ─── SESSIONS ─── */
+function _esSessionsSim(fn) {
+  return '<div class="es-sim-wrap">' +
+    '<div class="es-sim-topbar">' +
+      '<div class="es-sim-back">← Dashboard</div>' +
+      '<div class="es-sim-title">📡 Sessions</div>' +
+      '<span class="es-sim-live-badge" style="margin-left:4px"><span class="es-sim-live-dot"></span>1 LIVE</span>' +
+      '<div class="es-sim-spacer"></div>' +
+      _esSimGroup(fn, 'topbar') +
+    '</div>' +
+    _esHintStrip +
+    '<div class="es-sim-body" style="padding:12px;flex-direction:column;gap:8px;overflow:auto">' +
+      '<div style="background:#fff5f5;border:1.5px solid #fecaca;border-radius:9px;padding:12px 14px">' +
+        '<div style="font-size:.7rem;font-weight:700;color:#dc2626;margin-bottom:6px">🔴 LIVE — Intro to BMS  <span style="font-size:.58rem;color:#f87171">● 24 viewers</span></div>' +
+        '<div class="es-sim-ph w80 h6"></div><div class="es-sim-ph w55 h6" style="margin-top:5px"></div>' +
+      '</div>' +
+      '<div style="background:#fff;border:1.5px solid #e2e8f0;border-radius:9px;padding:12px 14px">' +
+        '<div style="font-size:.7rem;font-weight:700;color:#475569;margin-bottom:6px">📅 Scheduled — Finance 101 · Tomorrow 10am</div>' +
+        '<div class="es-sim-ph w70 h6"></div>' +
+      '</div>' +
+    '</div>' +
+  '</div>';
+}
+
+/* ─── FOLLOWUP TRACKER ─── */
+function _esFollowupSim(fn) {
+  return '<div class="es-sim-wrap">' +
+    '<div class="es-sim-topbar">' +
+      '<div class="es-sim-back">← Dashboard</div>' +
+      '<div class="es-sim-title">📂 Followup Tracker</div>' +
+      '<div class="es-sim-spacer"></div>' +
+      _esSimGroup(fn, 'topbar') +
+    '</div>' +
+    _esHintStrip +
+    '<div class="es-sim-body" style="flex-direction:column">' +
+      '<table class="es-sim-table">' +
+        '<thead><tr><th>Task</th><th>Assigned To</th><th>Due</th><th>Status</th></tr></thead>' +
+        '<tbody>' +
+          [['Send offer letters','Priya','15 Jun','Done','#16a34a'],['Follow up ABC Inst.','Rahul','18 Jun','Pending','#f59e0b'],['Review batch data','Admin','20 Jun','Open','#94a3b8']].map(function(r){
+            return '<tr><td style="font-weight:600">' + r[0] + '</td><td>' + r[1] + '</td><td style="font-family:monospace;font-size:.6rem">' + r[2] + '</td><td><span style="font-size:.6rem;font-weight:700;color:' + r[4] + '">' + r[3] + '</span></td></tr>';
+          }).join('') +
+        '</tbody>' +
+      '</table>' +
+    '</div>' +
+  '</div>';
+}
+
+/* ─── TRAINING PARTNERS ─── */
+function _esTpSim(fn) {
+  return '<div class="es-sim-wrap">' +
+    '<div class="es-sim-topbar">' +
+      '<div class="es-sim-back">← Dashboard</div>' +
+      '<div class="es-sim-title">🤝 Training Partners</div>' +
+      '<div class="es-sim-spacer"></div>' +
+      _esSimGroup(fn, 'topbar') +
+    '</div>' +
+    _esHintStrip +
+    '<div class="es-sim-body" style="padding:12px;flex-direction:column;gap:7px;overflow:auto">' +
+      [['Vikram Mehta','BMS Trainer','#bfdbfe'],['Ananya Singh','Finance Lead','#bbf7d0'],['Sanjay Gupta','Tech Mentor','#fde68a']].map(function(p){
+        return '<div style="background:#fff;border:1.5px solid #e2e8f0;border-radius:9px;padding:10px 14px;display:flex;align-items:center;gap:10px">' +
+          '<div style="width:30px;height:30px;border-radius:50%;background:' + p[2] + ';display:flex;align-items:center;justify-content:center;font-size:.85rem">🤝</div>' +
+          '<div><div style="font-size:.68rem;font-weight:700;color:#1e293b">' + p[0] + '</div><div style="font-size:.58rem;color:#94a3b8;margin-top:1px">' + p[1] + '</div></div>' +
+        '</div>';
+      }).join('') +
+    '</div>' +
+  '</div>';
+}
+
+/* ─── IMAGE RESIZER ─── */
+function _esImgCompSim(fn) {
+  return '<div class="es-sim-wrap">' +
+    '<div class="es-sim-topbar">' +
+      '<div class="es-sim-back">← Dashboard</div>' +
+      '<div class="es-sim-title">🖼️ Image Resizer</div>' +
+      '<div class="es-sim-spacer"></div>' +
+      _esSimGroup(fn, 'topbar') +
+    '</div>' +
+    _esHintStrip +
+    '<div class="es-sim-body">' +
+      '<div class="es-sim-sidebar">' +
+        '<div class="es-sim-sb-sect">Settings</div>' +
+        '<div class="es-sim-sb-item collapsed">Width × Height (px)</div>' +
+        '<div class="es-sim-sb-item collapsed">Quality: 80%</div>' +
+        '<div class="es-sim-sb-item collapsed">Format: WebP ▾</div>' +
+        '<div class="es-sim-sb-item collapsed">Keep Aspect Ratio ✓</div>' +
+      '</div>' +
+      '<div class="es-sim-main">' +
+        '<div class="es-sim-canvas" style="background:#1e2132">' +
+          '<div style="display:flex;flex-direction:column;align-items:center;gap:10px">' +
+            '<div style="width:140px;height:105px;background:#272b44;border:2px dashed #3d4168;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:2.2rem">🖼️</div>' +
+            '<div style="font-size:.6rem;color:#4a5280;font-weight:600">Drop image or click Upload</div>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+    '</div>' +
+  '</div>';
+}
+
+/* ─── FILE CONVERTER ─── */
+function _esFileConvSim(fn) {
+  return '<div class="es-sim-wrap">' +
+    '<div class="es-sim-topbar">' +
+      '<div class="es-sim-back">← Dashboard</div>' +
+      '<div class="es-sim-title">🔄 File Converter</div>' +
+      '<div class="es-sim-spacer"></div>' +
+      _esSimGroup(fn, 'topbar') +
+    '</div>' +
+    _esHintStrip +
+    '<div class="es-sim-body" style="padding:18px;flex-direction:column;gap:12px;align-items:center;justify-content:center">' +
+      '<div style="background:#fff;border:2px dashed #c8d6e5;border-radius:12px;padding:24px 36px;text-align:center;width:100%;max-width:340px">' +
+        '<div style="font-size:2rem;margin-bottom:8px">📁</div>' +
+        '<div class="es-sim-ph w60" style="margin:0 auto 6px"></div>' +
+        '<div class="es-sim-ph w40 h6" style="margin:0 auto"></div>' +
+      '</div>' +
+      '<div style="display:flex;align-items:center;gap:10px;width:100%;max-width:340px">' +
+        '<div style="flex:1;background:#fff;border:1.5px solid #e2e8f0;border-radius:8px;padding:7px 12px;font-size:.64rem;color:#94a3b8">PDF ▾</div>' +
+        '<div style="font-size:1.1rem;color:#94a3b8">→</div>' +
+        '<div style="flex:1;background:#fff;border:1.5px solid #e2e8f0;border-radius:8px;padding:7px 12px;font-size:.64rem;color:#94a3b8">DOCX ▾</div>' +
+      '</div>' +
+    '</div>' +
+  '</div>';
+}
+
+/* ─── IMAGE EDITOR ─── */
+function _esImgEditSim(fn) {
+  return '<div class="es-sim-wrap">' +
+    '<div class="es-sim-topbar">' +
+      '<div class="es-sim-back">← Dashboard</div>' +
+      '<div class="es-sim-title">🎨 Image Editor</div>' +
+      '<div class="es-sim-spacer"></div>' +
+      _esSimGroup(fn, 'topbar') +
+    '</div>' +
+    '<div class="es-sim-toolbar">' +
+      '<span style="font-size:.58rem;font-weight:700;color:#94a3b8;margin-right:4px">TOOLS</span>' +
+      '<div class="es-sim-toolbar-sep"></div>' +
+      _esSimGroup(fn, 'toolbar') +
+    '</div>' +
+    _esHintStrip +
+    '<div class="es-sim-body">' +
+      '<div class="es-sim-sidebar">' +
+        '<div class="es-sim-sb-sect">Adjustments</div>' +
+        '<div class="es-sim-sb-item collapsed">Brightness</div>' +
+        '<div class="es-sim-sb-item collapsed">Contrast</div>' +
+        '<div class="es-sim-sb-item collapsed">Saturation</div>' +
+        '<div class="es-sim-sb-sect">Filters</div>' +
+        '<div class="es-sim-sb-item collapsed">Blur · Sharpen</div>' +
+      '</div>' +
+      '<div class="es-sim-main">' +
+        '<div class="es-sim-canvas" style="background:#1a1d2e">' +
+          '<div style="width:190px;height:140px;background:#fff;border:1px solid #3d4168;border-radius:4px;overflow:hidden">' +
+            '<div style="width:100%;height:100%;background:linear-gradient(135deg,#dbeafe,#e0f2fe 50%,#f0fdf4);display:flex;align-items:center;justify-content:center;font-size:2rem">🌄</div>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+    '</div>' +
+  '</div>';
+}
+
+/* ─── DRAFT PROPOSALS ─── */
+function _esDraftsSim(fn) {
+  return '<div class="es-sim-wrap">' +
+    '<div class="es-sim-topbar">' +
+      '<div class="es-sim-back">← Dashboard</div>' +
+      '<div class="es-sim-title">✉️ Draft Proposals</div>' +
+      '<div class="es-sim-spacer"></div>' +
+      _esSimGroup(fn, 'topbar') +
+    '</div>' +
+    _esHintStrip +
+    '<div class="es-sim-body">' +
+      '<div class="es-sim-sidebar">' +
+        '<div class="es-sim-sb-sect">Drafts</div>' +
+        [['Q2 Proposal',true],['Training Offer',false],['Partnership Letter',false]].map(function(d){
+          return '<div class="es-sim-sb-item' + (d[1] ? '' : ' collapsed') + '" style="' + (d[1] ? 'background:rgba(200,241,53,.12);border-color:rgba(200,241,53,.35);color:#4d6400' : '') + '">' + (d[1]?'● ':'') + d[0] + '</div>';
+        }).join('') +
+      '</div>' +
+      '<div class="es-sim-main" style="background:#fff">' +
+        '<div style="padding:14px">' +
+          '<div class="es-sim-ph w55 h12" style="background:#e2e8f0;margin-bottom:12px"></div>' +
+          '<div class="es-sim-ph w100"></div><div class="es-sim-ph w100"></div><div class="es-sim-ph w80"></div>' +
+          '<div style="height:10px"></div>' +
+          '<div class="es-sim-ph w100"></div><div class="es-sim-ph w65"></div>' +
+        '</div>' +
+      '</div>' +
+    '</div>' +
+  '</div>';
+}
+
+/* ─── Canvas content router ─── */
+function _esCanvasContent() {
+  if (!ES_ACTIVE_FN) {
+    return '<div class="es-canvas-empty"><div class="es-canvas-empty-icon">✏️</div><div>No function loaded yet.<br>Drag a function into the Edit tab above.</div></div>';
+  }
+  var fn = ES_FUNCTIONS.find(function(f){ return f.id === ES_ACTIVE_FN; });
+  if (!fn) return '<div class="es-canvas-empty">Function not found.</div>';
+
+  var builders = {
+    sbCert:        _esCertSim,
+    sbMailer:      _esMailerSim,
+    sbPortal:      _esPortalSim,
+    sbSync:        _esSyncSim,
+    sbTeams:       _esTeamsSim,
+    sbLiveClasses: _esSessionsSim,
+    sbFollowup:    _esFollowupSim,
+    sbTp:          _esTpSim,
+    sbImgComp:     _esImgCompSim,
+    sbFileConv:    _esFileConvSim,
+    sbImgEdit:     _esImgEditSim,
+    sbDrafts:      _esDraftsSim
+  };
+  var builder = builders[fn.id];
+  return builder ? builder(fn) : _esCanvasContentLegacy(fn);
+}
+
+/* Legacy chip-grid fallback */
+function _esCanvasContentLegacy(fn) {
+  var btnHTML = fn.buttons.map(function(btn, idx){
+    var sizeStyles = btn.size==='sm' ? 'padding:6px 12px;font-size:.7rem;' : btn.size==='lg' ? 'padding:11px 22px;font-size:.88rem;' : 'padding:8px 16px;font-size:.78rem;';
+    return '<div class="es-ui-btn' + (ES_SELECTED===btn.id?' es-selected':'') + '" data-btn-id="' + btn.id + '" data-btn-idx="' + idx + '" draggable="true" onclick="esSelectBtn(\'' + btn.id + '\')" style="' + sizeStyles + 'background:' + btn.bg + ';color:' + btn.color + ';border-radius:' + (btn.radius||'8') + 'px;font-weight:' + (btn.bold?'700':'600') + '">' +
+      (btn.icon?'<span>'+btn.icon+'</span>':'') + '<span class="es-btn-text">'+btn.label+'</span>' +
+      '<span class="es-btn-grip" onclick="event.stopPropagation();esSelectBtn(\'' + btn.id + '\')">✕</span>' +
+    '</div>';
+  }).join('');
+  return '<div class="es-fn-render"><div class="es-fn-render-title">' + fn.icon + ' ' + fn.name + ' — ' + fn.buttons.length + ' button(s)</div><div class="es-btn-grid" id="esBtnGrid">' + btnHTML + '</div></div>';
+}
+
+function _esBuildPalette() {
+  return ES_FUNCTIONS.map(function(fn){
+    return '<div class="es-fn-item" draggable="true" data-fn-id="' + fn.id + '" id="esFnItem_' + fn.id + '">' +
+      '<span class="es-fn-item-ic">' + fn.icon + '</span>' +
+      '<div class="es-fn-item-info">' +
+        '<div class="es-fn-item-name">' + fn.name + '</div>' +
+        '<div class="es-fn-item-sub">' + fn.sub + '</div>' +
+      '</div>' +
+      '<span class="es-fn-drag-handle">⠿</span>' +
+    '</div>';
+  }).join('');
+}
+
+function _esPropsContent() {
+  if (!ES_SELECTED) {
+    return '<div class="es-props-empty">Click a button on the canvas<br>to edit its properties</div>';
+  }
+  var fn = ES_FUNCTIONS.find(function(f){ return f.id === ES_ACTIVE_FN; });
+  if (!fn) return '';
+  var btn = fn.buttons.find(function(b){ return b.id === ES_SELECTED; });
+  if (!btn) return '';
+
+  return '<div class="es-prop-section">Label & Icon</div>' +
+
+    '<div class="es-prop-row">' +
+      '<span class="es-prop-label">Label</span>' +
+      '<div class="es-prop-control"><input type="text" value="' + btn.label + '" oninput="esPropSet('' + btn.id + '','label',this.value)" placeholder="Button text"></div>' +
+    '</div>' +
+
+    '<div class="es-prop-row">' +
+      '<span class="es-prop-label">Icon</span>' +
+      '<div class="es-prop-control"><input type="text" value="' + (btn.icon || '') + '" oninput="esPropSet('' + btn.id + '','icon',this.value)" placeholder="Emoji icon" style="font-size:1rem"></div>' +
+    '</div>' +
+
+    '<div class="es-prop-section">Colours</div>' +
+
+    '<div class="es-prop-row">' +
+      '<span class="es-prop-label">Text</span>' +
+      '<div class="es-prop-control">' +
+        '<div class="es-prop-color-row">' +
+          '<input type="color" value="' + (btn.color || '#e8eaf0') + '" oninput="esPropSet('' + btn.id + '','color',this.value)">' +
+          '<span>' + (btn.color || '#e8eaf0') + '</span>' +
+        '</div>' +
+      '</div>' +
+    '</div>' +
+
+    '<div class="es-prop-row">' +
+      '<span class="es-prop-label">Background</span>' +
+      '<div class="es-prop-control">' +
+        '<div class="es-prop-color-row">' +
+          '<input type="color" value="' + (btn.bg || '#2a2e3e') + '" oninput="esPropSet('' + btn.id + '','bg',this.value)">' +
+          '<span>' + (btn.bg || '#2a2e3e') + '</span>' +
+        '</div>' +
+      '</div>' +
+    '</div>' +
+
+    '<div class="es-prop-section">Size & Shape</div>' +
+
+    '<div class="es-prop-row">' +
+      '<span class="es-prop-label">Size</span>' +
+      '<div class="es-prop-control">' +
+        '<select onchange="esPropSet('' + btn.id + '','size',this.value)">' +
+          ['sm','md','lg'].map(function(s){ return '<option value="'+s+'"'+(btn.size===s?' selected':'')+'>'+s.toUpperCase()+'</option>'; }).join('') +
+        '</select>' +
+      '</div>' +
+    '</div>' +
+
+    '<div class="es-prop-row">' +
+      '<span class="es-prop-label">Radius</span>' +
+      '<div class="es-prop-control"><input type="number" min="0" max="50" value="' + (btn.radius || 8) + '" oninput="esPropSet('' + btn.id + '','radius',+this.value)"></div>' +
+    '</div>' +
+
+    '<div class="es-prop-row">' +
+      '<span class="es-prop-label">Bold</span>' +
+      '<div class="es-prop-control">' +
+        '<label class="cp-toggle"><input type="checkbox" ' + (btn.bold ? 'checked' : '') + ' onchange="esPropSet('' + btn.id + '','bold',this.checked)"><span class="cp-toggle-slider"></span></label>' +
+      '</div>' +
+    '</div>' +
+
+    '<div class="es-prop-section">Position Zone</div>' +
+    '<div style="font-size:.65rem;color:var(--cp-muted);margin-bottom:8px;line-height:1.6">Move this button to a different zone in the live UI. Changes appear instantly on the canvas.</div>' +
+    '<div style="display:flex;flex-direction:column;gap:5px;margin-bottom:10px">' +
+      ['topbar','toolbar','sidebar'].map(function(zone){
+        var active = (btn.slot || 'topbar') === zone;
+        var zoneLabel = { topbar: '🔝 Top Bar — main action row', toolbar: '🔧 Toolbar — secondary tools', sidebar: '📋 Sidebar — panel controls' };
+        return '<button onclick="esPropSet(\'' + btn.id + '\',\'slot\',\'' + zone + '\')" style="padding:7px 10px;border-radius:8px;text-align:left;cursor:pointer;font-family:inherit;font-size:.7rem;font-weight:' + (active?'800':'600') + ';transition:all .15s;background:' + (active?'rgba(157,113,248,.2)':'rgba(255,255,255,.04)') + ';color:' + (active?'#9d71f8':'var(--cp-muted)') + ';border:1.5px solid ' + (active?'#9d71f8':'var(--cp-border)') + '">' + zoneLabel[zone] + (active?' ✓':'') + '</button>';
+      }).join('') +
+    '</div>' +
+
+    '<div class="es-prop-section">Order in Zone</div>' +
+    '<div style="font-size:.68rem;color:var(--cp-muted);margin-bottom:8px">Drag buttons on canvas to reorder, or:</div>' +
+    '<div style="display:flex;gap:6px">' +
+      '<button class="cp-btn-sm" onclick="esMoveBtn(\'' + btn.id + '\',-1)">↑ Move Left</button>' +
+      '<button class="cp-btn-sm" onclick="esMoveBtn(\'' + btn.id + '\',1)">↓ Move Right</button>' +
+    '</div>';
+}
+
+/* ── Drag: palette → drop tab ── */
+function _esBindPaletteDrag() {
+  document.querySelectorAll('.es-fn-item').forEach(function(el){
+    el.addEventListener('dragstart', function(e){
+      _esDragFnId = el.dataset.fnId;
+      e.dataTransfer.effectAllowed = 'copy';
+      el.classList.add('dragging');
+    });
+    el.addEventListener('dragend', function(){
+      el.classList.remove('dragging');
+    });
+  });
+}
+
+function _esBindDropTab() {
+  var tab = document.getElementById('esDropTab');
+  if (!tab) return;
+  tab.addEventListener('dragover', function(e){
+    e.preventDefault();
+    tab.classList.add('drag-over');
+  });
+  tab.addEventListener('dragleave', function(e){
+    if (!tab.contains(e.relatedTarget)) tab.classList.remove('drag-over');
+  });
+  tab.addEventListener('drop', function(e){
+    e.preventDefault();
+    tab.classList.remove('drag-over');
+    if (!_esDragFnId) return;
+    ES_ACTIVE_FN = _esDragFnId;
+    ES_SELECTED  = null;
+    ES_DIRTY     = false;
+    _esDragFnId  = null;
+    _esRefreshAll();
+    cpToast('Function loaded — click any button to edit it!', 'ok');
+  });
+}
+
+/* ── Drag: canvas reorder (simulation buttons) ── */
+var _esDragBtnId = null;   // id of the button being dragged
+var _esDragBtnIdx = null;  // legacy (unused but kept for safety)
+
+function _esBindCanvasDrag() {
+  _esRebindCanvasDrag();
+}
+
+function _esRebindCanvasDrag() {
+  var fn = ES_ACTIVE_FN ? ES_FUNCTIONS.find(function(f){ return f.id === ES_ACTIVE_FN; }) : null;
+
+  // ── Simulation buttons (.es-sim-btn) ─────────────────────
+  document.querySelectorAll('.es-sim-btn').forEach(function(el){
+    el.addEventListener('dragstart', function(e){
+      _esDragBtnId = el.dataset.btnId;
+      e.dataTransfer.effectAllowed = 'move';
+      el.classList.add('es-sim-dragging');
+    });
+    el.addEventListener('dragend', function(){
+      el.classList.remove('es-sim-dragging');
+      document.querySelectorAll('.es-sim-drag-over').forEach(function(x){ x.classList.remove('es-sim-drag-over'); });
+    });
+    el.addEventListener('dragover', function(e){
+      e.preventDefault();
+      if (_esDragBtnId && _esDragBtnId !== el.dataset.btnId) {
+        el.classList.add('es-sim-drag-over');
+      }
+    });
+    el.addEventListener('dragleave', function(){
+      el.classList.remove('es-sim-drag-over');
+    });
+    el.addEventListener('drop', function(e){
+      e.preventDefault();
+      el.classList.remove('es-sim-drag-over');
+      var fromId = _esDragBtnId;
+      var toId   = el.dataset.btnId;
+      _esDragBtnId = null;
+      if (!fromId || fromId === toId || !fn) return;
+      var fromIdx = fn.buttons.findIndex(function(b){ return b.id === fromId; });
+      var toIdx   = fn.buttons.findIndex(function(b){ return b.id === toId; });
+      if (fromIdx < 0 || toIdx < 0) return;
+      var moved = fn.buttons.splice(fromIdx, 1)[0];
+      fn.buttons.splice(toIdx, 0, moved);
+      ES_DIRTY = true;
+      _esRefreshCanvas();
+      _esRebindCanvasDrag();
+      cpToast('Button reordered!', 'ok');
+    });
+  });
+
+  // ── Legacy chip buttons (.es-ui-btn) ─────────────────────
+  document.querySelectorAll('.es-ui-btn').forEach(function(el){
+    el.addEventListener('dragstart', function(e){
+      _esDragBtnIdx = +el.dataset.btnIdx;
+      e.dataTransfer.effectAllowed = 'move';
+      el.style.opacity = '.4';
+    });
+    el.addEventListener('dragend', function(){ el.style.opacity = ''; });
+    el.addEventListener('dragover', function(e){ e.preventDefault(); el.style.outline = '2px dashed #9d71f8'; });
+    el.addEventListener('dragleave', function(){ el.style.outline = ''; });
+    el.addEventListener('drop', function(e){
+      e.preventDefault();
+      el.style.outline = '';
+      var targetIdx = +el.dataset.btnIdx;
+      if (_esDragBtnIdx === null || _esDragBtnIdx === targetIdx || !fn) return;
+      var moved = fn.buttons.splice(_esDragBtnIdx, 1)[0];
+      fn.buttons.splice(targetIdx, 0, moved);
+      _esDragBtnIdx = null;
+      ES_DIRTY = true;
+      _esRefreshCanvas();
+      _esRebindCanvasDrag();
+    });
+  });
+}
+
+/* ── Prop editing ── */
+function esSelectBtn(id) {
+  ES_SELECTED = (ES_SELECTED === id) ? null : id;
+  _esRefreshCanvas();
+  document.getElementById('esPropsBody').innerHTML = _esPropsContent();
+  _esRebindCanvasDrag();
+}
+
+function esPropSet(btnId, key, val) {
+  var fn = ES_FUNCTIONS.find(function(f){ return f.id === ES_ACTIVE_FN; });
+  if (!fn) return;
+  var btn = fn.buttons.find(function(b){ return b.id === btnId; });
+  if (!btn) return;
+  btn[key] = val;
+  ES_DIRTY = true;
+  // live-update colour hex display
+  if (key === 'color' || key === 'bg') {
+    var spans = document.querySelectorAll('.es-prop-color-row span');
+    spans.forEach(function(s){ if (s.textContent.startsWith('#')) s.textContent = val; });
+  }
+  _esRefreshCanvas();
+  _esRebindCanvasDrag();
+  // Re-render props panel so zone buttons update immediately
+  document.getElementById('esPropsBody').innerHTML = _esPropsContent();
+  _esUpdateStatus();
+  if (key === 'slot') {
+    cpToast('Button moved to ' + val + ' zone — canvas updated!', 'ok');
+  }
+}
+
+function esMoveBtn(id, dir) {
+  var fn = ES_FUNCTIONS.find(function(f){ return f.id === ES_ACTIVE_FN; });
+  if (!fn) return;
+  var btn = fn.buttons.find(function(b){ return b.id === id; });
+  if (!btn) return;
+  var slot = btn.slot || 'topbar';
+  // Get indices of buttons in the same slot
+  var slotIdxs = fn.buttons
+    .map(function(b, i){ return { b: b, i: i }; })
+    .filter(function(x){ return (x.b.slot || 'topbar') === slot; });
+  var posInSlot = slotIdxs.findIndex(function(x){ return x.b.id === id; });
+  var newPosInSlot = posInSlot + dir;
+  if (newPosInSlot < 0 || newPosInSlot >= slotIdxs.length) return;
+  // Swap in the full array
+  var idxA = slotIdxs[posInSlot].i;
+  var idxB = slotIdxs[newPosInSlot].i;
+  var tmp = fn.buttons[idxA];
+  fn.buttons[idxA] = fn.buttons[idxB];
+  fn.buttons[idxB] = tmp;
+  fn.buttons[newIdx] = tmp;
+  ES_DIRTY = true;
+  _esRefreshCanvas();
+  _esRebindCanvasDrag();
+  document.getElementById('esPropsBody').innerHTML = _esPropsContent();
+}
+
+function _esResetOrder() {
+  if (!ES_ACTIVE_FN) return;
+  if (!confirm('Reset button order & styles to defaults for this function?')) return;
+  var fn = ES_FUNCTIONS.find(function(f){ return f.id === ES_ACTIVE_FN; });
+  if (!fn) return;
+  // Find the original defaults from the master ES_FUNCTIONS catalogue
+  // (stored at page load before any overrides were applied)
+  var origFn = _ES_DEFAULTS ? _ES_DEFAULTS.find(function(o){ return o.id === ES_ACTIVE_FN; }) : null;
+  if (origFn) fn.buttons = origFn.buttons.map(function(b){ return Object.assign({}, b); });
+  ES_SELECTED = null;
+  ES_DIRTY = true;
+  _esRefreshAll();
+  cpToast('Reset to defaults!', 'ok');
+}
+
+/* ── Refresh helpers ── */
+function _esDropTabContent() {
+  if (!ES_ACTIVE_FN) {
+    return '<div class="es-droptab-empty-text">⬇ Drop a function here to start editing its buttons</div>';
+  }
+  var fn = ES_FUNCTIONS.find(function(f){ return f.id === ES_ACTIVE_FN; });
+  if (!fn) return '<div class="es-droptab-empty-text">⬇ Drop a function here</div>';
+  return '<div class="es-droptab-active-label">' +
+    fn.icon + ' ' + fn.name + ' — editing UI layout' +
+    '<span class="es-droptab-change" onclick="ES_ACTIVE_FN=null;ES_SELECTED=null;_esRefreshAll()">✕ change</span>' +
+  '</div>';
+}
+
+function _esRefreshAll() {
+  document.getElementById('esDropTabInner').innerHTML   = _esDropTabContent();
+  document.getElementById('esCanvasArea').innerHTML     = _esCanvasContent();
+  document.getElementById('esPropsBody').innerHTML      = _esPropsContent();
+  _esUpdateStatus();
+  _esBindPaletteDrag();
+  _esBindDropTab();
+  _esRebindCanvasDrag();
+}
+
+function _esRefreshCanvas() {
+  document.getElementById('esCanvasArea').innerHTML = _esCanvasContent();
+  _esUpdateStatus();
+  _esRebindCanvasDrag();
+}
+
+function _esUpdateStatus() {
+  var s = document.getElementById('esStatus');
+  if (!s) return;
+  if (!ES_ACTIVE_FN) {
+    s.innerHTML = 'Drag a function from the left panel into the Edit tab to begin';
+    return;
+  }
+  var fn = ES_FUNCTIONS.find(function(f){ return f.id === ES_ACTIVE_FN; });
+  s.innerHTML = ES_DIRTY
+    ? '<b style="color:var(--cp-amber)">⚠ Unsaved changes</b> — editing <b>' + (fn ? fn.name : '') + '</b>'
+    : 'Editing <b>' + (fn ? fn.name : '') + '</b> — ' + (fn ? fn.buttons.length : 0) + ' button(s). Click <b>Complete & Go Live</b> to publish.';
+}
+
+/* ── Save & Complete ── */
+function _esSaveDraft() {
+  if (!ES_ACTIVE_FN) { cpToast('Load a function first.', 'info'); return; }
+  var overrides = {};
+  overrides[ES_ACTIVE_FN] = ES_FUNCTIONS.find(function(f){ return f.id === ES_ACTIVE_FN; }).buttons;
+  fbDb.collection('nova_config').doc('es_button_overrides').set({ overrides: overrides, savedAt: Date.now() }, { merge: true })
+    .then(function(){
+      ES_DIRTY = false;
+      cpToast('Draft saved!', 'ok');
+      _esUpdateStatus();
+    })
+    .catch(function(e){ cpToast('Save error: ' + e.message, 'err'); });
+}
+
+function _esComplete() {
+  if (!ES_ACTIVE_FN) { cpToast('Load a function first.', 'info'); return; }
+  var fn = ES_FUNCTIONS.find(function(f){ return f.id === ES_ACTIVE_FN; });
+  if (!confirm('Push "' + fn.name + '" button layout live? All users will see the updated buttons immediately.')) return;
+
+  var overrides = {};
+  overrides[ES_ACTIVE_FN] = fn.buttons;
+
+  var batch = fbDb.batch();
+  batch.set(fbDb.collection('nova_config').doc('es_button_overrides'), { overrides: overrides, pushedAt: Date.now(), pushedBy: (ADMIN ? ADMIN.email : 'dev') }, { merge: true });
+  // Also write a signal that app.js can listen to for live UI updates
+  batch.set(fbDb.collection('nova_config').doc('ui_overrides'), {
+    [ES_ACTIVE_FN]: {
+      buttons: fn.buttons,
+      updatedAt: Date.now(),
+      updatedBy: (ADMIN ? ADMIN.email : 'dev')
+    }
+  }, { merge: true });
+
+  batch.commit().then(function(){
+    ES_DIRTY = false;
+    cpToast('✅ "' + fn.name + '" pushed live! Button layout updated for all users.', 'ok');
+    _esUpdateStatus();
+    if (typeof logAdminAction === 'function') logAdminAction('edit_studio_push', fn.name + ' buttons customised');
+  }).catch(function(e){ cpToast('Push error: ' + e.message, 'err'); });
+}
+
+/* ════════════════════════════════════════════════════════════
+   UIX EDITOR — Tab system + all editor panels
+════════════════════════════════════════════════════════════ */
+
+/* ── Set active tab ─────────────────────────────────────── */
+function esSetTab(tab) {
+  ES_ACTIVE_TAB = tab;
+  // Update tab buttons
+  document.querySelectorAll('.es-tab-btn').forEach(function(b) {
+    b.classList.toggle('es-tab-active', b.dataset.tab === tab);
+  });
+  // Re-render the body
+  var body = document.getElementById('esPropsBody');
+  if (!body) return;
+  switch (tab) {
+    case 'buttons':  body.innerHTML = _esPropsContent(); break;
+    case 'theme':    body.innerHTML = _esThemePanel(); break;
+    case 'layout':   body.innerHTML = _esLayoutPanel(); break;
+    case 'type':     body.innerHTML = _esTypographyPanel(); break;
+    case 'sections': body.innerHTML = _esSectionsPanel(); break;
+    case 'html':     body.innerHTML = _esHtmlPanel(); break;
+    case 'danger':   body.innerHTML = _esDangerPanel(); break;
+    default: body.innerHTML = _esPropsContent();
+  }
+}
+
+/* ── Helper: color row ─────────────────────────────────── */
+function _uixColorRow(label, key, group, value) {
+  return '<div class="es-uix-row">' +
+    '<span class="es-uix-label">' + label + '</span>' +
+    '<div class="es-uix-ctrl">' +
+      '<div class="es-color-row">' +
+        '<input type="color" value="' + value + '" oninput="esUixSet(\'' + group + '\',\'' + key + '\',this.value);this.nextElementSibling.textContent=this.value">' +
+        '<span>' + value + '</span>' +
+      '</div>' +
+    '</div>' +
+  '</div>';
+}
+
+/* ── Helper: text input row ────────────────────────────── */
+function _uixTextRow(label, key, group, value, placeholder) {
+  return '<div class="es-uix-row">' +
+    '<span class="es-uix-label">' + label + '</span>' +
+    '<div class="es-uix-ctrl"><input type="text" value="' + (value||'') + '" placeholder="' + (placeholder||'') + '" oninput="esUixSet(\'' + group + '\',\'' + key + '\',this.value)"></div>' +
+  '</div>';
+}
+
+/* ── Helper: number input row ──────────────────────────── */
+function _uixNumberRow(label, key, group, value, min, max) {
+  return '<div class="es-uix-row">' +
+    '<span class="es-uix-label">' + label + '</span>' +
+    '<div class="es-uix-ctrl"><input type="number" value="' + value + '" min="' + (min||0) + '" max="' + (max||999) + '" oninput="esUixSet(\'' + group + '\',\'' + key + '\',+this.value)"></div>' +
+  '</div>';
+}
+
+/* ── Helper: toggle row ────────────────────────────────── */
+function _uixToggleRow(label, key, group, value) {
+  return '<div class="es-uix-row">' +
+    '<span class="es-uix-label">' + label + '</span>' +
+    '<div class="es-uix-ctrl">' +
+      '<label class="es-uix-toggle">' +
+        '<input type="checkbox" ' + (value ? 'checked' : '') + ' onchange="esUixSet(\'' + group + '\',\'' + key + '\',this.checked)">' +
+        '<span style="font-size:.68rem;color:var(--cp-muted)">' + (value ? 'Visible' : 'Hidden') + '</span>' +
+      '</label>' +
+    '</div>' +
+  '</div>';
+}
+
+/* ── Helper: select row ────────────────────────────────── */
+function _uixSelectRow(label, key, group, value, options) {
+  var opts = options.map(function(o) {
+    return '<option value="' + o.v + '"' + (value === o.v ? ' selected' : '') + '>' + o.l + '</option>';
+  }).join('');
+  return '<div class="es-uix-row">' +
+    '<span class="es-uix-label">' + label + '</span>' +
+    '<div class="es-uix-ctrl"><select onchange="esUixSet(\'' + group + '\',\'' + key + '\',this.value)">' + opts + '</select></div>' +
+  '</div>';
+}
+
+/* ── Set a UIX property ────────────────────────────────── */
+function esUixSet(group, key, val) {
+  if (!ES_ACTIVE_FN) return;
+  var uix = _esGetUix(ES_ACTIVE_FN);
+  uix[group][key] = val;
+  ES_DIRTY = true;
+  _esUpdateStatus();
+  // Live-update canvas theme if theme group
+  if (group === 'theme') _esApplyThemeToCanvas(uix.theme);
+  if (group === 'layout') _esApplyLayoutToCanvas(uix.layout);
+  if (group === 'typography') _esApplyTypographyToCanvas(uix.typography);
+}
+
+/* ── Apply theme live to canvas ────────────────────────── */
+function _esApplyThemeToCanvas(theme) {
+  var sim = document.querySelector('#esCanvasArea .es-sim-wrap');
+  if (!sim) return;
+  var topbar = sim.querySelector('.es-sim-topbar');
+  var body   = sim.querySelector('.es-sim-body');
+  var sidebar = sim.querySelector('.es-sim-sidebar');
+  if (topbar) { topbar.style.background = theme.topbarBg; topbar.style.borderColor = theme.topbarBorder; }
+  if (body)   body.style.background = theme.bodyBg;
+  if (sidebar) sidebar.style.background = theme.sidebarBg;
+  // Accent: update all primary-style sim buttons
+  sim.querySelectorAll('.es-sim-btn').forEach(function(b) {
+    if (b.style.background === '#c8f135' || b.style.background === theme.accentColor) {
+      b.style.background = theme.accentColor;
+      b.style.color = theme.accentText;
+    }
+  });
+}
+
+function _esApplyLayoutToCanvas(layout) {
+  var sim = document.querySelector('#esCanvasArea .es-sim-wrap');
+  if (!sim) return;
+  var topbar  = sim.querySelector('.es-sim-topbar');
+  var toolbar = sim.querySelector('.es-sim-toolbar');
+  var sidebar = sim.querySelector('.es-sim-sidebar');
+  sim.style.borderRadius = (layout.borderRadius || 8) + 'px';
+  if (topbar)  topbar.style.display  = layout.showTopbar  ? '' : 'none';
+  if (toolbar) toolbar.style.display = layout.showToolbar ? '' : 'none';
+  if (sidebar) sidebar.style.display = layout.showSidebar ? '' : 'none';
+  if (topbar)  topbar.style.minHeight = (layout.topbarHeight || 42) + 'px';
+  if (sidebar) sidebar.style.width    = (layout.sidebarWidth || 200) + 'px';
+}
+
+function _esApplyTypographyToCanvas(typ) {
+  var sim = document.querySelector('#esCanvasArea .es-sim-wrap');
+  if (!sim) return;
+  sim.style.fontFamily = typ.fontFamily + ', system-ui, sans-serif';
+  sim.style.fontSize = typ.baseFontSize + 'px';
+  sim.querySelectorAll('.es-sim-title').forEach(function(el) {
+    el.style.color = typ.headingColor;
+    el.style.fontWeight = typ.titleWeight;
+  });
+}
+
+/* ── THEME PANEL ────────────────────────────────────────── */
+function _esThemePanel() {
+  if (!ES_ACTIVE_FN) return '<div class="es-props-empty">Load a function first to edit its theme</div>';
+  var uix = _esGetUix(ES_ACTIVE_FN);
+  var t = uix.theme;
+  return '<div class="es-uix-section">Topbar</div>' +
+    _uixColorRow('Background', 'topbarBg', 'theme', t.topbarBg) +
+    _uixColorRow('Border', 'topbarBorder', 'theme', t.topbarBorder) +
+    '<div class="es-uix-section">Body & Sidebar</div>' +
+    _uixColorRow('Body BG', 'bodyBg', 'theme', t.bodyBg) +
+    _uixColorRow('Sidebar BG', 'sidebarBg', 'theme', t.sidebarBg) +
+    '<div class="es-uix-section">Accent / Brand</div>' +
+    _uixColorRow('Accent Color', 'accentColor', 'theme', t.accentColor) +
+    _uixColorRow('Accent Text', 'accentText', 'theme', t.accentText) +
+    '<div style="margin-top:14px;padding:10px;background:rgba(157,113,248,.06);border-radius:8px;font-size:.65rem;color:var(--cp-muted);line-height:1.6">' +
+    '💡 Changes apply live to the canvas preview. Click <b>Save Draft</b> or <b>Complete & Go Live</b> to persist.' +
+    '</div>';
+}
+
+/* ── LAYOUT PANEL ───────────────────────────────────────── */
+function _esLayoutPanel() {
+  if (!ES_ACTIVE_FN) return '<div class="es-props-empty">Load a function first to edit its layout</div>';
+  var uix = _esGetUix(ES_ACTIVE_FN);
+  var l = uix.layout;
+  return '<div class="es-uix-section">Visibility</div>' +
+    _uixToggleRow('Topbar', 'showTopbar', 'layout', l.showTopbar) +
+    _uixToggleRow('Toolbar', 'showToolbar', 'layout', l.showToolbar) +
+    _uixToggleRow('Sidebar', 'showSidebar', 'layout', l.showSidebar) +
+    '<div class="es-uix-section">Dimensions</div>' +
+    _uixNumberRow('Topbar Height', 'topbarHeight', 'layout', l.topbarHeight, 32, 80) +
+    _uixNumberRow('Sidebar Width', 'sidebarWidth', 'layout', l.sidebarWidth, 120, 320) +
+    _uixNumberRow('Border Radius', 'borderRadius', 'layout', l.borderRadius, 0, 24) +
+    _uixNumberRow('Button Gap', 'gap', 'layout', l.gap, 0, 24);
+}
+
+/* ── TYPOGRAPHY PANEL ───────────────────────────────────── */
+function _esTypographyPanel() {
+  if (!ES_ACTIVE_FN) return '<div class="es-props-empty">Load a function first to edit typography</div>';
+  var uix = _esGetUix(ES_ACTIVE_FN);
+  var ty = uix.typography;
+  return '<div class="es-uix-section">Font Family</div>' +
+    _uixSelectRow('Font', 'fontFamily', 'typography', ty.fontFamily, [
+      {v:'Bricolage Grotesque', l:'Bricolage Grotesque (default)'},
+      {v:'Inter', l:'Inter'},
+      {v:'DM Sans', l:'DM Sans'},
+      {v:'Poppins', l:'Poppins'},
+      {v:'Space Grotesk', l:'Space Grotesk'},
+      {v:'Roboto', l:'Roboto'},
+      {v:'system-ui', l:'System UI'},
+    ]) +
+    '<div class="es-uix-section">Sizes & Weights</div>' +
+    _uixNumberRow('Base Size (px)', 'baseFontSize', 'typography', ty.baseFontSize, 10, 20) +
+    _uixSelectRow('Title Weight', 'titleWeight', 'typography', ty.titleWeight, [
+      {v:400,l:'400 — Regular'},{v:600,l:'600 — SemiBold'},{v:700,l:'700 — Bold'},{v:800,l:'800 — ExtraBold'}
+    ]) +
+    _uixSelectRow('Body Weight', 'bodyWeight', 'typography', ty.bodyWeight, [
+      {v:400,l:'400 — Regular'},{v:500,l:'500 — Medium'},{v:600,l:'600 — SemiBold'}
+    ]) +
+    '<div class="es-uix-section">Colors</div>' +
+    _uixColorRow('Heading Color', 'headingColor', 'typography', ty.headingColor) +
+    _uixColorRow('Muted Color', 'mutedColor', 'typography', ty.mutedColor);
+}
+
+/* ── SECTIONS PANEL ─────────────────────────────────────── */
+function _esSectionsPanel() {
+  if (!ES_ACTIVE_FN) return '<div class="es-props-empty">Load a function first to control sections</div>';
+  var uix = _esGetUix(ES_ACTIVE_FN);
+  var s = uix.sections;
+  return '<div style="font-size:.65rem;color:var(--cp-muted);margin-bottom:12px;line-height:1.6">' +
+    'Toggle visibility of UI sections within this function. Hidden sections are removed for all users.' +
+  '</div>' +
+  '<div class="es-uix-section">Navigation</div>' +
+    _uixToggleRow('← Back Button', 'showBackBtn', 'sections', s.showBackBtn) +
+    _uixToggleRow('Page Title', 'showTitle', 'sections', s.showTitle) +
+  '<div class="es-uix-section">UI Elements</div>' +
+    _uixToggleRow('Search Bar', 'showSearch', 'sections', s.showSearch) +
+    _uixToggleRow('Stats / Counts', 'showStats', 'sections', s.showStats) +
+    _uixToggleRow('Filter Controls', 'showFilters', 'sections', s.showFilters) +
+    _uixToggleRow('Pagination', 'showPagination', 'sections', s.showPagination) +
+  '<div style="margin-top:14px;padding:10px;background:rgba(200,241,53,.07);border-radius:8px;font-size:.65rem;color:var(--cp-muted);line-height:1.6">' +
+    '⚡ Changes here are saved with <b>Complete & Go Live</b> and affect all users instantly.' +
+  '</div>';
+}
+
+/* ── CUSTOM HTML PANEL ──────────────────────────────────── */
+function _esHtmlPanel() {
+  if (!ES_ACTIVE_FN) return '<div class="es-props-empty">Load a function first to add custom HTML</div>';
+  var uix = _esGetUix(ES_ACTIVE_FN);
+  var h = uix.customHtml;
+
+  function htmlZone(label, key, value, hint) {
+    return '<div class="es-uix-section">' + label + '</div>' +
+      '<div style="font-size:.62rem;color:var(--cp-muted);margin-bottom:5px">' + hint + '</div>' +
+      '<textarea class="es-html-editor" oninput="esUixSet(\'customHtml\',\'' + key + '\',this.value)" placeholder="<!-- HTML here -->">' + (value||'') + '</textarea>';
+  }
+
+  return htmlZone('Topbar Extra', 'topbarExtra', h.topbarExtra, 'Injected at the end of the topbar row') +
+    htmlZone('Body Header', 'bodyHeader', h.bodyHeader, 'Injected above the main content area') +
+    htmlZone('Body Footer', 'bodyFooter', h.bodyFooter, 'Injected below the main content area') +
+    htmlZone('Sidebar Extra', 'sidebarExtra', h.sidebarExtra, 'Injected at the bottom of the sidebar') +
+    '<div style="margin-top:12px;padding:10px;background:rgba(239,68,68,.06);border:1.5px solid rgba(239,68,68,.2);border-radius:8px;font-size:.63rem;color:#f87171;line-height:1.6">' +
+    '⚠️ Custom HTML is injected as-is. Scripts are supported but may affect other UI elements. Use with care.' +
+    '</div>';
+}
+
+/* ── DANGER ZONE PANEL ──────────────────────────────────── */
+function _esDangerPanel() {
+  if (!ES_ACTIVE_FN) return '<div class="es-props-empty">Load a function first</div>';
+  var fn = ES_FUNCTIONS.find(function(f){ return f.id === ES_ACTIVE_FN; });
+  if (!fn) return '';
+
+  return '<div style="font-size:.72rem;font-weight:800;color:#ef4444;margin-bottom:12px">⚠️ Danger Zone — ' + fn.icon + ' ' + fn.name + '</div>' +
+
+    '<div class="es-danger-card">' +
+      '<div class="es-danger-title">🔄 Reset All UIX to Defaults</div>' +
+      '<div class="es-danger-desc">Resets all theme, layout, typography, section, and HTML customizations for this function. Button edits are kept.</div>' +
+      '<button class="es-danger-btn" onclick="esResetUix()">Reset All UIX</button>' +
+    '</div>' +
+
+    '<div class="es-danger-card">' +
+      '<div class="es-danger-title">🗑️ Reset All Buttons</div>' +
+      '<div class="es-danger-desc">Resets all button customizations (labels, icons, colors, positions) for this function back to defaults.</div>' +
+      '<button class="es-danger-btn" onclick="_esResetOrder()">Reset Buttons</button>' +
+    '</div>' +
+
+    '<div class="es-danger-card">' +
+      '<div class="es-danger-title">🚫 Remove Function from Site</div>' +
+      '<div class="es-danger-desc">Permanently removes <b>' + fn.name + '</b> from the user sidebar. This is equivalent to hiding it via Feature Manager. The function code remains intact — you can re-enable it anytime.</div>' +
+      '<button class="es-danger-btn destructive" onclick="esRemoveFunction()">Remove from Site</button>' +
+    '</div>' +
+
+    '<div class="es-danger-card">' +
+      '<div class="es-danger-title">⛔ Force Maintenance Mode for This Function</div>' +
+      '<div class="es-danger-desc">Moves this function to "Under Construction" status. Users see it with a 🚧 badge but cannot access it.</div>' +
+      '<button class="es-danger-btn" onclick="esSetComingSoon()">Mark as Under Construction</button>' +
+    '</div>';
+}
+
+/* ── Danger actions ─────────────────────────────────────── */
+function esResetUix() {
+  if (!ES_ACTIVE_FN) return;
+  if (!confirm('Reset ALL UIX customizations for this function? (Theme, Layout, Typography, Sections, HTML)')) return;
+  ES_UIX[ES_ACTIVE_FN] = _esUixDefaults(ES_ACTIVE_FN);
+  ES_DIRTY = true;
+  _esApplyThemeToCanvas(ES_UIX[ES_ACTIVE_FN].theme);
+  _esApplyLayoutToCanvas(ES_UIX[ES_ACTIVE_FN].layout);
+  _esApplyTypographyToCanvas(ES_UIX[ES_ACTIVE_FN].typography);
+  cpToast('UIX reset to defaults. Click Save/Publish to persist.', 'ok');
+  esSetTab('danger');
+}
+
+function esRemoveFunction() {
+  if (!ES_ACTIVE_FN) return;
+  var fn = ES_FUNCTIONS.find(function(f){ return f.id === ES_ACTIVE_FN; });
+  if (!fn) return;
+  if (fn.protected) { cpToast('This function is protected and cannot be removed.', 'err'); return; }
+  if (!confirm('Remove "' + fn.name + '" from the site? It will be hidden from all users. You can re-enable it in Feature Manager.')) return;
+
+  fbDb.collection('nova_config').doc('features').get().then(function(doc) {
+    var list = doc.exists ? (doc.data().list || []) : [];
+    var updated = list.map(function(f) {
+      if (f.id === ES_ACTIVE_FN) return Object.assign({}, f, { hidden: true, comingSoon: false });
+      return f;
+    });
+    if (!updated.find(function(f){ return f.id === ES_ACTIVE_FN; })) {
+      updated.push({ id: ES_ACTIVE_FN, label: fn.label || fn.name, comingSoon: false, hidden: true });
+    }
+    return fbDb.collection('nova_config').doc('features').set({ list: updated, updatedAt: Date.now(), updatedBy: ADMIN ? ADMIN.email : 'dev' });
+  }).then(function() {
+    cpToast('✅ "' + fn.name + '" removed from site. Re-enable it in Feature Manager.', 'ok');
+    if (typeof logAdminAction === 'function') logAdminAction('remove_function', fn.name);
+    ES_ACTIVE_FN = null;
+    ES_SELECTED = null;
+    _esRefreshAll();
+  }).catch(function(e) { cpToast('Error: ' + e.message, 'err'); });
+}
+
+function esSetComingSoon() {
+  if (!ES_ACTIVE_FN) return;
+  var fn = ES_FUNCTIONS.find(function(f){ return f.id === ES_ACTIVE_FN; });
+  if (!fn) return;
+  if (fn.protected) { cpToast('Protected functions cannot be changed.', 'err'); return; }
+  if (!confirm('Mark "' + fn.name + '" as Under Construction? Users will see it with a 🚧 badge but cannot use it.')) return;
+
+  fbDb.collection('nova_config').doc('features').get().then(function(doc) {
+    var list = doc.exists ? (doc.data().list || []) : [];
+    var found = false;
+    var updated = list.map(function(f) {
+      if (f.id === ES_ACTIVE_FN) { found = true; return Object.assign({}, f, { comingSoon: true, hidden: false }); }
+      return f;
+    });
+    if (!found) updated.push({ id: ES_ACTIVE_FN, comingSoon: true, hidden: false });
+    return fbDb.collection('nova_config').doc('features').set({ list: updated, updatedAt: Date.now(), updatedBy: ADMIN ? ADMIN.email : 'dev' });
+  }).then(function() {
+    cpToast('🚧 "' + fn.name + '" marked as Under Construction.', 'ok');
+    if (typeof logAdminAction === 'function') logAdminAction('coming_soon', fn.name);
+  }).catch(function(e) { cpToast('Error: ' + e.message, 'err'); });
+}
+
+/* ── Override esSelectBtn to keep current tab ───────────── */
+var _origEsSelectBtn = typeof esSelectBtn === 'function' ? esSelectBtn : null;
+esSelectBtn = function(id) {
+  ES_SELECTED = (ES_SELECTED === id) ? null : id;
+  _esRefreshCanvas();
+  // Only switch to buttons tab if we're not already on another tab
+  if (ES_ACTIVE_TAB !== 'buttons') {
+    // keep current tab, just refresh
+    esSetTab(ES_ACTIVE_TAB);
+  } else {
+    document.getElementById('esPropsBody').innerHTML = _esPropsContent();
+  }
+  _esRebindCanvasDrag();
+};
+
+/* ── Load UIX from Firestore alongside button overrides ─── */
+var _origRenderEditStudio = renderEditStudio;
+renderEditStudio = function(container) {
+  fbDb.collection('nova_config').doc('es_uix_overrides').get()
+    .then(function(doc) {
+      if (doc.exists && doc.data().overrides) {
+        ES_UIX = doc.data().overrides;
+      }
+    })
+    .catch(function(){})
+    .finally(function() {
+      _origRenderEditStudio(container);
+    });
+};
+
+/* ── Patch _esSaveDraft and _esComplete to also save UIX ── */
+var _orig_esSaveDraft = _esSaveDraft;
+_esSaveDraft = function() {
+  if (!ES_ACTIVE_FN) { cpToast('Load a function first.', 'info'); return; }
+  var overrides = {};
+  overrides[ES_ACTIVE_FN] = ES_FUNCTIONS.find(function(f){ return f.id === ES_ACTIVE_FN; }).buttons;
+  var uixOverrides = {};
+  Object.assign(uixOverrides, ES_UIX);
+
+  var batch = fbDb.batch();
+  batch.set(fbDb.collection('nova_config').doc('es_button_overrides'),
+    { overrides: overrides, savedAt: Date.now() }, { merge: true });
+  batch.set(fbDb.collection('nova_config').doc('es_uix_overrides'),
+    { overrides: uixOverrides, savedAt: Date.now() }, { merge: true });
+
+  batch.commit().then(function() {
+    ES_DIRTY = false;
+    cpToast('Draft saved (buttons + UIX)!', 'ok');
+    _esUpdateStatus();
+  }).catch(function(e) { cpToast('Save error: ' + e.message, 'err'); });
+};
+
+var _orig_esComplete = _esComplete;
+_esComplete = function() {
+  if (!ES_ACTIVE_FN) { cpToast('Load a function first.', 'info'); return; }
+  var fn = ES_FUNCTIONS.find(function(f){ return f.id === ES_ACTIVE_FN; });
+  if (!confirm('Push "' + fn.name + '" full UI/UX live? All changes (buttons, theme, layout, typography, sections, HTML) will be visible to all users immediately.')) return;
+
+  var overrides = {};
+  overrides[ES_ACTIVE_FN] = fn.buttons;
+  var uixOverrides = {};
+  Object.assign(uixOverrides, ES_UIX);
+
+  var batch = fbDb.batch();
+  batch.set(fbDb.collection('nova_config').doc('es_button_overrides'),
+    { overrides: overrides, pushedAt: Date.now(), pushedBy: ADMIN ? ADMIN.email : 'dev' }, { merge: true });
+  batch.set(fbDb.collection('nova_config').doc('es_uix_overrides'),
+    { overrides: uixOverrides, pushedAt: Date.now(), pushedBy: ADMIN ? ADMIN.email : 'dev' }, { merge: true });
+  batch.set(fbDb.collection('nova_config').doc('ui_overrides'), {
+    [ES_ACTIVE_FN]: {
+      buttons: fn.buttons,
+      uix: ES_UIX[ES_ACTIVE_FN] || null,
+      updatedAt: Date.now(),
+      updatedBy: ADMIN ? ADMIN.email : 'dev'
+    }
+  }, { merge: true });
+
+  batch.commit().then(function() {
+    ES_DIRTY = false;
+    cpToast('\u2705 "' + fn.name + '" fully pushed live! All UI/UX changes applied.', 'ok');
+    _esUpdateStatus();
+    if (typeof logAdminAction === 'function') logAdminAction('edit_studio_push_full', fn.name + ' full UIX pushed live');
+  }).catch(function(e) { cpToast('Push error: ' + e.message, 'err'); });
+};
+</script>
+
+</body>
+</html>

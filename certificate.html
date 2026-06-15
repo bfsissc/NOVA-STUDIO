@@ -282,6 +282,42 @@
         <!-- Left panel -->
         <div class="cert-panel" id="certPanelEl">
 
+          <!-- Certificate Layout -->
+          <div class="cert-section">
+            <div class="cert-sec-h" onclick="certToggleSection('layout')">
+              <div class="cert-sec-t">▦ Certificate Layout</div>
+              <span class="cert-sec-toggle open" id="certSecToggleLayout">▾</span>
+            </div>
+            <div class="cert-sec-body" id="certSecLayout">
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px">
+                <button class="cert-fit-btn active" id="certLayoutClassic" onclick="certSetLayout('classic')" style="padding:9px 6px;line-height:1.35">
+                  Classic<br><span style="font-size:.56rem;font-weight:500;opacity:.7">Any CSV fields</span>
+                </button>
+                <button class="cert-fit-btn" id="certLayoutTraining" onclick="certSetLayout('training')" style="padding:9px 6px;line-height:1.35">
+                  Training Period<br><span style="font-size:.56rem;font-weight:500;opacity:.7">Name + From + To</span>
+                </button>
+              </div>
+              <div id="certTrainingMap" style="display:none;background:var(--snow);border:1px solid var(--fog);border-radius:8px;padding:9px">
+                <div style="font-size:.64rem;color:var(--mist);line-height:1.5;margin-bottom:8px">
+                  Upload a CSV, then map the columns. Each row can have different dates.
+                </div>
+                <div class="cert-label" style="margin-bottom:3px">STUDENT NAME COLUMN</div>
+                <select class="cert-input" id="certMapName" onchange="certApplyTrainingLayout()"></select>
+                <div class="cert-row2" style="margin-top:7px">
+                  <div>
+                    <div class="cert-label" style="font-size:.55rem;margin-bottom:3px">FROM DATE</div>
+                    <select class="cert-input" id="certMapFrom" onchange="certApplyTrainingLayout()"></select>
+                  </div>
+                  <div>
+                    <div class="cert-label" style="font-size:.55rem;margin-bottom:3px">TO DATE</div>
+                    <select class="cert-input" id="certMapTo" onchange="certApplyTrainingLayout()"></select>
+                  </div>
+                </div>
+                <button class="cert-file-action" onclick="certApplyTrainingLayout(true)" style="width:100%;margin-top:8px;text-align:center">Apply / Reset 3 Fields</button>
+              </div>
+            </div>
+          </div>
+
           <!-- Background / Template -->
           <div class="cert-section">
             <div class="cert-sec-h" onclick="certToggleSection('bg')">

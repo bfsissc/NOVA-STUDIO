@@ -110,6 +110,7 @@ const LC = (function () {
       if (!snap.exists) { _showLinkError('This session link is invalid or has expired.'); return; }
       roomData = snap.data();
       if (roomData.status !== 'live') { _showLinkError('This session has already ended.'); return; }
+      if (roomData.hostActive === false) { _showLinkError('This session is not live right now. Ask the host for a fresh invite link.'); return; }
     } catch (e) {
       _showLinkError('Could not reach the session. Check your connection.');
       return;
@@ -225,6 +226,8 @@ const LC = (function () {
   function _renderLobby() {
     const wrap = _el('lcWrap');
     if (!wrap) return;
+    document.body.classList.remove('lc-session-active');
+    wrap.classList.remove('lc-in-room');
     wrap.style.overflowY = 'auto';
 
     wrap.innerHTML = `
@@ -460,7 +463,7 @@ const LC = (function () {
       const roomId = _uid().toUpperCase().slice(0, 6);
       await _roomRef(roomId).set({
         title, description: desc, hostUid: user.uid, hostName: name,
-        status: 'live', createdAt: _ts(), participantCount: 1
+        status: 'live', hostActive: false, createdAt: _ts(), participantCount: 1
       });
       closeCreateModal();
 
@@ -484,6 +487,7 @@ const LC = (function () {
       if (!snap.exists) { lcShowToast('Room not found. Check the code.', 'err'); return; }
       const data = snap.data();
       if (data.status !== 'live') { lcShowToast('This session has ended.', 'err'); return; }
+      if (data.hostActive === false) { lcShowToast('This session is not live right now.', 'err'); return; }
 
       _el('lcJoinModal').style.display = 'flex';
       _el('lcJoinModal')._roomId = code;
@@ -514,12 +518,13 @@ const LC = (function () {
   async function rejoinRoom(roomId) {
     try {
       const snap = await _roomRef(roomId).get();
-      if (!snap.exists || snap.data().status !== 'live') {
+      const data = snap.exists ? snap.data() : null;
+      if (!snap.exists || data.status !== 'live' || data.hostActive === false) {
         lcShowToast('Session has ended.', 'err'); return;
       }
       const user = fbAuth.currentUser;
       const name = user?.displayName || user?.email?.split('@')[0] || 'Me';
-      _enterRoom(roomId, name, 'host', snap.data());
+      _enterRoom(roomId, name, 'host', data);
     } catch (e) {
       lcShowToast('Error: ' + e.message, 'err');
     }
@@ -541,12 +546,37 @@ const LC = (function () {
     _state.handRaised = false;
 
     _renderRoom();
+    _subscribeRoomStatus();
     _loadPeerJS(() => _startMedia());
+  }
+
+  function _subscribeRoomStatus() {
+    if (_state.roomUnsubscribe) {
+      _state.roomUnsubscribe();
+      _state.roomUnsubscribe = null;
+    }
+    if (!_state.roomId) return;
+    _state.roomUnsubscribe = _roomRef(_state.roomId).onSnapshot(snap => {
+      if (!snap.exists) {
+        lcShowToast('Session is no longer available', 'warn');
+        _cleanup();
+        openView();
+        return;
+      }
+      const data = snap.data() || {};
+      if (data.status && data.status !== 'live') {
+        lcShowToast('Session ended', 'ok');
+        _cleanup();
+        openView();
+      }
+    }, () => {});
   }
 
   function _renderRoom() {
     const wrap = _el('lcWrap');
     if (!wrap) return;
+    document.body.classList.add('lc-session-active');
+    wrap.classList.add('lc-in-room');
     wrap.style.overflowY = 'hidden';
     const r = _state.myRoom || {};
     wrap.innerHTML = `
@@ -663,6 +693,9 @@ const LC = (function () {
         name: _state.myName, role: _state.myRole,
         joinedAt: _ts(), active: true
       });
+      if (_state.myRole === 'host') {
+        _roomRef(_state.roomId).update({ status: 'live', hostActive: true, hostPeerId: id }).catch(() => {});
+      }
       _state.peer.on('call', call => _handleIncomingCall(call));
     });
 
@@ -912,29 +945,60 @@ const LC = (function () {
   }
 
   // ── Leave / End ───────────────────────────────────────────────────────────
-  async function leaveRoom() { _cleanup(); openView(); }
+  async function leaveRoom() {
+    const roomId = _state.roomId;
+    const isHost = _state.myRole === 'host';
+    try {
+      if (isHost && roomId) {
+        await _roomRef(roomId).update({ status: 'ended', endedAt: _ts() });
+        lcShowToast('Session ended', 'ok');
+      }
+    } catch (e) {
+      lcShowToast('Could not end session cleanly', 'warn');
+    }
+    _cleanup();
+    openView();
+  }
 
   async function endRoom(roomId) {
     if (!confirm('End this session for everyone?')) return;
     try {
-      await _roomRef(roomId).update({ status: 'ended' });
+      await _roomRef(roomId).update({ status: 'ended', hostActive: false, endedAt: _ts() });
       lcShowToast('Session ended', 'ok');
       if (_state.roomId === roomId) { _cleanup(); openView(); }
     } catch (e) { lcShowToast('Error ending session', 'err'); }
   }
 
   function _cleanup() {
+    const wrap = _el('lcWrap');
+    if (wrap) {
+      wrap.classList.remove('lc-in-room');
+      wrap.style.overflowY = 'auto';
+    }
+    document.body.classList.remove('lc-session-active');
+    ['lcCreateModal', 'lcJoinModal', 'lcShareModal'].forEach(id => {
+      const modal = _el(id);
+      if (modal) modal.style.display = 'none';
+    });
+    _el('lcGuestOverlay')?.remove();
     if (_state.localStream) { _state.localStream.getTracks().forEach(t => t.stop()); _state.localStream = null; }
     if (_state.screenStream) { _state.screenStream.getTracks().forEach(t => t.stop()); _state.screenStream = null; }
-    if (_state.myPeerId) {
+    if (_state.myPeerId && _state.roomId) {
       _peersRef(_state.roomId).doc(_state.myPeerId).update({ active: false }).catch(() => {});
+    }
+    if (_state.myRole === 'host' && _state.roomId) {
+      _roomRef(_state.roomId).update({ hostActive: false }).catch(() => {});
     }
     if (_state.peer) { try { _state.peer.destroy(); } catch (e) {} _state.peer = null; }
     if (_state.roomsUnsubscribe) { _state.roomsUnsubscribe(); _state.roomsUnsubscribe = null; }
+    if (_state.roomUnsubscribe) { _state.roomUnsubscribe(); _state.roomUnsubscribe = null; }
     if (_state.peersUnsubscribe) { _state.peersUnsubscribe(); _state.peersUnsubscribe = null; }
     if (_state.chatUnsubscribe) { _state.chatUnsubscribe(); _state.chatUnsubscribe = null; }
     _state.roomId = null; _state.myPeerId = null; _state.peers = {};
     _state.isScreenSharing = false;
+    _state.chatOpen = false;
+    _state.unreadChat = 0;
+    _state.handRaised = false;
   }
 
   // ── Utility Actions ───────────────────────────────────────────────────────
@@ -961,11 +1025,23 @@ const LC = (function () {
   function closeJoinModal() { if (_el('lcJoinModal')) _el('lcJoinModal').style.display = 'none'; }
 
   // ── Public API ────────────────────────────────────────────────────────────
+  window.addEventListener('beforeunload', () => {
+    try {
+      if (_state.myRole === 'host' && _state.roomId) {
+        _roomRef(_state.roomId).update({ status: 'ended', hostActive: false, endedAt: _ts() }).catch(() => {});
+      }
+      _cleanup();
+    } catch (e) {}
+  });
+
   async function openView() {
     _state.view = 'lobby';
-    // Check if arriving via magic join link first
-    const wasLink = await _checkJoinLink();
-    if (!wasLink) _renderLobby();
+    const params = new URLSearchParams(window.location.search);
+    if (!params.get('session')) {
+      _renderLobby();
+      return;
+    }
+    await _checkJoinLink();
   }
 
   return {

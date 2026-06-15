@@ -2518,9 +2518,39 @@ textarea:focus {
 .lc-join-room-host { font-size: .72rem; color: var(--lime-d); font-weight: 600; }
 
 /* ── Room View ──────────────────────────────────────────────── */
+#lcWrap.lc-in-room {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 4500 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  height: 100dvh !important;
+  min-height: 100vh !important;
+  min-height: 100dvh !important;
+  overflow: hidden !important;
+  background: #0f0f0f;
+}
+
+body.lc-session-active #nova-ai-fab,
+body.lc-session-active #nova-ai-panel {
+  display: none !important;
+}
+
+#viewLiveclasses:has(#lcWrap.lc-in-room) {
+  overflow: hidden !important;
+}
+
 .lc-room {
   display: flex; flex-direction: column;
-  height: 100%; width: 100%; background: #0f0f0f; position: relative;
+  height: 100%; min-height: 0; width: 100%; background: #0f0f0f; position: relative;
+}
+
+#lcWrap.lc-in-room .lc-room {
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  min-height: 100vh;
+  min-height: 100dvh;
 }
 
 /* Top Bar */
@@ -2560,18 +2590,22 @@ textarea:focus {
   flex: 1; display: grid; gap: 6px; padding: 10px;
   background: #0f0f0f; overflow: hidden;
   grid-template-columns: repeat(1, 1fr);
+  grid-auto-rows: minmax(0, 1fr);
   align-content: center;
+  min-width: 0;
+  min-height: 0;
 }
 .lc-video-tile {
   position: relative; background: #1c1c1c;
   border-radius: 10px; overflow: hidden;
-  aspect-ratio: 16/9;
   border: 2px solid transparent;
   transition: border-color .15s;
+  min-width: 0;
+  min-height: 0;
 }
 .lc-video-tile:hover { border-color: rgba(200,241,53,.4); }
 .lc-video-tile video {
-  width: 100%; height: 100%; object-fit: cover; display: block;
+  width: 100%; height: 100%; object-fit: contain; display: block;
   background: #111;
 }
 .lc-video-local video { transform: scaleX(-1); } /* mirror local */
@@ -2675,6 +2709,11 @@ textarea:focus {
   .lc-lobby { padding: 16px; }
   .lc-actions-row { flex-direction: column; align-items: stretch; }
   .lc-join-bar { max-width: 100%; }
+  .lc-room-bar { height: auto; min-height: 52px; padding: 8px 10px; align-items: flex-start; }
+  .lc-room-bar-left, .lc-room-bar-right { flex-wrap: wrap; }
+  .lc-room-bar-code { display: none; }
+  .lc-video-area { grid-template-columns: 1fr !important; align-content: stretch; }
+  .lc-controls { height: auto; min-height: 72px; padding: 8px; gap: 6px; flex-wrap: wrap; }
   .lc-ctrl-btn { min-width: 52px; padding: 6px 9px; }
   .lc-chat-panel { width: 260px; }
 }
@@ -2684,4 +2723,3 @@ textarea:focus {
   display: inline-block; width: 6px; height: 6px; border-radius: 50%;
   background: #f00; margin-left: 4px; animation: lcPulse 1.6s infinite;
 }
-
