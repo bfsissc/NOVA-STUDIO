@@ -1,4 +1,4 @@
-﻿// ==================== DASHBOARD CORE ====================
+// ==================== DASHBOARD CORE ====================
 let U=null, editSkills=[];
 // SK / SS kept for legacy reference but Firestore is the source of truth now
 const SK='nova_users', SS='nova_sess';
@@ -1096,10 +1096,30 @@ function certRenderFull(overrideData) {
 
 function certSubstitute(text, data) {
   return text.replace(/\{\{([^{}]+)\}\}/g, (_, key) => {
-    const wanted = key.trim().toLowerCase();
+    if (!data) return '';
+    if (Object.prototype.hasOwnProperty.call(data, key)) return data[key] ?? '';
+    const trimmedKey = key.trim();
+    if (Object.prototype.hasOwnProperty.call(data, trimmedKey)) return data[trimmedKey] ?? '';
+    const wanted = trimmedKey.toLowerCase();
     const actualKey = Object.keys(data).find(k => k.trim().toLowerCase() === wanted);
     return actualKey ? (data[actualKey] ?? '') : '';
   });
+}
+
+function certDownloadTrainingCsvTemplate() {
+  const rows = [
+    ['name', 'limit', 'from_date', 'to_date'],
+    ['Khushi Aggarwal', '3', '15 June', '14 June'],
+    ['Kasak Yadav', '3', '22 July', '30 July']
+  ];
+  const csv = rows.map(row => row.map(value => '"' + String(value).replace(/"/g, '""') + '"').join(',')).join('\r\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'training_period_certificate_template.csv';
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 function certSetLayout(layout) {
@@ -1126,8 +1146,8 @@ function certFindCsvHeader(aliases) {
 function certPopulateTrainingMap() {
   const configs = [
     ['certMapName', ['name', 'student name', 'studentname', 'participant name', 'candidate name']],
-    ['certMapFrom', ['from date', 'from', 'start date', 'startdate', 'date from']],
-    ['certMapTo', ['to date', 'to', 'end date', 'enddate', 'date to']]
+    ['certMapFrom', ['from_date', 'from date', 'from', 'start date', 'startdate', 'date from']],
+    ['certMapTo', ['to_date', 'to date', 'to', 'end date', 'enddate', 'date to']]
   ];
   configs.forEach(([id, aliases]) => {
     const select = document.getElementById(id);
@@ -1144,8 +1164,8 @@ function certPopulateTrainingMap() {
 function certApplyTrainingLayout(forceReset) {
   if (C.layout !== 'training') return;
   const nameCol = document.getElementById('certMapName')?.value || certFindCsvHeader(['name', 'student name']);
-  const fromCol = document.getElementById('certMapFrom')?.value || certFindCsvHeader(['from date', 'from', 'start date']);
-  const toCol = document.getElementById('certMapTo')?.value || certFindCsvHeader(['to date', 'to', 'end date']);
+  const fromCol = document.getElementById('certMapFrom')?.value || certFindCsvHeader(['from_date', 'from date', 'from', 'start date']);
+  const toCol = document.getElementById('certMapTo')?.value || certFindCsvHeader(['to_date', 'to date', 'to', 'end date']);
   const fields = [
     { role:'training-name', column:nameCol, fallback:'Name', x:0.56, y:0.515, fontSize:96, fontFamily:'Georgia', bold:false, italic:true },
     { role:'training-from', column:fromCol, fallback:'From Date', x:0.55, y:0.62, fontSize:58, fontFamily:'Georgia', bold:true, italic:true },
