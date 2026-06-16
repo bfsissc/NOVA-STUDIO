@@ -211,16 +211,38 @@
 <div id="loginScreen">
   <div class="lw">
     <div class="ll">
-      <div class="ll-logo"><div class="ll-gem">N</div><div class="ll-brand">NOVA <em>Studio</em></div></div>
-      <div class="ll-hero">
-        <div class="ll-h">Design <b>smarter.</b><br>Create faster.</div>
-        <div class="ll-p">All-in-one creative workspace â€” certificates, presentations, photo editing and more.</div>
+      <!-- Decorative background grid -->
+      <div class="nova-login-grid"></div>
+      <!-- Animated vertical rails -->
+      <div class="nova-login-rail rail-a"></div>
+      <div class="nova-login-rail rail-b"></div>
+
+      <!-- Logo row -->
+      <div class="ll-logo">
+        <div class="ll-gem">N</div>
+        <div class="ll-brand">NOVA <em>Studio</em></div>
+        <div class="nova-login-status"><span></span>Creative Platform</div>
       </div>
-      <div class="ll-feats">
-        <div class="ll-feat"><div class="ll-dot"></div>ðŸŽ“ Bulk certificate generation with CSV</div>
-        <div class="ll-feat"><div class="ll-dot"></div>ðŸ“Š Presentation builder &amp; PPTX export</div>
-        <div class="ll-feat"><div class="ll-dot"></div>ðŸŽ¨ AI-powered photo editor</div>
-        <div class="ll-feat"><div class="ll-dot"></div>ðŸ“ Project dashboard to track everything</div>
+
+      <!-- Hero stage -->
+      <div class="nova-login-stage">
+        <div class="nova-login-kicker">Design · Build · Deploy</div>
+        <div class="nova-login-wordmark">
+          NOVA
+          <div class="nova-type-caret"></div>
+        </div>
+        <div class="nova-login-rule"><span></span></div>
+        <div class="nova-login-subtitle">STUDIO &nbsp;·&nbsp; CREATIVE PLATFORM</div>
+      </div>
+
+      <!-- Footer chips -->
+      <div class="nova-login-footer">
+        <div class="nova-login-chips">
+          <span>15+ Built-in Tools</span>
+          <span>Free Forever Plan</span>
+          <span>No install needed</span>
+        </div>
+        <div class="nova-login-caption">Trusted by 2,000+ educators &amp; creators</div>
       </div>
     </div>
     <div class="lr">
@@ -236,7 +258,7 @@
         <div class="ld"><span>or sign in with email</span></div>
 
         <div class="fg"><div class="fl">Email</div><input class="fi" id="siEmail" type="email" placeholder="you@example.com"></div>
-        <div class="fg"><div class="fl">Password</div><input class="fi" id="siPass" type="password" placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" onkeydown="if(event.key==='Enter')doLogin()"></div>
+        <div class="fg nova-password-field"><div class="fl">Password</div><input class="fi" id="siPass" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"><button type="button" class="nova-password-toggle" onclick="(function(b){var i=document.getElementById('siPass');i.type=i.type==='password'?'text':'password';b.textContent=i.type==='password'?'SHOW':'HIDE';})(this)">SHOW</button></div>
         <button class="btn-pri" onclick="doLogin()">Sign In &nbsp;â†’</button>
         <div class="ld"><span>or</span></div>
         <button class="btn-sec" onclick="demoLogin()">âœ¦ Continue with Demo Account</button>
@@ -258,7 +280,7 @@
           <div class="fg"><div class="fl">Last Name</div><input class="fi" id="suLast" type="text" placeholder="Johnson"></div>
         </div>
         <div class="fg"><div class="fl">Email</div><input class="fi" id="suEmail" type="email" placeholder="you@example.com"></div>
-        <div class="fg"><div class="fl">Password</div><input class="fi" id="suPass" type="password" placeholder="Min 6 characters" onkeydown="if(event.key==='Enter')doSignup()"></div>
+        <div class="fg nova-password-field"><div class="fl">Password</div><input class="fi" id="suPass" type="password" placeholder="Min 6 characters" onkeydown="if(event.key==='Enter')doSignup()"><button type="button" class="nova-password-toggle" onclick="(function(b){var i=document.getElementById('suPass');i.type=i.type==='password'?'text':'password';b.textContent=i.type==='password'?'SHOW':'HIDE';})(this)">SHOW</button></div>
         <button class="btn-pri" onclick="doSignup()">Create Account &nbsp;â†’</button>
         <div class="lt">Already have an account? <a onclick="toggleForm('signin')">Sign in</a></div>
       </div>
